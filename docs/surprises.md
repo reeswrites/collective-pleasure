@@ -34,3 +34,10 @@ Objectives saturated by generation 3, so the frontier collapsed to a single corn
 - **Pressing mostly ends the household.** With a pressing persona present, 89 to 93 percent of runs end with a partner gone (33 percent without) and the fail share under free_chaotic is 0.53 (0.13 without). Walls on pressing: 0.39 fail, 48 percent dissolved, cooperation 0.815 against baseline 0.649.
 - **A price is worse than a wall.** no_pressure_sanctioned: 31.5 sanctions per run, cooperation 0.506, fail 0.63, worse than baseline. The persona agents pay and press on.
 - **Hand-made freedom stays at 0.997 to 1.000 outside the trap family even with pressing personas present.** The empowerment score spreads variants by 0.72 bits and ranks them differently (Spearman 0.33).
+
+## 2026-11-10: evolution v2 (fishery)
+
+- The seam measure that cannot exhaust still hit a floor: one scripted patch card removes most adversaries, so the generation-0 elite is already near 0 prevalence in most runs and a "prevalence falls" test has nothing left to show. A baseline should be the seed spec's prevalence, not the generation-0 elite's.
+- Redundancy was mostly repaired, not rejected: 255 of 381 flagged mutants were patch cards that made an older card implied by the rest, and pruning kept them as smaller rule sets.
+- Varied training made the selection target move: the varied arm's 4-D hypervolume fell at generations 7 and 8 when harsher conditions were drawn, so the final elite depends on the last draws.
+- A seed spec the loop had pushed away (`tight`, cap 4, infeasible under the yield floor) was more robust on exam 2 than the evolved elites: the floor plus the efficiency objective select against caution.

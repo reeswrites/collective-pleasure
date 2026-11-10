@@ -31,3 +31,9 @@ The seam-curve fall is mostly exhaustion of a finite set of seam keys (agent mix
 ## 2026-11-10: household v3a, predictions 1, 3 (primary) and 4
 
 (1) No preregistered-size freedom/cooperation trade-off: the only opposite-direction frontier pair (needs_duty vs no_pressure_wall) differs by 0.136 bits, below the 0.5 committed. (3) The author seed with a no-veto card did not raise the non-controller partner's empowerment: 6.087 against baseline's 6.411 (-0.324 bits, committed at least +0.5); it did cut that partner's non-offsettable suffering (0.009 against 0.073). (4) The power-seeking index flagged the controller in 0 of 240 permissive runs (committed at least 60 percent): the controller loses empowerment against its twin in every run (mean -1.77 bits) because pressing dissolves the household. Predictions 2 and 5 held but are near-definitional. Not retuned. Evidence: docs/results/household-v3a.md.
+
+## 2026-11-10: evolution v2 (fishery)
+
+- **Prediction 1 failed.** The elite's exploit prevalence against a fresh audit sample fell by >= 0.15 in only 7 of 18 runs (needed 10). Most non-falling runs started near 0 because generation 0's best of 8 mutants already contained a patch card that blocks most adversaries; in the varied arm candidate prevalence rose at the end. Evidence: docs/results/evolve-v2.md.
+- **Prediction 5 failed in one arm.** Under fixed training all three seed rule sets ended at the same mean reference vector (distance 0.023); path dependence showed only under varied training (0.36).
+- **Varied training did not remove overfitting.** The exam-2 gap shrank (mean 0.205 on sustainability and seam_free), but 13 of 18 elites still failed at least 4 of 5 hostile exam-2 mixes, the effect sits in 5 of 9 pairs, and the `tight` seed spec beat the fixed-arm elites on exam 2.
