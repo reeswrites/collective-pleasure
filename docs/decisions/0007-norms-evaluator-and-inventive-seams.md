@@ -19,6 +19,8 @@ The author's conversation of 2026-11-10 moved the project. The questions are rec
 9. **Typed talk for deception.** Decision-model agents talk in a fixed vocabulary. A typed lie is a mismatch between report and action. LLM agents also talk freely. The formal vocabulary grows when LLMs deceive outside it.
 10. **Cost strategy.** Conversation on the author's Claude plan. Swarm agents via API: Jev for screening, Haiku 5.5 for sweeps, Sonnet 5.5 and Opus 5.5 for exams, the patcher and the judge. Agents never run as Claude Code subagents. Measured dry run: at most about $0.09 per 5-agent, 12-month fishery run with Haiku 5.5. First month estimated at $80 to $130.
 11. **Guardrail.** Evolving deceptive strategies is robustness testing only, reported as defenses (CONTRIBUTING.md).
+12. **Typed reports for LLM agents (decided 2026-11-10).** Talking LLM agents also file typed reports in the same fixed vocabulary as decision-model agents, alongside free talk, so say vs do can be compared across tiers. The backend already asks for a "report" field. This is the standing rule.
+13. **One untouched final exam (decided 2026-11-10).** A held-out set of conditions, for example different regrowth or household shocks, an unseen agent model, and a judge rubric version never used in selection. It is defined and committed before evolution runs, used exactly once at the end, and never fed back into selection or tuning. Process claim FX1.
 
 ## Prior art to check
 
@@ -32,4 +34,4 @@ Drafts IT1 and ML1 in docs/claims.md. Finalize and commit before the first paid 
 
 - docs/plan.md gains the MVP demo slice and pending items.
 - ADR 0006's stand-in study is the screening-tier question inside the model ladder.
-- Open for the author: typed reports from LLM agents, one untouched final exam, and pushing the branch.
+- Nothing is open for the author from this ADR. The branch was pushed to GitHub (private repo) on 2026-11-10 at the author's request.

@@ -19,6 +19,7 @@ Predictions must be committed before runs. Do not edit a prediction after its ru
 | SI3 | Jev swarms find fewer seams and show fewer emergent norms than LLM swarms | draft prediction - finalize and commit before the first paid run | none | ADR 0006 |
 | IT1 | Inventive seams (ADR 0007): below some agent capability there are zero inventive seams; above it they appear. The threshold and its price are the result | draft prediction - finalize and commit before the first paid run | none | ADR 0007 |
 | ML1 | Model ladder (ADR 0007): rules evolved against a cheaper model transfer to the next rung up but not two rungs up | draft prediction - finalize and commit before the first paid run | none | ADR 0007 |
+| FX1 | Process requirement (ADR 0007): the final exam (held-out conditions, unseen agent model, unused judge rubric version) is defined and committed before the first evolution run, used once, and never fed back into selection or tuning | process requirement - commit before the first evolution run | none | ADR 0007 |
 
 ## Follow-ups (not preregistered)
 

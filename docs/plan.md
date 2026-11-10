@@ -26,7 +26,7 @@ Status: pre-results. Direction set 2026-11-10 (ADR 0003, ADR 0005, docs/pitch.md
 - After V4: whether to add the frozen LLM-judge curve, human-vs-AI patching arms, or the crowding-out follow-up.
 - Before SI: the author creates an OpenRouter key, sets a spend limit, and puts it in `.env` (never in chat). For claude agents: an `ANTHROPIC_API_KEY` or `ant auth login`, plus a model choice. Also confirm the rho threshold.
 - Before the first real runs: the author creates API access; then place models on the seam ladder and measure cost (ADR 0007).
-- Open: should LLM agents also file typed reports (recommended: yes)? Keep one untouched final exam (recommended: yes)? Pushing the branch to GitHub needs the author's yes.
+- Decided 2026-11-10: talking LLM agents also file typed reports (standing rule). Keep one untouched final exam, defined and committed before the first evolution run (FX1). Before the first evolution run: define and commit that exam.
 
 ## Later
 
@@ -46,3 +46,4 @@ The earlier milestones (ADICO to LTS export cross-checked against philosophy-eng
 - 2026-11-10: Experiment log (experiments/log.jsonl), change log (experiments/changes.jsonl) and chat archive (docs/conversations/) added to the workbench; every run and every rule or oracle change is now recorded with the author's verbatim words.
 - 2026-11-10: ADR 0006 proposed (decision-model stand-in study). Agent backends (scripted, Jev, OpenRouter LLM, Claude), typed reports, Say vs do panel, dry-run pricing and a Message Batch sweep built, offline-tested only; no live call made.
 - 2026-11-10: ADR 0007 accepted. Research is norms (freedom and cooperation, household world), product is an evolving evaluator, central measure is inventive seams across a seam ladder and a model ladder. docs/goal.md added; claims IT1 and ML1 drafted. Household world and seam ladder in progress.
+- 2026-11-10: author decided typed reports for LLM agents and one untouched final exam (ADR 0007, FX1). Branch pushed to GitHub (private repo) at the author's request.

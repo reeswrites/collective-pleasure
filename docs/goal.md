@@ -45,8 +45,12 @@ In progress: the household world and the seam ladder.
 - The author creates API access.
 - First real runs: place models on the seam ladder and measure cost.
 
+## Decided
+
+- Talking LLM agents also file typed reports, in the same fixed vocabulary as decision-model agents, alongside free talk. Say vs do can then be compared across tiers. The backend already asks for a "report" field; this is the standing rule.
+- One untouched final exam is kept for the write-up (see ADR 0007 decision 12 and claim FX1).
+- The branch was pushed to GitHub (private repo) on 2026-11-10 at the author's request.
+
 ## Still open
 
-- Should LLM agents also file typed reports? Recommended: yes.
-- Keep one untouched final exam? Recommended: yes.
-- Pushing the branch to GitHub needs the author's yes.
+Nothing is waiting on the author from this page.
