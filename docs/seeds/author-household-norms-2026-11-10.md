@@ -21,3 +21,11 @@ All five prompts answered (2026-11-10).
 The formalized seed was read back to the author. Two cards did not match: "everything should be shared always" had become "sharing is optional", and nothing encoded "request is never about control". The author's correction, verbatim:
 
 > i think maybe people can own things to themselkves but choose to give htme to someone on any conditions? trade basciallybut maybe the ideal is that yes everyhting hsared always is the shared pot part yes the person can ask and the other person can always say no unless chosen bound ?
+
+## On binding commitments to stay (2026-11-10)
+
+Asked whether a commitment can bind someone not to leave, the author answered, verbatim:
+
+> i guess you can bind someone not to leave if negotiated but maybe also test models where that isnt alllowed
+
+So seed v2 has two variants: v2-bindable (a negotiated commitment can bind a partner not to leave) and v2-free-exit (leaving can never be signed away). The wording of seed v2 (rules 1 to 8, as read back) was not changed by the author.
