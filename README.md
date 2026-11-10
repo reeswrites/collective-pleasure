@@ -24,13 +24,23 @@ docs/decisions/       ADRs (design choices)
 docs/reviews/         review-council convention and reports
 docs/surprises.md     unexpected observations
 docs/negative-results.md  negative results
-src/                  code (placeholder)
-tests/                tests (placeholder)
+src/mar/              harness, cards, gate, oracle, patcher, miner
+rules/fishery/        ADICO cards for the fishery fixture
+scripts/v2_run.py     V2 pass/fail table
+tests/                tests
 ```
 
 ## Start locally
 
-Placeholder; nothing is built yet. Planned stack: Python managed with [uv](https://docs.astral.sh/uv/). Tools under evaluation: mCRL2 (transition systems, bisimulation, model checking), Z3 (action gate), and a fork of GovSim (testbed).
+Needs [uv](https://docs.astral.sh/uv/) (Python 3.10+). Z3 gates agent actions; no model calls or network are needed.
+
+```
+uv sync
+uv run pytest                      # unit tests (about 10 s)
+uv run python scripts/v2_run.py    # V2 instrument-calibration table (about 10 s)
+```
+
+V2 results: [docs/results/v2.md](docs/results/v2.md). Still to come: mCRL2 (only if a slice needs bisimulation) and a fork of GovSim (testbed, needs the author's OK).
 
 Related: [philosophy-engine](https://github.com/reeswrites/philosophy-engine) is an input (ADICO schema, reference engine), not part of this repo.
 
