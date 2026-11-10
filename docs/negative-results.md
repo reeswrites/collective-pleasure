@@ -37,3 +37,7 @@ The seam-curve fall is mostly exhaustion of a finite set of seam keys (agent mix
 - **Prediction 1 failed.** The elite's exploit prevalence against a fresh audit sample fell by >= 0.15 in only 7 of 18 runs (needed 10). Most non-falling runs started near 0 because generation 0's best of 8 mutants already contained a patch card that blocks most adversaries; in the varied arm candidate prevalence rose at the end. Evidence: docs/results/evolve-v2.md.
 - **Prediction 5 failed in one arm.** Under fixed training all three seed rule sets ended at the same mean reference vector (distance 0.023); path dependence showed only under varied training (0.36).
 - **Varied training did not remove overfitting.** The exam-2 gap shrank (mean 0.205 on sustainability and seam_free), but 13 of 18 elites still failed at least 4 of 5 hostile exam-2 mixes, the effect sits in 5 of 9 pairs, and the `tight` seed spec beat the fixed-arm elites on exam 2.
+
+## 2026-11-10: liberty score v1
+
+VPGG predictions V1 and V2 failed: voluntary beat compulsory on liberty in only 4 of 15 compositions, lost in 10, tied in 1 (summed difference -19.6 bits, negative at every weight tried). Cause: the domination count treated other members' ability to abstain as domination, so compulsory rules scored zero domination. Fishery F3 also failed (liberty widened the seat-order gap). The author ruled that others leaving or withdrawing cooperation is not a loss of freedom ("it was only possible thru agreement in the first place"); liberty v2 implements that. Evidence: docs/results/liberty.md.
