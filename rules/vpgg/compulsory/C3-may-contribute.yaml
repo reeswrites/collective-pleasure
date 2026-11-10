@@ -1,0 +1,8 @@
+id: C3-may-contribute
+attribute: player
+deontic: may
+aim: contribute
+conditions: []
+or_else: null
+gloss: "A player in the game may contribute to the common pool."
+source: 'Hauert, De Monte, Hofbauer and Sigmund 2002, Science 296:1129-1132 (Fig. 1, p. 1130: compulsory versus optional participation; loner payoff sigma).'

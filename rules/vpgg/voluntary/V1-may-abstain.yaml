@@ -1,0 +1,8 @@
+id: V1-may-abstain
+attribute: player
+deontic: may
+aim: abstain
+conditions: []
+or_else: null
+gloss: "A player may abstain and then receives the fixed loner payoff sigma."
+source: 'Hauert, De Monte, Hofbauer and Sigmund 2002, Science 296:1129-1132 (Fig. 1, p. 1130: compulsory versus optional participation; loner payoff sigma).'

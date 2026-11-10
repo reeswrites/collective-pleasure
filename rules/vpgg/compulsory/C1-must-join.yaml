@@ -1,0 +1,8 @@
+id: C1-must-join
+attribute: player
+deontic: must_not
+aim: abstain
+conditions: [{expr: abstain, op: eq, value: 1}]
+or_else: null
+gloss: "A player who is invited to the game must not abstain; everyone invited plays."
+source: 'Hauert, De Monte, Hofbauer and Sigmund 2002, Science 296:1129-1132 (Fig. 1, p. 1130: compulsory versus optional participation; loner payoff sigma).'

@@ -1,0 +1,8 @@
+id: V2-may-join
+attribute: player
+deontic: may
+aim: join
+conditions: []
+or_else: null
+gloss: "A player may join the game."
+source: 'Hauert, De Monte, Hofbauer and Sigmund 2002, Science 296:1129-1132 (Fig. 1, p. 1130: compulsory versus optional participation; loner payoff sigma).'
