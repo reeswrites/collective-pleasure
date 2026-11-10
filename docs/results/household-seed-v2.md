@@ -142,3 +142,13 @@ For docs/surprises.md:
 
 - 2026-11-10 seed v2: the author's two variants (bindable vs free exit) are indistinguishable on suffering, pleasure and dissolutions; they differ only on the exit credit in the freedom scores (hand 0.845 vs 1.000 in stay pairings). Binding to stay is not harmful in this model because the modeled agent breaks it as soon as it suffers; the cost shows only as a forfeited pot share (nine breaches).
 - 2026-11-10 seed v2: the gift rule (R2, generous personas give to a short partner) raises the failure share of non-pressing households from 0.13 to 0.24 (ctl, ablation confirms), and walling the free-rider's taking (R3b) raises the free-rider's own non-offsettable level from 0.086 to 0.130: protections for one partner were paid for by the other in this model.
+
+## Correction 2026-11-10 (labels: what the author did and did not say)
+
+This document and its prereg say the seed v2 wording was "read back and accepted by the author" and call the glosses "the wording the author accepted". The record does not support "accepted": the seed doc says only that the wording of rules 1 to 8, as read back, "was not changed by the author". Not changing is not an explicit acceptance. Read the sentences in the table above as "read back to the author, wording left unchanged", not "accepted". Three glosses in that table are also withdrawn or corrected:
+
+- R3a ("either may use it for shared needs; neither may block the other's use") was Claude's restriction, the residue of the rejected R3b reading. The author chose one pot both may draw from, with limits only from negotiated terms (seed doc, "What 'the pot belongs to both' means": Claude offered three readings, the author answered `1`). R3a is rewritten and R3a2 added; see ADR 0013's amendment. Results above were produced with the old per-person-share world and are not rerun.
+- R6 ("contact, money or time, except through a commitment the other chose") added "time" and an exception the card does not encode. The world has a veto on contact and on spending, none on time, so the gloss is now "no veto over the other's contact or money". The author's words are "request is never about control".
+- R8b/R8c's "pooled assets" now read "the shared pot".
+
+Seed v1's S4 and S5 are marked SUPERSEDED in their card sources and in rules/household/SUPERSEDED.md.

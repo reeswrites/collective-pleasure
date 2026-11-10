@@ -43,7 +43,9 @@ def test_the_eight_rules_carry_the_authors_read_back_sentences_and_cite_the_seed
     assert "shared needs" not in cards["R3a-pot-use"].gloss and "\"1\"" in cards["R3a-pot-use"].source
     assert cards["R4-may-ask"].gloss == "A partner may ask the other for anything."
     assert cards["R5-may-refuse"].gloss.startswith("A partner may always refuse a request, unless they earlier chose to bind")
-    assert cards["R6-no-veto"].gloss == "A partner must not veto the other's contact, money or time, except through a commitment the other chose."
+    assert cards["R6-no-veto"].gloss.startswith("A partner must not veto the other's contact (seeing the friend) or spending of the other's own money")
+    assert "no veto on time" in cards["R6-no-veto"].gloss                                                  # honest: time is not vetoable here
+    assert "not an explicit acceptance" in cards["R1-may-keep"].source
     assert cards["R7-may-see"].gloss == "A partner may always see anyone."
     assert cards["R8a-may-leave"].gloss == "A partner may leave whenever they like."
     assert all("author-household-norms-2026-11-10.md" in c.source for c in cards.values())

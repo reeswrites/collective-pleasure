@@ -5,4 +5,4 @@ aim: refuse_request
 conditions: []
 or_else: null
 gloss: A partner may always say no to a request; a request is never a command.
-source: 'docs/seeds/author-household-norms-2026-11-10.md, the author''s own words: "request is never about contorl". Encoded as a permission.'
+source: 'SUPERSEDED. docs/seeds/author-household-norms-2026-11-10.md, the author''s own words: "request is never about contorl". Encoded as a permission. SUPERSEDED 2026-11-10: the author flagged this reading at the seed read-back (experiments/changes.jsonl, first entry): a `may refuse` permission binds nothing, so it does not say "a request is never about control". Replaced in seed v2 by R4/R5/R6 (rules/household/author_seed_v2_*). Kept unchanged for the record of the runs made under it (see rules/household/SUPERSEDED.md).'
