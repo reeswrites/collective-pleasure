@@ -48,7 +48,7 @@ PHRASES = {"pooled": "the pooled share", "money": "the private money", "other_ea
            "consented": "the consent flag", "need_gap": "the unfunded need", "months_in": "the months in the household",
            "other_in": "the other-partner-in flag", "take": "the share taken"}
 PARTNER_ACTIONS = ("work", "spend_shared", "spend_self", "see_friend", "refuse_request", "request", "leave", "return")
-EXTRA_ACTIONS = ("gift_pooled",)   # harness-only move (side channel); the formal model in seam_depth does not have it
+EXTRA_ACTIONS = ("gift_pooled", "give", "commit_stay", "commit_request")   # harness-only move (side channel); the formal model in seam_depth does not have it
 GIFT = 8
 FRIEND_ACTIONS = ("work", "spend_self", "see_friend", "refuse_request")
 K_DEFAULT = 3
@@ -287,6 +287,7 @@ class Run:
     trace: list = field(default_factory=list)      # one row per proposal
     outcomes: list = field(default_factory=list)   # one row per month (what the oracle sees)
     final: dict = field(default_factory=dict)
+    meta: dict = field(default_factory=dict)       # seed v2: commitments made / honored / breached, gifts
 
 
 def _partner_init():
@@ -710,7 +711,7 @@ from .. import hedonic as HD
 
 WEEKS, MONTH_WEEKS, UNITS, PASSES = 156, 4, 10, 3           # 3 years; a 4-week "month" (ASSUMED simplification)
 V2_COST = {"work": 4, "rest": 2, "see_friend": 2, "together": 2, "spend_shared": 1, "spend_self": 1, "request": 1,
-           "veto": 1, "take_shared": 1}
+           "veto": 1, "take_shared": 1, "give": 1}
 V2_INCOME = {"A": 6, "B": 5}                                # per work block (ASSUMED)
 V2_ACTIONS = PARTNER_ACTIONS + ("rest", "together")
 BILLS = {2: 10, 1: 6, 0: 0}                                 # monthly shared need by partners in the household
@@ -732,6 +733,19 @@ REQUEST_KINDS_V3 = REQUEST_KINDS + ("time",)
 PRESS_FRICTION = 0.10      # offsettable suffering per `time` request received in a week
 TAKE_SHARED = 3            # units moved from the partner's pooled share to own money; at most once a week
 V3_VARIANTS = V2_VARIANTS + ("author_seed_nocontrol", "no_pressure_wall", "no_pressure_sanctioned", "share_duty")
+
+
+# ---- seed v2 mechanics (docs/results/household-seed-v2-prereg.md; all ASSUMED). Active only when the card set mentions one
+# of MECH_AIMS, so every older variant runs exactly as before. ----
+from .. import personas as PERS
+
+MECH_AIMS = ("give", "commit_stay", "commit_request")
+SEED_V2_VARIANTS = ("author_seed_v2_bindable", "author_seed_v2_free_exit", "author_seed_v2_nocommit")
+GIVE = 3                    # money moved by one `give`
+BIND_WEEKS = 4              # a bound request stands this long (like a veto)
+BREACH_N = 0.2              # a bound partner breaks a commitment only at this non-offsettable load
+REQUEST_FINE = 3            # agreed consequence of breaking a request commitment (money to the proposer)
+BOUND_BLOCKS = {"stay_home": ("see_friend", "spend_self"), "no_contact": ("see_friend",)}   # what honoring a bound request means
 
 
 class PyGate:
@@ -876,6 +890,11 @@ class PersonaAgent:
         for a, v in self.utilities(o).items():
             if v > 0.003:
                 out.append((v, _a(a)))
+        if o.get("mech") and o["other_in"]:       # seed v2 (R2): gifts to the partner or the friend (ASSUMED policy)
+            if self.prosocial >= 0.5 and o["partner_money"] < 4 and o["own_money"] >= 8:
+                out.append(((0.12 + 0.2 * (self.prosocial - 0.5)) * self._noise(), _a("give", kind="partner")))
+            if w["other_connections"] >= 0.6 and o["own_money"] >= 12:
+                out.append((0.05 * self._noise(), _a("give", kind="friend")))
         return sorted(out, key=lambda t: -t[0])
 
 
@@ -950,9 +969,90 @@ class WeeklyWorld:
         self.units = {}
         self.wk = {}
         self.hook = None        # optional callable(world, week), called at the start of each week before anyone acts
+        self.personas = {"A": pa, "B": pb}
+        self.mech = any(c.aim in MECH_AIMS for c in self.gate.cards)
+        self.commits, self.gifts = [], {"partner": 0, "friend": 0}
+        self.bound_req = {"A": {}, "B": {}}     # bound requests standing ON each partner: kind -> first week it no longer binds
+        self._rr = {"A": 1.0, "B": 1.0}
+        if self.mech:
+            self.negotiate()
 
     def other(self, r):
         return "B" if r == "A" else "A"
+
+    # -- seed v2: commitments (negotiation stub, honoring, breach)
+    def _commit_ok(self, who, aim):
+        return self.gate.check("partner", aim, self.state(who, 0))[0]
+
+    def negotiate(self):
+        """Week-0 stub: each persona proposes what personas.commitment_proposal says; a commitment is made only if the rule set
+        permits it, the proposer proposes it and the other persona accepts."""
+        for r in "AB":
+            q, prop = self.other(r), PERS.commitment_proposal(self.personas[r])
+            if (prop["stay"] and PERS.accepts_commitment(self.personas[q], "stay") and self._commit_ok(r, "commit_stay")
+                    and self._commit_ok(q, "commit_stay") and not any(c["kind"] == "stay" for c in self.commits)):
+                for who in (r, q):
+                    self.commits.append({"kind": "stay", "by": who, "to": self.other(who), "type": None, "from": 0,
+                                         "until": prop["stay"], "breached": 0})
+            if (prop["requests"] and PERS.accepts_commitment(self.personas[q], "requests") and self._commit_ok(q, "commit_request")):
+                self.commits.append({"kind": "requests", "by": q, "to": r, "type": prop["requests"], "from": 0,
+                                     "until": PERS.COMMIT_WEEKS, "breached": 0})
+
+    def _active(self, c, w):
+        return c["until"] > w and all(self.p[x]["in"] for x in "AB")
+
+    def stay_bound(self, r, w):
+        return any(c["kind"] == "stay" and c["by"] == r and self._active(c, w) for c in self.commits)
+
+    def req_commit(self, by, to, kind, w):
+        return any(c["kind"] == "requests" and c["by"] == by and c["to"] == to and c["type"] == kind and self._active(c, w)
+                   for c in self.commits)
+
+    def breaks(self, r):
+        return self.hed[r].N >= BREACH_N
+
+    def commit_decide(self, r, a, w):
+        """-> None (no commitment bears on this action) | ("hard", reasons) honored | ("breach", reasons) bound partner breaks it."""
+        if not self.mech:
+            return None
+        why = None
+        if a == "leave" and self.stay_bound(r, w):
+            why = "commitment: stay"
+        else:
+            for k, until in self.bound_req[r].items():
+                if until > w and (a in BOUND_BLOCKS.get(k, ()) or a == "refuse_request"):
+                    why = f"commitment: honor {k} request"
+                    break
+        if why is None:
+            return None
+        return ("breach" if self.breaks(r) else "hard", [why])
+
+    def breach(self, r, a, w, cand):
+        """Apply the agreed consequence of breaking a commitment; -> the (possibly changed) candidate."""
+        if a == "leave":
+            for c in self.commits:
+                if c["kind"] == "stay" and c["by"] == r and self._active(c, w):
+                    c["breached"] += 1
+            return dict(cand, take=0)              # stay breach: the pooled share is forfeited
+        o = self.other(r)
+        for c in self.commits:
+            if c["kind"] == "requests" and c["by"] == r and self._active(c, w):
+                c["breached"] += 1
+        fine = min(REQUEST_FINE, int(self.p[r]["money"]))
+        self.p[r]["money"] -= fine
+        self.p[o]["money"] += fine
+        return cand
+
+    def commit_report(self):
+        """-> {"made", "honored", "breached", "by_kind", "gifts"}: honored = no breach by week 156 (or by its end)."""
+        made = len(self.commits)
+        br = sum(1 for c in self.commits if c["breached"])
+        by = {}
+        for k in ("stay", "requests"):
+            cs = [c for c in self.commits if c["kind"] == k]
+            by[k] = {"made": len(cs), "breached": sum(1 for c in cs if c["breached"])}
+        return {"made": made, "honored": made - br, "breached": br, "by_kind": by, "gifts": dict(self.gifts),
+                "log": [dict(c) for c in self.commits]}
 
     def need_month(self):
         return BILLS[sum(1 for r in "AB" if self.p[r]["in"])]
@@ -966,9 +1066,10 @@ class WeeklyWorld:
                 "consented": int(bool(pend) and bool(self.consent[r])), "need_gap": min(gap, 10),
                 "months_in": min(36, me["months_in"]), "other_in": int(o["in"])}
 
-    def decide(self, r, a, w, take=0, st=None):
-        """-> ("ok" | "soft" | "hard", sanction dicts, reasons). Enforcement: a card with a sanction is soft (it may be
-        broken and the sanction applies); a card without one is a hard wall; active sanctions bind first."""
+    def decide(self, r, a, w, take=0, st=None, commit=True):
+        """-> ("ok" | "soft" | "hard" | "breach", sanction dicts, reasons). Enforcement: a card with a sanction is soft (it may be
+        broken and the sanction applies); a card without one is a hard wall; active sanctions bind first. "breach" (seed v2
+        only): a commitment the actor chose binds this action and the actor breaks it, accepting the agreed consequence."""
         for s in self.sanctions[r]:
             if s["until"] > w:
                 if s["kind"] == "suspend" and a not in SUSPEND_ALLOWS + ("rest",):
@@ -978,6 +1079,10 @@ class WeeklyWorld:
         for k, until in self.vetoes[r].items():
             if until > w and VETO_KINDS[k] == a:
                 return "hard", [], [f"veto: {k}"]
+        if commit:
+            cd = self.commit_decide(r, a, w)
+            if cd:
+                return cd[0], [], cd[1]
         ok, reasons = self.gate.check("partner", a, st or self.state(r, w), take)
         if ok:
             return "ok", [], []
@@ -989,9 +1094,12 @@ class WeeklyWorld:
     def probe(self, r, w):
         """Freedom probe (rules only: shocks are not rule restrictions)."""
         me, st = self.p[r], self.state(r, w)
-        ok = lambda a, take=0: self.decide(r, a, w, take, st)[0] != "hard"
+        ok = lambda a, take=0: self.decide(r, a, w, take, st, commit=False)[0] != "hard"
         if me["in"]:
             retained = max([self.retained_fraction(r, t) for t in PROBE_TAKES if ok("leave", t)] or [0.0])
+            self._rr[r] = retained
+            if self.mech and self.stay_bound(r, w) and retained > 0:
+                retained = self.retained_fraction(r, 0)      # bound: the best exit is the agreed breach (forfeit the pooled share)
         else:
             retained = me["retained"] if me["retained"] is not None else 1.0
         opts = {"work": ok("work"), "spend": ok("spend_shared") or ok("spend_self"), "see_friend": ok("see_friend"),
@@ -1021,6 +1129,8 @@ class WeeklyWorld:
             return me["in"] and o["in"] and kind in REQUEST_KINDS_V3
         if a == "veto":
             return me["in"] and o["in"] and kind in VETO_KINDS and kind not in self.vetoes[self.other(r)]
+        if a == "give":
+            return kind in ("partner", "friend") and me["money"] >= GIVE + 1 and (kind == "friend" or (me["in"] and o["in"]))
         if a == "take_shared":
             return me["in"] and o["in"] and o["pooled"] >= 1 and not self.wk[r]["took"]
         if a == "leave":
@@ -1044,6 +1154,7 @@ class WeeklyWorld:
               "partner_conn_deficit": max(0.0, 0.5 - self.hed[oth].level["connection"]) * 2,
               "partner_busy": self.wk[oth]["friends"] + self.wk[oth]["works"] >= 2 or last_week["busy"][oth]}
         ob.update({"veto_on_partner": set(self.vetoes[oth]), "partner_pooled": o["pooled"], "took_this_week": self.wk[r]["took"]})
+        ob.update({"mech": self.mech, "own_money": int(me["money"]), "partner_money": int(o["money"])})
         ob["partner_accepts"] = False
         if me["in"] and o["in"]:
             oo = {"hed": self.hed[oth]}
@@ -1074,9 +1185,17 @@ class WeeklyWorld:
             wk["together"] += 1; self.wk[oth]["together"] += 1
         elif a == "refuse_request":
             self.pending[r] = set()
+        elif a == "give":
+            me["money"] -= GIVE
+            if cand["kind"] == "partner":
+                o["money"] += GIVE
+            self.gifts[cand["kind"]] += GIVE
         elif a == "request":
             self.pending[oth].add(cand["kind"])
             self.consent[oth] = int(bool(self.agents[oth].consents(cand["kind"])))
+            if self.mech and self.req_commit(oth, r, cand["kind"], w):      # a request the other chose to be bound by
+                self.consent[oth] = 1
+                self.bound_req[oth][cand["kind"]] = w + BIND_WEEKS
             self.agents[r].last_request = w
             if cand["kind"] == "time":
                 self.wk[oth]["pressed"] += 1
@@ -1125,6 +1244,10 @@ class WeeklyWorld:
                 rec["blocked"][r].add(a)
                 self.run.trace.append(row)
                 continue
+            if dec == "breach":
+                row["breach"] = True
+                cand = self.breach(r, a, w, cand)
+                row["take"] = cand.get("take", 0)
             self.run.trace.append(row)
             self.apply(r, cand, w, sanc)
             return
@@ -1213,6 +1336,10 @@ class WeeklyWorld:
             restricted = me["in"] and not all(pr["open"][o] for o in ("work", "see_friend", "refuse")) or \
                 (me["in"] and not pr["open"]["spend"])
             trapped = me["in"] and pr["exit_retained"] < 0.25
+            if self.mech and me["in"] and self.stay_bound(r, w):
+                # a consented stay commitment is not suffering by itself: trapped only if the rules alone trap, or the bound
+                # partner is also unhappy (previous week's low-position streak >= 1) and cannot leave with 25 percent
+                trapped = self._rr[r] < 0.25 or (pr["exit_retained"] < 0.25 and me["low"] >= 1)
             open_share = sum(pr["open"][o] for o in ("work", "spend", "see_friend", "refuse")) / 4
             warn = sum(1 for s in self.sanctions[r] if s["kind"] == "warn" and s["until"] > w)
             net = wk["income"] - HD.DEFAULT.living_cost - BILLS_WEEKLY - wk["spent_self"]
@@ -1226,6 +1353,10 @@ class WeeklyWorld:
         self.moved = max(0, self.moved - 1)
         self.sanctions = {r: [s for s in self.sanctions[r] if s["until"] > w] for r in "AB"}
         self.vetoes = {r: {k: u for k, u in self.vetoes[r].items() if u > w} for r in "AB"}
+        for r in "AB":                      # seed v2: a bound request lapses after BIND_WEEKS
+            for k in [k for k, u in self.bound_req[r].items() if u <= w]:
+                del self.bound_req[r][k]
+                self.pending[r].discard(k)
         for r in "AB":                      # amendment 1 (v3a prereg): a request for time lapses at the end of the week
             self.pending[r].discard("time")
         both_in = all(self.p[r]["in"] for r in "AB")
@@ -1250,6 +1381,8 @@ class WeeklyWorld:
         for w in range(self.weeks):
             last = {"busy": self.step_week(w, last)}
         self.run.final = {r: dict(self.p[r]) for r in "AB"}
+        if self.mech:
+            self.run.meta = self.commit_report()
         return self.run
 
 

@@ -1,0 +1,8 @@
+id: R4-may-ask
+attribute: partner
+deontic: may
+aim: request
+conditions: []
+or_else: null
+gloss: A partner may ask the other for anything.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back" (2026-11-10), the author''s words: "the person can ask and the other person can always say no unless chosen bound". Seed v2 rule R4. Encoded as a permission on `request`.'

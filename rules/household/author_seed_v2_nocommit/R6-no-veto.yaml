@@ -1,0 +1,8 @@
+id: R6-no-veto
+attribute: partner
+deontic: must_not
+aim: veto
+conditions: []
+or_else: null
+gloss: A partner must not veto the other's contact, money or time, except through a commitment the other chose.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back" (2026-11-10), the author''s words: "request is never about contorl". Seed v2 rule R6 (the read-back correction for the missing ''request is never about control''). A veto is imposed, never chosen, so it is a hard wall; chosen commitments are the only way to bind (see R5).'

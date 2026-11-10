@@ -1,0 +1,8 @@
+id: R5-may-refuse
+attribute: partner
+deontic: may
+aim: refuse_request
+conditions: []
+or_else: null
+gloss: A partner may always refuse a request, unless they earlier chose to bind themselves to it; then they must honor it or accept the consequence they agreed to.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back" (2026-11-10), the author''s words: "the person can ask and the other person can always say no unless chosen bound". Seed v2 rule R5. The permission is on `refuse_request`; the ''unless chosen bound'' clause is carried by the commitment mechanics of the world (a request commitment forces consent and blocks refusal; breach costs the agreed fine).'

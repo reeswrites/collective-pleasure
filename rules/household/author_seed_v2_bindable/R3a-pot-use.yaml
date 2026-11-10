@@ -1,0 +1,8 @@
+id: R3a-pot-use
+attribute: partner
+deontic: may
+aim: spend_shared
+conditions: []
+or_else: null
+gloss: Anything in the shared pot belongs to both; either may use it for shared needs; neither may block the other's use.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back" (2026-11-10), the author''s words: "the ideal is that yes everyhting hsared always is the shared pot part". Seed v2 rule R3, first part: permission to use the pot for shared needs.'

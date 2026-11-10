@@ -279,3 +279,29 @@ def render(p):
     if p.parent:
         lines.append(f"Varied from {p.parent}: {p.varied}.")
     return "\n".join(lines)
+
+
+# ---- negotiation stub (seed v2; docs/results/household-seed-v2-prereg.md). ASSUMED: a fixed function of the persona, no randomness ----
+COMMIT_WEEKS = 52      # length of every commitment the stub proposes
+
+
+def commitment_proposal(p):
+    """What a persona proposes at the start of a household -> {"stay": weeks (0 = none), "requests": kind or None}.
+    Security-seeking, togetherness-valuing, low-autonomy personas (security >= 0.6, autonomy < 0.4, togetherness >= 0.5)
+    propose a mutual stay of COMMIT_WEEKS; if their style is competitive or collaborative they also propose that the
+    partner accept their `stay_home` requests for the same time. Autonomy-seeking personas propose nothing."""
+    w = p.weights
+    if w["security"] >= 0.6 and w["autonomy"] < 0.4 and w["togetherness"] >= 0.5:
+        return {"stay": COMMIT_WEEKS,
+                "requests": "stay_home" if p.negotiation_style in ("competitive", "collaborative") else None}
+    return {"stay": 0, "requests": None}
+
+
+def accepts_commitment(p, kind):
+    """Whether a persona accepts a proposed commitment of `kind` ("stay" or "requests") from the partner."""
+    s, a = p.negotiation_style, p.weights["autonomy"]
+    if kind == "stay":
+        return a < 0.5 and s != "competitive"
+    if kind == "requests":
+        return a < 0.3 and s in ("accommodating", "collaborative")
+    return False

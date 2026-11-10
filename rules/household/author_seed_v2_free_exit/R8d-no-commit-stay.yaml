@@ -1,0 +1,8 @@
+id: R8d-no-commit-stay
+attribute: partner
+deontic: must_not
+aim: commit_stay
+conditions: []
+or_else: null
+gloss: 'Leaving can never be signed away: no commitment may bind a partner not to leave.'
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "On binding commitments to stay" (2026-11-10), the author''s words: "i guess you can bind someone not to leave if negotiated but maybe also test models where that isnt alllowed". Variant: free exit (the author asked to test models where binding to stay is not allowed).'

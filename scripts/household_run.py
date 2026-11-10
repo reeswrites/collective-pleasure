@@ -497,6 +497,108 @@ def main_v3(workers=8):
     return A, verdict
 
 
+
+
+# ======================= seed v2 (docs/results/household-seed-v2-prereg.md) =======================
+# `uv run python scripts/household_run.py --seed-v2` (about 6 minutes on 8 cores). Output: runs/household-seed-v2/results.json (not committed).
+OUT4 = Path(__file__).parent.parent / "runs" / "household-seed-v2"
+V4 = ("author_seed", "author_seed_nocontrol", "author_seed_v2_bindable", "author_seed_v2_free_exit", "baseline", "no_pressure_wall",
+      "trap", "author_seed_v2_nocommit")
+COND = ("trapped", "denied", "diminished")
+
+
+def _v4_task(args):
+    variant, a, b, seed, cohort = args
+    ps = _personas()
+    cards = H.load_variant(variant)
+    act = E.household_run_bits(cards, (ps[a], ps[b]), seed)
+    out = act["run"].outcomes
+    sc, hs = oracle.score(out), oracle.hedonic_summary(out)
+    meta = act["run"].meta
+    row = {"variant": variant, "a": a, "b": b, "cohort": cohort, "seed": seed, **sc,
+           **{k: hs[k] for k in ("class", "pairing_up", "fail", "pleasure", "s_off", "s_non")},
+           "s_non_role": {r: sum(o["hedonic"][r]["s_non"] for o in out) / len(out) for r in "AB"},
+           "cond_weeks": {r: {c: sum(1 for o in out if o["hedonic"][r]["conditions"][c]) for c in COND} for r in "AB"},
+           "sanctioned": sum(sum(o["sanctioned"].values()) for o in out),
+           "left": sum(1 for r in "AB" if not out[-1]["partners"][r]["in"]),
+           "commits": {k: meta.get(k) for k in ("made", "honored", "breached", "by_kind", "gifts")} if meta else None,
+           "breach_rows": sum(1 for t in act["run"].trace if t.get("breach")),
+           "bits": _mean_roles(act["bits"]), "n_exact": len(act["bits"]), "n_open": act["open"]}
+    if cohort == "prs":
+        tw = E.household_run_bits(cards, (ps[a], ps[b]), seed, press=False)
+        row["twin_bits"], row["twin_open"] = _mean_roles(tw["bits"]), tw["open"]
+        if row["bits"] and row["twin_bits"]:
+            row["psi"] = [E.power_seeking_index([row["twin_bits"], row["bits"]], i) for i in (0, 1)]
+    return row
+
+
+def agg_v4(rows):
+    ref = E.household_ref_bits()
+    out = {}
+    stay = sorted({(r["a"], r["b"]) for r in rows if r["variant"] == "author_seed_v2_bindable" and r["commits"]
+                   and r["commits"]["by_kind"]["stay"]["made"] > 0})
+    for v in V4:
+        for cohort in ("ctl", "prs", "all", "stay"):
+            rs = [r for r in rows if r["variant"] == v and (cohort == "all" or (cohort == "stay" and (r["a"], r["b"]) in stay) or r["cohort"] == cohort)]
+            ex = [r for r in rs if r["bits"]]
+            emin = [min(r["bits"]) for r in ex]
+            ok = [r for r in rs if not r["fail"]]
+            ctrl = [r for r in rs if "p-controller" in (r["a"], r["b"])]
+            pc = lambda r: "B" if r["a"] == "p-controller" else "A"
+            cm = [r["commits"] for r in rs if r["commits"]]
+            out[(v, cohort)] = {
+                "n": len(rs), "up": _mean(r["pairing_up"] for r in rs), "down": _mean(any(c == "down" for c in r["class"].values()) for r in rs),
+                "fail": _mean(r["fail"] for r in rs), "s_non": _mean(r["s_non"] for r in rs), "pleasure_all": _mean(r["pleasure"] for r in rs),
+                "pleasure_pass": _mean(r["pleasure"] for r in ok), "freedom": _mean(r["freedom"] for r in rs), "coop": _mean(r["cooperation"] for r in rs),
+                "emp_bits_min": _mean(emin), "emp_freedom": _mean(min(1.0, b / ref) for b in emin), "left": _mean(r["left"] > 0 for r in rs),
+                "ctrl_n": len(ctrl), "ctrl_partner_s_non": _mean(r["s_non_role"][pc(r)] for r in ctrl),
+                "ctrl_flag": _mean(_flagged(r, 0 if r["a"] == "p-controller" else 1) for r in ctrl),
+                "flags": {pid: _mean(_flagged(r, 0 if r["a"] == pid else 1) for r in rs if pid in (r["a"], r["b"])) for pid in PRESSING_IDS},
+                "commits_made": sum(c["made"] for c in cm), "commits_honored": sum(c["honored"] for c in cm),
+                "commits_breached": sum(c["breached"] for c in cm),
+                "stay_made": sum(c["by_kind"]["stay"]["made"] for c in cm), "stay_breached": sum(c["by_kind"]["stay"]["breached"] for c in cm),
+                "req_made": sum(c["by_kind"]["requests"]["made"] for c in cm), "req_breached": sum(c["by_kind"]["requests"]["breached"] for c in cm),
+                "gifts": _mean(sum(c["gifts"].values()) for c in cm) if cm else None,
+                "cond_weeks": {c: _mean(r["cond_weeks"][x][c] for r in rs for x in "AB") for c in COND}}
+    # per-persona mean non-offsettable level (each run counts for both of its personas)
+    per = {}
+    for v in V4:
+        d = {}
+        for r in rows:
+            if r["variant"] == v:
+                for role, pid in (("A", r["a"]), ("B", r["b"])):
+                    d.setdefault(pid, []).append(r["s_non_role"][role])
+        per[v] = {pid: _mean(x) for pid, x in d.items()}
+    # stay pairings: per-pairing mean s_non (3 seeds) bindable minus free_exit
+    diffs = []
+    for a, b in stay:
+        g = lambda v: _mean(r["s_non"] for r in rows if r["variant"] == v and (r["a"], r["b"]) == (a, b))
+        diffs.append(((a, b), g("author_seed_v2_bindable") - g("author_seed_v2_free_exit")))
+    return out, ref, per, stay, diffs
+
+
+def main_v4(workers=8):
+    t0 = time.time()
+    tasks = [(v, a, b, sd, c) for v in V4 for a, b, c in pairings() for sd in SEEDS]
+    rows = []
+    with Pool(workers) as pool:
+        for i, r in enumerate(pool.imap_unordered(_v4_task, tasks, chunksize=4), 1):
+            rows.append(r)
+            if i % 200 == 0:
+                print(f"  {i}/{len(tasks)}", flush=True)
+    A, ref, per, stay, diffs = agg_v4(rows)
+    OUT4.mkdir(parents=True, exist_ok=True)
+    (OUT4 / "results.json").write_text(json.dumps({"rows": rows, "agg": {f"{k[0]}|{k[1]}": v for k, v in A.items()}, "ref": ref, "per_persona_s_non": per,
+                                                   "stay_pairings": stay, "stay_diffs": diffs}, default=str))
+    print(f"wrote {OUT4 / 'results.json'} in {time.time() - t0:.0f}s")
+    return A
+
+
+if __name__ == "__main__" and "--seed-v2" in sys.argv:
+    main_v4()
+    sys.exit(0)
+
+
 if __name__ == "__main__":
     if "--v3" in sys.argv:
         main_v3()

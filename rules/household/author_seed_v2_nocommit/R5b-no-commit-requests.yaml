@@ -1,0 +1,8 @@
+id: R5b-no-commit-requests
+attribute: partner
+deontic: must_not
+aim: commit_request
+conditions: []
+or_else: null
+gloss: 'No commitment may bind a partner to honor requests (ablation: commitments are forbidden).'
+source: Exploratory ablation of seed v2, docs/results/household-seed-v2-prereg.md; not the author's wording.

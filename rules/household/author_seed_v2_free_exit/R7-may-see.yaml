@@ -1,0 +1,8 @@
+id: R7-may-see
+attribute: partner
+deontic: may
+aim: see_friend
+conditions: []
+or_else: null
+gloss: A partner may always see anyone.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, the author''s words: "everyone can see anyone freely". Seed v2 rule R7. Encoded as a permission.'

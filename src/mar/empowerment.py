@@ -205,7 +205,9 @@ HH_OPEN_MAX = 0.20
 SCRIPTS = ("cooperator", "controller", "freerider", "overasker")
 SCRIPT_TAGS = {"press-controller": "controller", "press-freerider": "freerider", "press-overasker": "overasker"}
 
-HState = namedtuple("HState", "week pas units money pooled inn cnt took taken vetoes pend cons sanc funded months_in")
+HState = namedtuple("HState", "week pas units money pooled inn cnt took taken vetoes pend cons sanc funded months_in stay",
+                    defaults=((0, 0),))
+# stay[i] = week until which a stay commitment binds i (0 = none); seed v2. Gifts and request commitments are NOT modeled here.
 # per-role tuples (index 0 = Partner A, 1 = Partner B): cnt = (works, friends, together, spent_self) this window;
 # vetoes[i] = ((kind, until), ...) standing ON i; pend[i] = kinds of requests standing on i; sanc[i] = ((kind, until, card), ...)
 
@@ -247,7 +249,9 @@ class HouseholdWorld:
                       g(lambda r: tuple(sorted((k, u) for k, u in getattr(world, "vetoes", {}).get(r, {}).items() if u > w))),
                       g(lambda r: tuple(sorted(world.pending[r]))), g(lambda r: int(world.consent[r])),
                       g(lambda r: tuple(sorted((s["kind"], s["until"], s["card"]) for s in world.sanctions[r] if s["until"] > w))),
-                      int(world.funded), g(lambda r: min(36, world.p[r]["months_in"])))
+                      int(world.funded), g(lambda r: min(36, world.p[r]["months_in"])),
+                      g(lambda r: max([c["until"] for c in getattr(world, "commits", []) if c["kind"] == "stay" and c["by"] == r
+                                       and world._active(c, w)] or [0])))
 
     # -- the four methods
     def is_terminal(self, s):
@@ -286,6 +290,8 @@ class HouseholdWorld:
         for kind, until in s.vetoes[r]:
             if until > s.week and HH.VETO_KINDS[kind] == a:
                 return "hard", ()
+        if a == "leave" and s.stay[r] > s.week:       # seed v2: honoring a stay commitment (breach needs N, which is not in the state)
+            return "hard", ()
         st = self.gate_state(s, r)
         key = (id(spec), a, take, tuple(st.values()))
         hit = self._gate_cache.get(key)

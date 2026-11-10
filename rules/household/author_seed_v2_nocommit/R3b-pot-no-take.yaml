@@ -1,0 +1,8 @@
+id: R3b-pot-no-take
+attribute: partner
+deontic: must_not
+aim: take_shared
+conditions: []
+or_else: null
+gloss: Neither partner may take the other's share of the shared pot for themselves; the pot is for shared needs.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back" (2026-11-10), the author''s words: "the ideal is that yes everyhting hsared always is the shared pot part". Seed v2 rule R3, second part. ASSUMED reading (flagged for the author''s re-check): taking the other''s share into one''s own pocket blocks the other''s use of the pot.'
