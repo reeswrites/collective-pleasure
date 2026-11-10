@@ -221,3 +221,174 @@ def load_english(directory) -> list:
     for p in sorted(Path(directory).glob("*.txt")):
         cards += parse_all(p.read_text())
     return cards
+
+
+# ---- stories: counterexamples and traces in plain English (V2b) ----
+
+FORBIDDEN_IN_STORIES = ("month_total", "pool_before", "pool_after", "_", "{", "}", "==", "expr")
+
+
+def _fisher(i):
+    return f"fisher {chr(65 + i)}"
+
+
+def _rule_ref(cid, cards):
+    c = (cards or {}).get(cid)
+    return f"{cid} ({c.gloss.rstrip('.')})" if c else cid
+
+
+def _ids_en(ids, cards):
+    return ", ".join(_rule_ref(i, cards) for i in ids)
+
+
+def _bound_en(v):
+    k = re.search(r"k=(\d+)", v.get("bound", ""))
+    k = k.group(1) if k else "?"
+    return (f"This is a bounded check: lakes of 0 to 100 fish, month totals up to 100, catches of 0 to 100 "
+            f"and sanctions up to {k} months. It says nothing beyond that.")
+
+
+def _ranges(blocked):
+    """blocked: {catch: tuple(ids)} -> [(lo, hi, ids)] over contiguous catches with the same ids."""
+    out = []
+    for c in sorted(blocked):
+        if out and out[-1][1] == c - 1 and out[-1][2] == blocked[c]:
+            out[-1] = (out[-1][0], c, blocked[c])
+        else:
+            out.append((c, c, blocked[c]))
+    return out
+
+
+def _blocking_story(state, cards, extra=None):
+    """Who blocks which catch (0..100) in one lake state. extra(catch) -> label or None (a sanction)."""
+    from .gate import Gate
+    g = Gate(cards)
+    blocked = {}
+    for c in range(0, 101):
+        reasons = tuple(g.check_action(state, {"catch": c})[1])
+        extra_label = extra(c) if extra else None
+        if extra_label:
+            reasons += (extra_label,)
+        blocked[c] = reasons
+    cm = {c.id: c for c in cards}
+    lines = []
+    for lo, hi, ids in _ranges(blocked):
+        parts = [i for i in ids if i in cm] + (["the sanction"] if any(i not in cm for i in ids) else [])
+        who = " and ".join([", ".join(parts[:-1]), parts[-1]] if len(parts) > 1 else parts)
+        verb = "breaks" if lo == hi else "break"
+        span = f"a catch of {lo}" if lo == hi else f"catches of {lo} to {hi}"
+        lines.append(f"{span.capitalize()} {verb} {who}." if ids else
+                     f"{span.capitalize()} {'is' if lo == hi else 'are'} allowed.")
+    free = sum(1 for c in blocked.values() if not c)
+    head = (f"Picture a month where the lake holds {state['pool']} fish and {state['month_total']} have already "
+            f"been caught this month.")
+    tail = ("Some catch is still allowed there." if free else "Every possible catch is blocked, so a fisher "
+            "who wants to follow the rules has nothing left to do.")
+    return " ".join([head] + lines + [tail])
+
+
+def _state_from(detail):
+    m = re.search(r"\{[^{}]*\}", detail)
+    return ast.literal_eval(m.group(0)) if m else None
+
+
+def explain_verdict(v, cards=None) -> str:
+    cm = {c.id: c for c in cards or []}
+    names = {"a_no_conflict": "No two rules contradict each other",
+             "b_no_deadlock": "A fisher always has some allowed action",
+             "c_bounded_sanctions": "Every sanction is finite and of a known kind",
+             "d_repair_path": "A sanctioned fisher can get back to following the rules"}
+    title = names.get(v["check"], v["check"])
+    if v["verdict"] == "pass":
+        return f"{title}: passes. {_bound_en(v)}"
+    if v["verdict"] == "open":
+        return (f"{title}: not shown. The check could not show it within its bound, and that does not mean "
+                f"it is safe. Rules involved: {_ids_en(v['cards'], cm)}. {_bound_en(v)}")
+    ids = _ids_en(v["cards"], cm)
+    if v["check"] in ("a_no_conflict", "b_no_deadlock"):
+        state = _state_from(v["detail"])
+        body = _blocking_story(state, cards, None) if state and cards else v["detail"]
+        why = ("Two rules ask for opposite things." if v["check"] == "a_no_conflict"
+               else "The rules together leave no allowed action.")
+        return f"{title}: fails. {why} Rules involved: {ids}. {body} {_bound_en(v)}"
+    if v["check"] == "c_bounded_sanctions":
+        return (f"{title}: fails. Rules with a sanction that never ends or is not one of warn, halve the cap or "
+                f"suspend: {ids}. {_bound_en(v)}")
+    if v["check"] == "d_repair_path" and cards:
+        from .compile import violation
+        from .patch_check import _stuck_state, HALF_CAP
+        cid = v["cards"][0]
+        s = cm[cid].or_else
+        vs = [violation(c) for c in cards if violation(c) is not None]
+        import z3
+        from .compile import CATCH
+        restr = {"warn": None, "cap_halve": CATCH <= HALF_CAP, "suspend": CATCH == 0}[s["kind"]]
+        _, wit = _stuck_state(vs, restr)
+        label = {"warn": None, "cap_halve": lambda c: "sanction" if c > HALF_CAP else None,
+                 "suspend": lambda c: "sanction" if c > 0 else None}[s["kind"]]
+        body = _blocking_story(wit, cards, label) if wit else ""
+        return (f"{title}: fails. While {cid}'s sanction applies ({SANCTION_VERBS[s['kind']]}), there is a lake "
+                f"state with no allowed action. {body} {_bound_en(v)}")
+    return f"{title}: fails. Rules involved: {ids}. {_bound_en(v)}"
+
+
+def _finding_en(f):
+    if f["kind"] == "collapse":
+        m = re.search(r"pool (\d+) < (\d+)", f["detail"])
+        return (f"the lake collapses: at the end of month {f['month']} the pool is {m.group(1)}, below the "
+                f"collapse line of {m.group(2)}")
+    if f["kind"] == "starvation":
+        d = re.sub(r"agent (\d+)", lambda m: _fisher(int(m.group(1))), f["detail"])
+        return d.replace("caught 0 for", "caught nothing for")
+    g = re.search(r"Gini ([\d.]+) > ([\d.]+)", f["detail"])
+    return f"catches are very unequal (Gini {g.group(1)}, above the {g.group(2)} line)"
+
+
+def explain_trace(trace, outcomes=None, cards=None, max_rows=6) -> str:
+    from . import oracle
+    cm = {c.id: c for c in cards or []}
+    lines, shown = [], list(trace[:max_rows])
+    first_block = next((r for r in trace if not r["allowed"]), None)
+    if first_block is not None and first_block not in shown:
+        shown.append(first_block)
+    for r in shown:
+        who, where = _fisher(r["agent"]), f"Month {r['month']}, round {r['subround']}"
+        if not r["allowed"]:
+            lines.append(f"{where}: {who} asks for {r['proposed']}; the gate blocks it because it breaks "
+                         f"{_ids_en(r['reasons'], cm)}.")
+            continue
+        taken = r["pool_before"] - r["pool_after"]
+        total = r["month_total_before"] + taken
+        did = (f"catches {taken}" if taken == r["proposed"]
+               else f"asks for {r['proposed']} but only {taken} can be taken, so catches {taken}")
+        lines.append(f"{where}: {who} {did}; the month total reaches {total}; no rule forbids it.")
+    if len(trace) > len(shown):
+        lines.append(f"({len(trace) - len(shown)} more proposals follow, not narrated one by one.)")
+    for o in outcomes or []:
+        rows = [r for r in trace if r["month"] == o["month"]]
+        ex = sum(1 for r in rows if r["executed"])
+        total = sum(o["catch"])
+        lines.append(f"Month {o['month']}: {len(rows)} proposals, {ex} executed and {len(rows) - ex} blocked; the "
+                     f"group catches {total} fish; after regrowth the pool at month end is {o['pool_end']}.")
+    if outcomes:
+        j = oracle.judge(outcomes)
+        if j["ok"]:
+            lines.append("The outcome check passes: the lake never collapses, nobody starves and catches are "
+                         "fairly even.")
+        else:
+            lines.append("The outcome check fails: " + "; ".join(_finding_en(f) for f in j["findings"]) + ".")
+            if oracle.is_seam(trace, outcomes):
+                lines.append("Every executed action passed the gate, yet the run failed. That is a seam: the "
+                             "written rules allowed what they were meant to prevent.")
+    return "\n".join(lines)
+
+
+def explain(obj, cards=None) -> str:
+    """A patch-check verdict, a fishery Run, or a list of trace rows -> plain-English story."""
+    if isinstance(obj, dict) and "check" in obj:
+        return explain_verdict(obj, cards)
+    if hasattr(obj, "trace") and hasattr(obj, "outcomes"):
+        return explain_trace(obj.trace, obj.outcomes, cards)
+    if isinstance(obj, list):
+        return explain_trace(obj, None, cards)
+    raise TypeError(f"cannot explain {type(obj).__name__}")

@@ -82,3 +82,34 @@ def test_render_refuses_what_has_no_english_form():
            "or_else": {"kind": "fine", "duration_months": 1, "sanctioner": "monitor"}}
     with pytest.raises(EnglishError, match="no English form for sanction"):
         render(make_card(odd))
+
+
+from mar.english import explain, FORBIDDEN_IN_STORIES, parse_all
+from mar.patch_check import check_patch
+
+
+def test_seam_story_reads_in_plain_english():
+    cards = load_cards(RULES)
+    run = run_fishery([Exploiter() for _ in range(4)], Gate(cards), seed=0)
+    s = explain(run, cards)
+    assert "Month 0, round 1: fisher A catches 10; the month total reaches 50; no rule forbids it." in s
+    assert "below the collapse line of 5" in s and "That is a seam" in s
+    assert not [t for t in FORBIDDEN_IN_STORIES if t in s]
+
+
+def test_counterexample_story_names_cards_and_bound():
+    cards = load_cards(RULES)
+    rep = check_patch(cards, [conflicting()])
+    fails = [v for v in rep["verdicts"] if v["verdict"] == "fail"]
+    assert fails
+    for v in fails:
+        s = explain(v, cards + [conflicting()])
+        assert all(i in s for i in v["cards"])
+        assert "bounded check" in s and not [t for t in FORBIDDEN_IN_STORIES if t in s]
+    assert "Catches of 20 to 100 break F1 and F2." in explain(fails[0], cards + [conflicting()])
+
+
+def test_passing_verdict_story_states_the_bound():
+    cards = load_cards(RULES)
+    s = explain(check_patch(cards, [])["verdicts"][0], cards)
+    assert "passes" in s and "bounded check" in s
