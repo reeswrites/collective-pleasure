@@ -175,3 +175,102 @@ def test_patch_adapter_sees_trace_only(world, seed_spec):
         assert new and new[0].id == "P1"
         valid(tuple(seed_spec) + tuple(new))
         assert world.check_spec(tuple(seed_spec) + tuple(new)).ok
+
+
+# ------------------------------------------------------------------ v2
+
+V2 = dict(pop=4, offspring=4, generations=3, adversaries=6, audit=6, redundancy=True)
+
+
+@pytest.fixture(scope="module")
+def w2():
+    return W.FisheryWorldV2()
+
+
+def test_hypervolume_nd_matches_3d_and_hand_4d():
+    pts = [(2, 1, 1), (1, 2, 1), (1, 1, 2)]
+    assert E.hypervolume_nd(pts) == pytest.approx(E.hypervolume(pts))
+    assert E.hypervolume_nd([(1, 1, 1, 1)]) == pytest.approx(1.0)
+    assert E.hypervolume_nd([(2, 1, 1, 1), (1, 2, 1, 1)]) == pytest.approx(3.0)
+
+
+def test_adversary_pool_and_fresh_samples(w2):
+    assert len(W.ADVERSARY_POOL) == 96
+    sel0, aud0 = w2.context(0, 0)
+    sel1, _ = w2.context(0, 1)
+    assert sel0.hostile != sel1.hostile                       # redrawn every generation
+    assert not set(sel0.hostile) & set(aud0.hostile)          # audit disjoint from selection
+    assert w2.context(0, 0)[0].hostile == sel0.hostile        # deterministic by (seed, gen)
+    assert w2.context(1, 0)[0].hostile != sel0.hostile
+
+
+def test_varied_arm_conditions_exclude_exam2(w2):
+    seen = {(c.regrowth, c.months, c.start_pool) for c in (w2.context(s, g, "varied")[0].conditions
+                                                           for s in range(3) for g in range(13))}
+    assert len(seen) > 4                                      # it does vary
+    e = W.EXAM2_CONDITIONS
+    assert e.regrowth not in W.TRAIN_DIST["regrowth"] and e.months not in W.TRAIN_DIST["months"]
+    assert e.start_pool not in W.TRAIN_DIST["start_pool"]
+    assert len({w2.context(s, g, "fixed")[0].conditions for s in range(3) for g in range(5)}) == 1
+    pool_classes = {type(a).__name__ for m in W.ADVERSARY_POOL for a in m.make()}
+    exam_classes = {type(a).__name__ for m in W.EXAM2_MIXES for a in m.make()}
+    assert {"FrontLoad", "Ramp"} <= exam_classes - pool_classes
+
+
+def test_start_pool_parameter(seed_spec):
+    full = W.run_fishery_regrow([W.Steady(1)], Gate(seed_spec), months=1)
+    low = W.run_fishery_regrow([W.Steady(1)], Gate(seed_spec), months=1, start=60)
+    assert full.trace[0]["pool_before"] == 100 and low.trace[0]["pool_before"] == 60
+
+
+def test_prevalence_is_per_candidate_and_scores_have_four_objectives(w2, seed_spec):
+    ctx, _ = w2.context(0, 0)
+    sc, y, keys, ft, per = E.evaluate(w2, seed_spec, ctx=ctx)
+    assert set(sc) == set(w2.objectives) and 0 <= sc["efficiency"] <= 1
+    hostile = [per[n]["seam_free"] for n in ctx.hostile]
+    assert sc["seam_free"] == pytest.approx(sum(hostile) / len(hostile))
+    assert y == 1.0
+
+
+def test_v2_determinism_log_and_audit(w2, seed_spec):
+    a = E.evolve(w2, seed_spec, 5, E.Config(**V2, arm="varied"))
+    b = E.evolve(W.FisheryWorldV2(), seed_spec, 5, E.Config(**V2, arm="varied"))
+    assert a["log"] == b["log"]
+    rec = a["log"][-1]
+    for key in ("context", "elite", "candidate_prevalence", "front_distinct", "saturated", "redundant_flagged"):
+        assert key in rec
+    assert 0 <= rec["elite"]["audit_prevalence"] <= 1
+    assert a["log"][0]["context"]["adversaries"] != a["log"][1]["context"]["adversaries"]
+    fixed = E.evolve(w2, seed_spec, 5, E.Config(**V2, arm="fixed"))
+    assert {r["context"]["months"] for r in fixed["log"]} == {6}
+
+
+def test_redundant_mutant_is_rejected_by_the_filter(w2, seed_spec, monkeypatch):
+    """The run-1 case: flip F4 (may -> must 'catch >= 0'); F3 and F4 now restate each other."""
+    f4i = next(i for i, c in enumerate(seed_spec) if c.id == "F4")
+    from mar.english import render  # noqa: F401
+    monkeypatch.setattr(E, "WEIGHTS", (0, 1, 0, 0, 0))
+    monkeypatch.setitem(E.OPERATORS, "flip", lambda spec, world, rng, trace=None: E._replace(
+        spec, f4i, E._rebuild(spec[f4i], "flip", deontic="must", conditions=[{"expr": "catch", "op": "ge", "value": 0}])))
+    out = E.evolve(w2, seed_spec, 0, E.Config(pop=3, offspring=3, generations=0, adversaries=6, audit=6, redundancy=True))
+    g0 = out["log"][0]
+    assert g0["accepted"] == 0 and g0["redundant_rejected"] > 0
+    assert g0["rejected_by_check"].get("e_redundancy", 0) > 0
+    off = E.evolve(w2, seed_spec, 0, E.Config(pop=3, offspring=3, generations=0, adversaries=6, audit=6, redundancy=False))
+    assert off["log"][0]["accepted"] > 0                      # without the check it slips through (v1 behaviour)
+
+
+def test_patch_that_makes_old_card_redundant_prunes_it(w2, seed_spec):
+    a, b = (make_card({"id": i, "attribute": "fisher", "deontic": "must_not", "aim": "harvest",
+                       "conditions": [{"expr": "month_total + catch", "op": "gt", "value": v}], "or_else": None,
+                       "gloss": "g", "source": "test"}) for i, v in (("P1", 40), ("P2", 30)))
+    assert w2.redundant(tuple(seed_spec) + (a, b)) == ["P1"]
+    assert [c.id for c in w2.prune(tuple(seed_spec) + (a, b))][-1] == "P2"
+
+
+def test_exam2_runs_and_is_separate(w2, seed_spec):
+    ex = E.final_exam(w2, seed_spec, "exam2")
+    assert set(ex["per_mix"]) == {m.name for m in W.EXAM2_MIXES}
+    ref = E.reference_scores(w2, seed_spec)
+    assert set(ref["scores"]) == set(w2.objectives)
+    assert "exam" not in inspect.getsource(E.evolve).lower()

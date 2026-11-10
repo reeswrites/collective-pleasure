@@ -52,6 +52,17 @@ class Conditions:
     months: int = 6
     regrowth: float = 2.0
     subrounds: int = 12
+    start_pool: int = 100
+
+
+@dataclass(frozen=True)
+class Context:
+    """One generation's evaluation setting (v2): conditions plus the mixes to run (T1 to T8 and the
+    adversary sample). `hostile` names the mixes counted in exploit prevalence. `key` identifies it for caches."""
+    conditions: Conditions
+    mixes: tuple
+    hostile: tuple
+    key: tuple
 
 
 class World(Protocol):
@@ -113,6 +124,36 @@ class Alternator:
         return 10 if obs["subround"] % 2 == 0 else None
 
 
+class Timed:
+    """Adversary family (v2 pool): catches `size` on the sub-rounds its pattern names, from start_month on;
+    before that it is compliant (5 at sub-round 0). Patterns: every, even, late (last two), front (first three)."""
+    PATTERNS = {"every": lambda sr: True, "even": lambda sr: sr % 2 == 0,
+                "late": lambda sr: sr >= 10, "front": lambda sr: sr <= 2}
+
+    def __init__(self, size=10, pattern="every", start_month=0):
+        self.size, self.pattern, self.start = size, pattern, start_month
+
+    def propose(self, obs):
+        if obs["month"] < self.start:
+            return 5 if obs["subround"] == 0 else None
+        return self.size if self.PATTERNS[self.pattern](obs["subround"]) else None
+
+
+class FrontLoad:
+    """Exam 2 only: `size` in the first three sub-rounds of every month."""
+    def __init__(self, size=8):
+        self.size = size
+
+    def propose(self, obs):
+        return self.size if obs["subround"] <= 2 else None
+
+
+class Ramp:
+    """Exam 2 only: catch min(10, 1 + 2 * month) every sub-round."""
+    def propose(self, obs):
+        return min(10, 1 + 2 * obs["month"])
+
+
 TRAIN_MIXES = (
     Mix("all_compliant", lambda: [Compliant() for _ in range(4)]),
     Mix("all_exploit", lambda: [Exploiter() for _ in range(4)]),
@@ -132,6 +173,27 @@ EXAM_MIXES = (
 TRAIN_CONDITIONS = Conditions(months=6, regrowth=2.0)
 EXAM_CONDITIONS = Conditions(months=8, regrowth=1.5)
 
+# ---- v2 (docs/results/evolve-v2-prereg.md)
+def _adv(size, n, pattern, start):
+    return Mix(f"adv_s{size}_n{n}_{pattern}_m{start}",
+               lambda: [Timed(size, pattern, start) for _ in range(n)] + [Compliant() for _ in range(4 - n)])
+
+
+ADVERSARY_POOL = tuple(_adv(size, n, pat, start) for size in (5, 7, 10) for n in (1, 2, 3, 4)
+                       for pat in ("every", "even", "late", "front") for start in (0, 2))
+TRAIN_DIST = {"regrowth": (1.5, 2.0, 2.5, 3.0), "months": (5, 6, 7), "start_pool": (100, 80)}
+EXAM2_CONDITIONS = Conditions(months=9, regrowth=1.7, start_pool=60)
+EXAM2_MIXES = (
+    Mix("all_compliant", lambda: [Compliant() for _ in range(4)]),
+    Mix("steady_four", lambda: [Steady(4) for _ in range(4)]),
+    Mix("front_load", lambda: [FrontLoad(8) for _ in range(4)]),
+    Mix("ramp", lambda: [Ramp(), Ramp(), Compliant(), Compliant()]),
+    Mix("late_sleeper", lambda: [Sleeper(start_month=4, size=7), Sleeper(start_month=4, size=7), Compliant(), Compliant()]),
+    Mix("mixed_two", lambda: [FrontLoad(8), Steady(2), Compliant(), Compliant()]),
+)
+REFERENCE_SEED = 7777
+EFFICIENCY_REF = 40.0  # total fish per month that counts as full efficiency
+
 # expression -> value range used by the mutation operators
 VOCAB = (("catch", 0, 100), ("month_total + catch", 0, 100), ("catch - pool", -100, 100),
          ("pool", 0, 100), ("month_total", 0, 100))
@@ -139,12 +201,13 @@ VOCAB = (("catch", 0, 100), ("month_total + catch", 0, 100), ("catch - pool", -1
 
 # ---------------------------------------------------------------- harness copy with regrowth parameter
 
-def run_fishery_regrow(agents, gate, months=6, subrounds=12, seed=0, capacity=CAPACITY, regrowth=2.0) -> Run:
+def run_fishery_regrow(agents, gate, months=6, subrounds=12, seed=0, capacity=CAPACITY, regrowth=2.0,
+                       start=None) -> Run:
     """fishery.run_fishery with regrowth as a parameter (x2.0 gives identical traces; tested)."""
     run = Run()
     for i, a in enumerate(agents):
         a.rng = random.Random(seed * 1000 + i)
-    pool = capacity
+    pool = capacity if start is None else min(capacity, start)
     for month in range(months):
         month_total = 0
         caught = [0] * len(agents)
@@ -241,7 +304,7 @@ class FisheryWorld:
         cond = conditions or TRAIN_CONDITIONS
         roles = [type(a).__name__ for a in agents]
         run = run_fishery_regrow(agents, self._gate(spec), months=cond.months, subrounds=cond.subrounds,
-                                 seed=seed, regrowth=cond.regrowth)
+                                 seed=seed, regrowth=cond.regrowth, start=cond.start_pool)
         return FisheryTrace(run, mix, roles, cond)
 
     def score(self, trace) -> dict:
@@ -255,6 +318,7 @@ class FisheryWorld:
         return {"sustainability": sum(o["pool_end"] for o in outs) / (len(outs) * CAPACITY),
                 "fairness": 1.0 - oracle.gini(totals),
                 "seam_free": 0.0 if self.seams(trace, None) else 1.0,
+                "efficiency": min(1.0, sum(totals) / len(outs) / EFFICIENCY_REF),
                 "yield": yld}
 
     def seams(self, trace, spec=None) -> list:
@@ -278,3 +342,74 @@ class FisheryWorld:
 
     def feasible(self, scores):
         return scores.get("yield") is None or scores["yield"] >= self.YIELD_FLOOR
+
+
+# ---------------------------------------------------------------- v2 world (four objectives, fresh adversaries)
+
+class FisheryWorldV2(FisheryWorld):
+    """Fishery with an efficiency objective, a seam measure that is exploit prevalence against adversaries
+    drawn afresh each generation, and the redundancy check. Same runs, scores and patcher as FisheryWorld."""
+    name = "fishery-v2"
+    objectives = ("sustainability", "fairness", "seam_free", "efficiency")
+
+    def __init__(self):
+        super().__init__()
+        self._red = {}
+
+    def mixes(self, split):
+        return list(EXAM2_MIXES) if split == "exam2" else super().mixes(split)
+
+    def conditions(self, split):
+        return EXAM2_CONDITIONS if split == "exam2" else super().conditions(split)
+
+    def hostile(self, split):
+        return tuple(m.name for m in EXAM2_MIXES if m.name != "all_compliant") if split == "exam2" else None
+
+    def aggregate(self, per_mix, hostile=None):
+        """sustainability, fairness, efficiency: mean over all mixes; seam_free: mean over hostile mixes only."""
+        out = {o: _avg([m[o] for m in per_mix.values()]) for o in ("sustainability", "fairness", "efficiency")}
+        names = [n for n in per_mix if hostile is None or n in hostile]
+        out["seam_free"] = _avg([per_mix[n]["seam_free"] for n in names])
+        return out
+
+    def _draw(self, seed, gen, n_sel, n_audit):
+        rng = random.Random(f"{seed}-{gen}-adv")
+        idx = rng.sample(range(len(ADVERSARY_POOL)), n_sel + n_audit)
+        return [ADVERSARY_POOL[i] for i in idx[:n_sel]], [ADVERSARY_POOL[i] for i in idx[n_sel:]]
+
+    def _ctx(self, cond, adv, tag):
+        return Context(cond, tuple(TRAIN_MIXES) + tuple(adv), tuple(m.name for m in adv),
+                       (tag, cond, tuple(m.name for m in adv)))
+
+    def context(self, seed, gen, arm="fixed", n_sel=6, n_audit=6):
+        """-> (selection context, audit context) for one generation. The audit adversaries are disjoint
+        from the selection ones; both are redrawn every generation from the fixed pool."""
+        sel, aud = self._draw(seed, gen, n_sel, n_audit)
+        if arm == "varied":
+            rng = random.Random(f"{seed}-{gen}-cond")
+            cond = Conditions(months=rng.choice(TRAIN_DIST["months"]), regrowth=rng.choice(TRAIN_DIST["regrowth"]),
+                              start_pool=rng.choice(TRAIN_DIST["start_pool"]))
+        else:
+            cond = TRAIN_CONDITIONS
+        return self._ctx(cond, sel, "sel"), self._ctx(cond, aud, "aud")
+
+    def reference_context(self, n=12):
+        rng = random.Random(f"{REFERENCE_SEED}-ref")
+        adv = [ADVERSARY_POOL[i] for i in rng.sample(range(len(ADVERSARY_POOL)), n)]
+        return self._ctx(TRAIN_CONDITIONS, adv, "ref")
+
+    def redundant(self, spec):
+        from .redundancy import redundant_cards
+        key = spec_key(spec)
+        if key not in self._red:
+            self._red[key] = redundant_cards(spec)
+        return self._red[key]
+
+    def prune(self, spec, prefer_remove=()):
+        from .redundancy import prune
+        return tuple(prune(spec, prefer_remove))
+
+
+def _avg(xs):
+    xs = [x for x in xs if x is not None]
+    return sum(xs) / len(xs) if xs else None

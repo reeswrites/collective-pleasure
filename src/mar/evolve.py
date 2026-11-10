@@ -32,6 +32,11 @@ class Config:
     k: int = 3
     max_rules: int = 12
     attempts_factor: int = 12
+    # v2 (all off by default, so the v1 behaviour is unchanged)
+    adversaries: int = 0     # fresh selection adversaries drawn per generation; 0 = v1 fixed training mixes
+    audit: int = 0           # disjoint adversaries per generation used only to audit the generation's elite
+    arm: str = "fixed"       # "fixed" or "varied" training conditions (v2 only)
+    redundancy: bool = False  # redundancy check as a fourth reason for proof-filter rejection
 
 
 @dataclass
@@ -109,6 +114,20 @@ def hypervolume(points) -> float:
     return vol
 
 
+def hypervolume_nd(points) -> float:
+    """Volume dominated by maximized n-D points above the origin (recursive slicing; fine for small fronts)."""
+    pts = [tuple(p) for p in points if all(x > 0 for x in p)]
+
+    def hv(ps, d):
+        if not ps:
+            return 0.0
+        if d == 1:
+            return max(p[0] for p in ps)
+        zs = sorted({p[-1] for p in ps}, reverse=True)
+        return sum(hv([p[:-1] for p in ps if p[-1] >= z], d - 1) * (z - zn) for z, zn in zip(zs, zs[1:] + [0.0]))
+    return hv(pts, len(pts[0])) if pts else 0.0
+
+
 def _cdom(world):
     """Constraint dominance: feasible beats infeasible; among infeasible, smaller shortfall wins."""
     def dom(a, b):
@@ -139,15 +158,15 @@ def rank_population(world, pop):
 
 # ------------------------------------------------------------------ evaluation
 
-def evaluate(world, spec, split="train", cache=None):
-    """Run the spec against every mix of the split. -> (scores, yield, seam keys, first failing trace)."""
+def evaluate(world, spec, split="train", cache=None, ctx=None):
+    """Run the spec against every mix of the split (or of a v2 context). -> (scores, yield, seam keys, first failing trace, per-mix)."""
     from .world_api import spec_key  # local: evolve has no other fishery knowledge
-    key = (spec_key(spec), split)
+    key = (spec_key(spec), split, ctx.key if ctx else None)
     if cache is not None and key in cache:
         return cache[key]
-    cond = world.conditions(split)
+    cond = ctx.conditions if ctx else world.conditions(split)
     per_mix, seams, fail_trace, yields = {}, set(), None, []
-    for mix in world.mixes(split):
+    for mix in (ctx.mixes if ctx else world.mixes(split)):
         runs = []
         for seed in mix.seeds:
             tr = world.run(spec, mix.make(), seed, cond, mix=mix.name)
@@ -159,7 +178,10 @@ def evaluate(world, spec, split="train", cache=None):
             if found and fail_trace is None:
                 fail_trace = tr
         per_mix[mix.name] = {n: _mean([r[n] for r in runs]) for n in runs[0]}
-    scores = {o: _mean([m[o] for m in per_mix.values()]) for o in world.objectives}
+    if hasattr(world, "aggregate"):
+        scores = world.aggregate(per_mix, ctx.hostile if ctx else world.hostile(split))
+    else:
+        scores = {o: _mean([m[o] for m in per_mix.values()]) for o in world.objectives}
     yields = [m["yield"] for m in per_mix.values() if m.get("yield") is not None]
     out = (scores, (_mean(yields) if yields else None), frozenset(seams), fail_trace, per_mix)
     if cache is not None:
@@ -172,8 +194,8 @@ def _mean(xs):
     return sum(xs) / len(xs) if xs else None
 
 
-def _individual(world, spec, cache, op="seed", split="train"):
-    scores, yld, seams, ft, _ = evaluate(world, spec, split, cache)
+def _individual(world, spec, cache, op="seed", split="train", ctx=None):
+    scores, yld, seams, ft, _ = evaluate(world, spec, split, cache, ctx)
     return Individual(tuple(spec), scores, yld, seams, ft, op)
 
 
@@ -305,7 +327,8 @@ def _log_record(world, gen, stats, pop, new_keys, seen, introduced, cand_prev):
     return {"gen": gen, **stats, "n_new_seams": len(new_keys), "new_seams": sorted(map(list, new_keys)),
             "seams_seen": len(seen), "introduced_seams_mean": introduced, "candidate_seam_prevalence": cand_prev,
             "front_size": len(front), "front_seam_prevalence": _mean([len(i.seams) for i in front]),
-            "hv": hypervolume(objs), "pop_rules_mean": _mean([i.n_rules for i in pop]),
+            "hv": hypervolume(objs) if len(world.objectives) == 3 else hypervolume_nd(objs),
+            "front_distinct": len({tuple(round(x, 2) for x in o) for o in objs}), "pop_rules_mean": _mean([i.n_rules for i in pop]),
             "pop_rules_max": max(i.n_rules for i in pop),
             "front": [{"n_rules": i.n_rules, "ids": [c.id for c in i.spec], "scores": i.scores, "yield": i.yld,
                        "seams": sorted(map(list, i.seams))} for i in front],
@@ -313,27 +336,38 @@ def _log_record(world, gen, stats, pop, new_keys, seen, introduced, cand_prev):
 
 
 def evolve(world, seed_spec, seed, config=None, log_path=None, cache=None):
-    """Run the loop on the TRAINING split only. -> dict(pop, elite, log, seed_individual)."""
+    """Run the loop on the TRAINING split only. -> dict(pop, elite, log, seed_individual).
+    With cfg.adversaries > 0 (v2) every generation draws its own conditions and adversary sample, and
+    every population member is re-scored under them before selection."""
     cfg, rng = config or Config(), random.Random(seed)
     cache = {} if cache is None else cache
+    v2 = cfg.adversaries > 0
     log, seen = [], set()
     out = Path(log_path) if log_path else None
     if out:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text("")
-    seed_ind = _individual(world, tuple(seed_spec), cache)
+    ctx0 = world.context(seed, 0, cfg.arm, cfg.adversaries, cfg.audit)[0] if v2 else None
+    seed_ind = _individual(world, tuple(seed_spec), cache, ctx=ctx0)
     seed_check = world.check_spec(seed_spec, cfg.k)
     pop = [seed_ind]
     have = {tuple(c.to_yaml() for c in seed_ind.spec)}
     for gen in range(cfg.generations + 1):
+        ctx = actx = None
+        if v2:
+            ctx, actx = world.context(seed, gen, cfg.arm, cfg.adversaries, cfg.audit)
+            if gen:  # same setting for everyone this generation: re-score the survivors
+                pop = rank_population(world, [_individual(world, i.spec, cache, i.op, ctx=ctx) for i in pop])
         target = cfg.pop - 1 if gen == 0 else cfg.offspring
         stats = {"proposed": 0, "duplicates": 0, "oversize": 0, "inapplicable": 0, "proof_rejected": 0,
-                 "accepted": 0, "rejected_by_check": {}, "proposed_by_op": {}, "rejected_by_op": {}}
+                 "accepted": 0, "rejected_by_check": {}, "proposed_by_op": {}, "rejected_by_op": {},
+                 "redundancy_checked": 0, "redundant_flagged": 0, "redundant_rejected": 0, "redundant_repaired": 0}
         kids, introduced = [], []
         attempts = 0
         while len(kids) < target and attempts < target * cfg.attempts_factor:
             attempts += 1
-            parent = _tournament(pop, rng) if gen else seed_ind
+            parent = _tournament(pop, rng) if gen else (_individual(world, seed_ind.spec, cache, ctx=ctx)
+                                                        if v2 else seed_ind)
             spec, op = mutate(parent.spec, world, rng, parent.fail_trace)
             if spec is None:
                 stats["inapplicable"] += 1
@@ -348,6 +382,34 @@ def evolve(world, seed_spec, seed, config=None, log_path=None, cache=None):
                 stats["oversize"] += 1
                 continue
             res = world.check_spec(spec, cfg.k)  # proof filter, before any run
+            if res.ok and cfg.redundancy:
+                stats["redundancy_checked"] += 1
+                red = world.redundant(spec)
+                if red:
+                    stats["redundant_flagged"] += 1
+                    old = {c.id for c in parent.spec}
+                    if op == "patch":  # drop-in: prefer removing the redundant card, keep the rest
+                        pruned = world.prune(spec, {c.id for c in spec if c.id not in old})
+                        key2 = tuple(c.to_yaml() for c in pruned)
+                        have.add(key)
+                        if key2 in have:
+                            stats["redundant_repaired"] += 1
+                            stats["duplicates"] += 1
+                            continue
+                        res2 = world.check_spec(pruned, cfg.k)
+                        if res2.ok:
+                            stats["redundant_repaired"] += 1
+                            spec, key = pruned, key2
+                            res = res2
+                        else:
+                            res = res2
+                    else:
+                        stats["redundant_rejected"] += 1
+                        stats["proof_rejected"] += 1
+                        stats["rejected_by_op"][op] = stats["rejected_by_op"].get(op, 0) + 1
+                        stats["rejected_by_check"]["e_redundancy"] = stats["rejected_by_check"].get("e_redundancy", 0) + 1
+                        have.add(key)
+                        continue
             if not res.ok:
                 stats["proof_rejected"] += 1
                 stats["rejected_by_op"][op] = stats["rejected_by_op"].get(op, 0) + 1
@@ -356,7 +418,7 @@ def evolve(world, seed_spec, seed, config=None, log_path=None, cache=None):
                 have.add(key)  # do not re-propose a known-bad mutant
                 continue
             have.add(key)
-            child = _individual(world, spec, cache, op=op)
+            child = _individual(world, spec, cache, op=op, ctx=ctx)
             introduced.append(len(child.seams - parent.seams))
             kids.append(child)
             stats["accepted"] += 1
@@ -368,6 +430,17 @@ def evolve(world, seed_spec, seed, config=None, log_path=None, cache=None):
         rec = _log_record(world, gen, stats, pop, new_keys, seen, _mean(introduced),
                           _mean([len(i.seams) for i in cands]))
         rec["seed_check"] = seed_check.verdict if gen == 0 else None
+        if v2:
+            el = pick_elite(world, pop)
+            audit = _individual(world, el.spec, cache, ctx=actx).scores
+            rec["context"] = {"regrowth": ctx.conditions.regrowth, "months": ctx.conditions.months,
+                              "start_pool": ctx.conditions.start_pool, "adversaries": list(ctx.hostile),
+                              "audit": list(actx.hostile)}
+            rec["candidate_prevalence"] = _mean([1 - c.scores["seam_free"] for c in cands]) if cands else None
+            rec["elite"] = {"ids": [c.id for c in el.spec], "n_rules": el.n_rules, "scores": el.scores,
+                            "prevalence": 1 - el.scores["seam_free"], "audit_prevalence": 1 - audit["seam_free"],
+                            "audit_scores": audit}
+            rec["saturated"] = rec["front_size"] >= 8 and rec["front_distinct"] == 1
         log.append(rec)
         if out:
             with out.open("a") as f:
@@ -383,7 +456,14 @@ def pick_elite(world, pop) -> Individual:
     return max(pop, key=lambda i: (i.yld or 0.0))
 
 
-def final_exam(world, spec) -> dict:
-    """The held-out exam: conditions and agent mixes the loop never sees. Run once, after evolution."""
-    scores, yld, seams, _, per_mix = evaluate(world, spec, "exam", None)
+def final_exam(world, spec, split="exam") -> dict:
+    """A held-out exam: conditions and agent mixes the loop never sees ("exam" = v1, "exam2" = v2, run once)."""
+    scores, yld, seams, _, per_mix = evaluate(world, spec, split, None)
+    return {"scores": scores, "yield": yld, "seams": sorted(map(list, seams)), "per_mix": per_mix}
+
+
+def reference_scores(world, spec) -> dict:
+    """v2: the common reference evaluation (training conditions, T1 to T8 plus 12 reference adversaries)
+    used as the "training score" in exam gaps, the same for every run and arm."""
+    scores, yld, seams, _, per_mix = evaluate(world, spec, "ref", None, world.reference_context())
     return {"scores": scores, "yield": yld, "seams": sorted(map(list, seams)), "per_mix": per_mix}
