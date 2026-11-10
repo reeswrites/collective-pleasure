@@ -68,11 +68,11 @@ def read_rows(path) -> list:
 
 
 def log_run(exp_dir, rec, verdict_text, report_path, trace_path, spec, note=None,
-            model=None, cost_usd=None) -> dict:
+            model=None, cost_usd=None, backends=None) -> dict:
     row = {"run_id": rec.run_id, "kind": rec.kind, "timestamp": now_utc(), "git_commit": git_commit(),
            "spec": str(spec), "cards_hash": cards_hash(rec.cards), "oracle_version": oracle_version(),
            "agents": list(rec.agents), "months": rec.months, "seed": rec.seed,
-           "model": model, "cost_usd": cost_usd, "verdict": verdict_text,
+           "model": model, "cost_usd": cost_usd, "backends": backends or {}, "verdict": verdict_text,
            "seams": sum(r["seams"] for r in rec.rounds), "report": str(report_path),
            "trace": str(trace_path), "note": note}
     _append(Path(exp_dir) / LOG_NAME, row)
@@ -92,7 +92,7 @@ def log_table(rows) -> str:
 
 def log_detail(r) -> str:
     order = ("run_id", "kind", "timestamp", "git_commit", "spec", "cards_hash", "oracle_version", "agents",
-             "months", "seed", "model", "cost_usd", "seams", "verdict", "report", "trace", "note")
+             "months", "seed", "model", "cost_usd", "backends", "seams", "verdict", "report", "trace", "note")
     return "\n".join(f"{k}: {r.get(k)}" for k in order)
 
 

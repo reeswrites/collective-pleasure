@@ -1,6 +1,7 @@
 """`mar`: a thin command line over the library. Each command prints plain English.
 
   mar run --spec rules/fishery --agents exploiter,compliant --months 6 --seed 0
+  mar run --spec rules/fishery --agents jev*3,llm*2 --temperature 2 --model <openrouter id> --dry-run
   mar rules show --spec rules/fishery
   mar check --spec rules/fishery [--k 3]
   mar loop --spec rules/fishery --rounds 2
@@ -12,7 +13,8 @@
   mar timeline                           one HTML page of questions, decisions, changes, runs, commits
 
 Every run and loop appends one line to the experiment log (--note says why). Reports and traces go to
-runs/<run_id>/ (override with --runs-dir; logs with --experiments-dir). No LLM, no network.
+runs/<run_id>/ (override with --runs-dir; logs with --experiments-dir). Scripted agents make no calls.
+jev and llm agents call the network and need keys in .env (see .env.example); --dry-run prices a run first.
 """
 import argparse
 import sys
@@ -20,11 +22,14 @@ from pathlib import Path
 
 from . import log as explog
 from . import oracle
+from .agents.base import AgentError
+from .agents.factory import AgentFactory
+from .agents.jev import JEV_MODEL
 from .cards import load_cards
 from .patch_check import K_DEFAULT, check_patch, check_spec
 from .patcher import propose_patch
 from .report import (RunRecord, build_report, cond_text, execute, load_record, parse_agents, agents_slug,
-                     run_story, sanction_text, verdict)
+                     rules_text, run_story, sanction_text, verdict)
 
 CHECK_NAMES = {"a_no_conflict": "No two rules contradict each other",
                "b_no_deadlock": "In every state some action is allowed",
@@ -57,19 +62,55 @@ def check_lines(cards, k):
     return ok, lines
 
 
+def make_factory(a) -> AgentFactory:
+    return AgentFactory(temperature=a.temperature, jev_provider=a.jev_provider, jev_model=a.jev_model,
+                        llm_model=a.model, llm_temperature=a.llm_temperature, llm_price_in=a.llm_price_in,
+                        llm_price_out=a.llm_price_out, cache_dir=Path(a.runs_dir) / "cache" / "jev",
+                        max_usd=a.max_usd)
+
+
+def dry_run(a, names, rounds=1) -> int:
+    est = make_factory(a).estimate(names, a.months, rules_text(load_cards(a.spec)), rounds)
+    if not est:
+        print("Dry run: no jev or llm agents, so no model calls and no cost.")
+        return 0
+    print(f"Dry run (nothing is called or logged). Upper bounds, no cache hits, {rounds} run(s) of {a.months} months:")
+    for kind, e in est.items():
+        print(f"  {kind}: up to {e['calls']} calls, about {e['input_tokens']} input tokens, "
+              f"upper-bound cost ${e['usd']:.4f} ({e['note']})")
+    print(f"Total upper bound: ${sum(e['usd'] for e in est.values()):.4f}")
+    return 0
+
+
 def cmd_run(a) -> int:
-    rec = execute(a.spec, parse_agents(a.agents), a.months, a.seed)
+    names = parse_agents(a.agents)
+    if a.dry_run:
+        return dry_run(a, names)
+    factory = make_factory(a)
+    rec = execute(a.spec, names, a.months, a.seed, factory=factory)
     path = build_report(rec, a.runs_dir)
     _log(a, rec, path)
     print(f"report: {path}")
     print(verdict(rec)[1])
+    _print_usage(rec)
     print(f"logged: {Path(a.experiments_dir) / explog.LOG_NAME}")
     return 0
 
 
+def _print_usage(rec):
+    for kind, u in rec.backends.items():
+        print(f"{kind}: {', '.join(u['model_builds']) or 'no model build seen'}; {u['calls']} calls "
+              f"({u['cache_hits']} cached), {u['input_tokens']} in / {u['output_tokens']} out tokens, ${u['usd']:.4f}")
+    if rec.reports:
+        print(f"typed reports: {sum(r['lie'] for r in rec.reports)} of {len(rec.reports)} did not match what was done")
+
+
 def _log(a, rec, report_path):
+    b = rec.backends
+    builds = sorted({m for u in b.values() for m in u["model_builds"]})
     explog.log_run(a.experiments_dir, rec, verdict(rec)[1], report_path, Path(report_path).parent / "trace.json",
-                   a.spec, note=a.note)
+                   a.spec, note=a.note, model="; ".join(builds) or None,
+                   cost_usd=round(sum(u["usd"] for u in b.values()), 6) if b else None, backends=b)
 
 
 def cmd_rules_show(a) -> int:
@@ -91,11 +132,14 @@ def cmd_check(a) -> int:
 
 def cmd_loop(a) -> int:
     agents = parse_agents(a.agents)
+    if a.dry_run:
+        return dry_run(a, agents, a.rounds + 1)
+    factory = make_factory(a)
     base = load_cards(a.spec)
     patch, history, checks = [], [], []
     rec = None
     for r in range(a.rounds + 1):
-        rec = execute(a.spec, agents, a.months, a.seed, patch_cards=patch)
+        rec = execute(a.spec, agents, a.months, a.seed, patch_cards=patch, factory=factory)
         seam = oracle.is_seam(rec.trace, rec.outcomes)
         entry = {"round": r, "seams": int(seam), "patch_ids": [c.id for c in patch],
                  "story": run_story(rec) if seam else "", "note": ""}
@@ -118,7 +162,7 @@ def cmd_loop(a) -> int:
         else:
             entry["note"] = "Final re-run." if patch else "Final run."
         history.append(entry)
-    rec.run_id = f"{rec.spec_name}-loop-{agents_slug(agents)}-m{a.months}-s{a.seed}-r{a.rounds}"
+    rec.run_id = f"{rec.spec_name}-loop-{agents_slug(agents)}{factory.tag(agents)}-m{a.months}-s{a.seed}-r{a.rounds}"
     rec.kind, rec.history, rec.checks = "loop", history, checks
     rec.rounds = [{"round": h["round"], "seams": h["seams"]} for h in history]
     path = build_report(rec, a.runs_dir)
@@ -128,6 +172,7 @@ def cmd_loop(a) -> int:
     for h in history:
         print(f"  round {h['round']}: {h['note']}")
     print(verdict(rec)[1])
+    _print_usage(rec)
     print(f"logged: {Path(a.experiments_dir) / explog.LOG_NAME}")
     return 0
 
@@ -195,11 +240,22 @@ def parser():
     def common(sp, agents=True):
         sp.add_argument("--spec", required=True, help="directory of YAML rule cards, e.g. rules/fishery")
         if agents:
-            sp.add_argument("--agents", default="exploiter*4", help="comma list of exploiter|compliant|explorer, "
-                            "name*n repeats (default exploiter*4)")
+            sp.add_argument("--agents", default="exploiter*4", help="comma list of exploiter|compliant|explorer|jev|llm, "
+                            "name*n repeats, e.g. jev*3,llm*2 (default exploiter*4)")
             sp.add_argument("--months", type=int, default=6)
             sp.add_argument("--seed", type=int, default=0)
             sp.add_argument("--note", default=None, help="one-line plain summary of why this run was made")
+            sp.add_argument("--dry-run", action="store_true", help="print the call count and an upper-bound cost; run nothing")
+            sp.add_argument("--temperature", type=float, default=1.0,
+                            help="Jev temperature T: probabilities become p^(1/T), renormalized (default 1; "
+                            "T above 1 flattens an overconfident model)")
+            sp.add_argument("--model", default=None, help="OpenRouter model id for llm agents (or MAR_LLM_MODEL in .env)")
+            sp.add_argument("--jev-model", default=JEV_MODEL, help=f"pinned Jev build (default {JEV_MODEL}; latest is refused)")
+            sp.add_argument("--jev-provider", default="openrouter", choices=["openrouter", "aimlapi"])
+            sp.add_argument("--llm-temperature", type=float, default=0.7, help="sampling temperature sent to the llm")
+            sp.add_argument("--llm-price-in", type=float, default=0.0, help="USD per 1M input tokens, for the llm estimate")
+            sp.add_argument("--llm-price-out", type=float, default=0.0, help="USD per 1M output tokens, for the llm estimate")
+            sp.add_argument("--max-usd", type=float, default=None, help="stop a backend once its spend passes this")
 
     common(sub.add_parser("run", help="run the fishery under a spec; write a report"))
     rules = sub.add_parser("rules", help="read rules").add_subparsers(dest="rules_cmd", required=True)
@@ -247,7 +303,7 @@ def main(argv=None) -> int:
         return {"run": cmd_run, "check": cmd_check, "loop": cmd_loop, "report": cmd_report,
                 "log": cmd_log, "keep": cmd_keep, "change": cmd_change,
                 "question": cmd_question, "timeline": cmd_timeline}[a.cmd](a)
-    except (ValueError, FileNotFoundError) as e:
+    except (ValueError, FileNotFoundError, AgentError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
 

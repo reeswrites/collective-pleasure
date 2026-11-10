@@ -137,3 +137,10 @@ class Agent(ABC):
     @abstractmethod
     def message(self, context: str, vocabulary) -> Report:
         """vocabulary: list of words, or {word: description}. Returns a typed report with value in vocabulary."""
+
+
+def report_vocabulary() -> dict:
+    """Typed-report words for a month's total catch: the same 11 buckets, described as a month total."""
+    return {lab: ("Plans to catch no fish this month." if lab == "0"
+                  else f"Plans to catch {lab.replace('-', ' to ')} fish in total this month.")
+            for lab in BUCKET_LABELS}
