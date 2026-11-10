@@ -238,6 +238,7 @@ class ResultLLM(N.Result2):
     below_floor: int = 0                                 # proposals whose bundle breaks the floor at the week-0 holdings
     proposals_made: int = 0
     labels: dict = field(default_factory=dict)
+    invalid: list = field(default_factory=list)          # logging only: every invalid reply (k, attempt, why, the first 700 characters)
 
 
 def restricted_menu(personas, menu):
@@ -251,7 +252,7 @@ def restricted_menu(personas, menu):
     return allowed
 
 
-def _ask_turn(client, system, user, standing, menu, allowed, res):
+def _ask_turn(client, system, user, standing, menu, allowed, res, k=None):
     """One model turn with one retry. -> (reply dict | None, status) where status is ok | refusal | format_error."""
     msgs = [{"role": "user", "content": user}]
     why = None
@@ -267,6 +268,7 @@ def _ask_turn(client, system, user, standing, menu, allowed, res):
             return parse_reply(text, standing, menu, allowed), "ok"
         except ParseError as e:
             why = str(e)
+            res.invalid.append({"k": k, "attempt": attempt, "why": why, "text": (text or "")[:700]})
             if attempt == 1:
                 break
             msgs = msgs + [{"role": "assistant", "content": text or "(cut off)"},
@@ -296,7 +298,7 @@ def negotiate_llm(personas, arm, seed, *, base, W, O, clients, detail=None, hold
         i = order[k % n]
         me = personas[i]
         user = user_prompt(history, labels[me.id], k, deadline, standing)
-        reply, status = _ask_turn(clients[me.id], systems[me.id], user, standing, menu, allowed, res)
+        reply, status = _ask_turn(clients[me.id], systems[me.id], user, standing, menu, allowed, res, k)
         turn = {"k": k, "speaker": me.id, "status": status, "standing": dict(standing["bundle"]) if standing else None}
         res.transcript.append(turn)
         if reply is None:                                    # refusal or invalid reply after one retry: walk away

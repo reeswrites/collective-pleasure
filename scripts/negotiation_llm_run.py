@@ -75,7 +75,7 @@ def live_rows(model, seeds, max_usd, out, pairs=PAIRS, client=None):
             L = N.Lived(ps[a], ps[b], ARM, sd, base, res, apart=True)
             row = _row(res, L, L.play(), a, b, sd, "llm")
             row.update({"transcript": res.transcript, "format_errors": res.format_errors, "refusals": res.refusals, "calls": res.calls,
-                        "turns": len(res.transcript), "below_floor_llm": res.below_floor, "proposals_llm": res.proposals_made,
+                        "turns": len(res.transcript), "invalid": res.invalid, "below_floor_llm": res.below_floor, "proposals_llm": res.proposals_made,
                         "say_vs_do": NL.say_vs_do(res.transcript), "stay_breaches_lived": row["stay_breaches"]})
             rows.append(row)
             with (out / "log.jsonl").open("a", encoding="utf-8") as f:
