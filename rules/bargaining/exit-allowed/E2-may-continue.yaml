@@ -1,0 +1,8 @@
+id: E2-may-continue
+attribute: player
+deontic: may
+aim: continue
+conditions: []
+or_else: null
+gloss: "A player may keep bargaining (make or reject an offer)."
+source: 'Rubinstein 1982, Econometrica 50(1):97-109 (alternating offers); Binmore, Shaked and Sutton 1989, QJE 104(4):753-770 (outside options).'

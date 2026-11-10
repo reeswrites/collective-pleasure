@@ -1,0 +1,8 @@
+id: N1-must-not-exit
+attribute: player
+deontic: must_not
+aim: exit
+conditions: [{expr: exit, op: ge, value: 1}]
+or_else: null
+gloss: "A player must not exit: keep bargaining until agreement or the deadline."
+source: 'Rubinstein 1982, Econometrica 50(1):97-109 (alternating offers); Binmore, Shaked and Sutton 1989, QJE 104(4):753-770 (outside options).'
