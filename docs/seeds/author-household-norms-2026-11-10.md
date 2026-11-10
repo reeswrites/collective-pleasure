@@ -45,3 +45,11 @@ After the faithfulness review found the pot was coded as two separate shares, Cl
 > 1
 
 So the pot is a single shared resource. Limits on its use come only from negotiated terms. The "shared needs only" default and any imposed no-taking rule are removed. Note: options (1) to (3) were worded by Claude; the author's choice is the one-character answer above.
+
+## Read-back of seed v2 cards (2026-11-10)
+
+The free-exit variant was read back card by card (docs/results/seed-v2-readback.md). The author answered, verbatim:
+
+> 12-13 should be negotiated exit terms  i feel like with 8 we could maybe also have implicit penalties idk
+
+Claude's reading, pending the author's confirmation at the next read-back: rules 12 and 13 (the even exit split) become "the leaver takes the exit terms negotiated beforehand, never below the floor". Rule 8 (honoring a chosen commitment) becomes a norm, not a fined rule: by default, breaking it costs the partner's trust (lower willingness to accept later requests or commitments, possible renegotiation or leaving), and an explicit penalty applies only if one was negotiated. Trust is tracked and can recover through kept commitments.
