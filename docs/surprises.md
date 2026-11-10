@@ -75,3 +75,9 @@ A depth-1 seam the greedy script finds every time was found by no LLM. The cause
 - `2026-11-10 negotiation v2.1: the v2 finding that making outside options real made households worse was an artifact of the disagreement point. With a failed negotiation meaning living apart, no-agreement households fell from s_non 0.159 and fail 0.809 to 0.0315 and 0.459, and overall s_non from 0.100 to 0.0361; agreement is still 0.46 to 0.54.`
 - `2026-11-10 negotiation v2.1: 82 of 257 households that failed to agree at week 0 formed a household at a later retry, and those late households did worse than week-0 pots (fail 0.549, 61 percent dissolved).`
 - `2026-11-10 negotiation v2: results depend slightly on run scheduling. The outside-option rollout cache rounds the hedonic state to 0.1, so 2 of 256 pot rows changed their review outcome when the worker workload changed.`
+
+## 2026-11-10: negotiation LLM pilot
+
+- `2026-11-10 negotiation LLM pilot: the model never used "reject" (0 of 82 turns); it counter-proposed instead, and negotiations ended in 2 to 6 turns. No LLM proposal broke the exit floor (0 of 58) where half of the scripted proposals did.`
+- `2026-11-10 negotiation LLM pilot: claude-haiku-5-5 spends about 500 output tokens per call before the JSON starts, so a 700-token cap cut off replies 13 times in 55 calls; a 10 percent exclusion rule was tripped (4 of 39 turns) by the token cap, not by the model's ability to follow the format. The whole pilot cost $0.037.`
+- `2026-11-10 negotiation LLM pilot: the models agreed more often than the scripted negotiators (8 and 11 of 12 against 5) but the households they negotiated were no better on s_non (0.0063 and 0.0196 against 0.0036 on the same pairings), because the scripted disagreement is living apart, which v2.1 showed is as good.`
