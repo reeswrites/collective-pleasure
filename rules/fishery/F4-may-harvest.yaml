@@ -1,0 +1,9 @@
+id: F4
+attribute: fisher
+deontic: may
+aim: harvest
+conditions:
+  - {expr: catch, op: ge, value: 0}
+or_else: null
+gloss: A fisher may harvest from the lake (a permission; it adds no constraint of its own).
+source: "V2 fixture; fishery premise of GovSim, Piatti et al. 2024, arXiv 2404.16698."

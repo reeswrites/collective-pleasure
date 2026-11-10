@@ -1,0 +1,9 @@
+id: F2
+attribute: fisher
+deontic: must_not
+aim: harvest
+conditions:
+  - {expr: catch - pool, op: gt, value: 0}
+or_else: null
+gloss: A fisher may not try to take more fish than are in the lake right now.
+source: "V2 fixture; physical bound from GovSim dynamics (Piatti et al. 2024, arXiv 2404.16698)."

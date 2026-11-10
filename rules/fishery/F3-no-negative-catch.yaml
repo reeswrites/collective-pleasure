@@ -1,0 +1,9 @@
+id: F3
+attribute: fisher
+deontic: must_not
+aim: harvest
+conditions:
+  - {expr: catch, op: lt, value: 0}
+or_else: null
+gloss: A harvest cannot be a negative number of fish.
+source: "V2 fixture (range sanity)."
