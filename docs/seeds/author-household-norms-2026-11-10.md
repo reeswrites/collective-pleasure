@@ -15,3 +15,9 @@ Recorded verbatim before any household results existed. This is the author's own
 > no one owes anyone anything day to day except for what they have negotirated bascially i feel like negotitaiotn used to be such a cognitively taxing process or see what you want whats good for you what the other person can provide to you and want but if we can model this it could be interesting and have good tempaltes for peopel
 
 All five prompts answered (2026-11-10).
+
+## Correction after read-back (2026-11-10)
+
+The formalized seed was read back to the author. Two cards did not match: "everything should be shared always" had become "sharing is optional", and nothing encoded "request is never about control". The author's correction, verbatim:
+
+> i think maybe people can own things to themselkves but choose to give htme to someone on any conditions? trade basciallybut maybe the ideal is that yes everyhting hsared always is the shared pot part yes the person can ask and the other person can always say no unless chosen bound ?
