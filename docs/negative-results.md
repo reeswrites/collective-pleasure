@@ -73,3 +73,8 @@ VPGG predictions V1 and V2 failed: voluntary beat compulsory on liberty in only 
 ## 2026-11-10: live ladder, capability arm
 
 Live ladder capability arm (6 models, $4.35): zero inventive seams, and no model found L1, L2, L3 or L5. IT1 is not supported and the run is uninformative. Cause: the model drove both partners, so both counted as deviators and the oracle had no victim. A one-sided replay of the logged moves flips L1 to predicted in 45 of 48 runs. Opus was excluded (43% refusals). See docs/results/ladder-live-diagnosis.md.
+
+## 2026-11-10: negotiation v2.1
+
+- `negotiation v2.1 prediction 2 (2026-11-10): FAIL on the second clause. Apart-from-week-0 households are 118 of 200 failed runs = 0.590 (needed under 0.50; v2 0.717); overall fail rate 0.390 (needed at most 0.45; held). Prereg docs/results/negotiation-v2.1-prereg.md; results docs/results/negotiation-v2.1.md.`
+- `negotiation v2.1 prediction 5 (2026-11-10): FAIL. 254 of 256 week-0 pot runs were identical to v2, not all 256. Both differences are review outcomes and trace to the outside-option rollout cache keying the hedonic state at 0.1 resolution, so results depend on which runs a worker executed earlier.`
