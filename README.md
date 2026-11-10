@@ -2,7 +2,7 @@
 
 Multi-agent rules: proof-gated rule search for AI agent groups.
 
-This project asks whether spec refinement converges for LLM agents. Rules are written as readable ADICO-derived cards, compiled to a transition system, and enforced per action by a solver. An intent oracle that is independent of the spec flags seams: runs that pass the gate but violate what was meant. An LLM patcher tightens the rules, the solver checks each patch, and rules the agents actually live by are mined from traces and diffed against the written ones. The result is a curve: new seams per round, and where it plateaus. One page: [docs/pitch.md](docs/pitch.md).
+This project is an AI-native workbench, used through chat, for evolving alignment norms by tweaking interpretable rules. The author talks loosely about how agents should behave; the system turns that into precise rules (ADICO cards, also English-like sentences), proves what it can, runs swarm experiments, and reports back in plain English and charts. Proof checks filter candidate rules, an LLM patcher mutates them, and a seam curve judges the evolution. There are two loops: rules against the test (do new seams per round slow, and where do they plateau?), and the test against the author's intent (do "not what I meant" moments per round fall?). One page: [docs/pitch.md](docs/pitch.md); decision: [ADR 0005](docs/decisions/0005-two-loops-and-workbench.md).
 
 **Status: pre-results; nothing here is a finding.**
 

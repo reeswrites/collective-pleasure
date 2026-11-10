@@ -1,7 +1,7 @@
 # Rationale
 
-**Working title:** Multi-agent rules: does spec refinement converge for AI agent groups?
-**Status:** draft, revised 2026-11-10 after the prior-art check and an interview with the author (ADR 0003). Nothing here is a result yet. One-page version: docs/pitch.md.
+**Working title:** Multi-agent rules: evolving alignment norms, and checking the test against intent
+**Status:** draft, revised 2026-11-10 after the prior-art check, an interview with the author (ADR 0003) and a conversation that set the two-loop framing (ADR 0005). Nothing here is a result yet. One-page version: docs/pitch.md.
 
 ---
 
@@ -18,6 +18,21 @@ The subject is formally specified rule systems (rules, norms, sanctions) governi
 - **Rules and formalization are the interesting part.** The scarce work is writing and owning the spec. Generating code and checking proofs are getting cheap.
 - **Learnings should generalize, and parallels should be provable.** A result about one rule system should carry over to another by a checkable argument, not by analogy.
 - **No novelty for its own sake.** Every component must either already exist (and be reused) or earn its place by measuring something the simpler alternatives can't.
+
+## 1b. The two loops and the workbench
+
+Decided 2026-11-10 (ADR 0005). Nothing here is a result.
+
+The project is an AI-native workbench used through chat. The author talks loosely about how agents should behave. The system turns that into precise rules (ADICO cards, also English-like sentences), runs proofs and swarm experiments, and turns everything back into plain English and charts, so the author can check it understood and tweak it in conversation. Chat captures something abstract; the system formalizes it into something exact that is still generated from, and readable as, the abstract. Form: a Claude Code skill plus a small `mar` CLI, with a self-contained HTML report per run (in progress: docs/results/workbench.md).
+
+The core is evolving alignment norms by tweaking interpretable rules. Proof checks are the selection filter, the patcher is the mutation operator, the seam curve judges the evolution. One lineage first (V3, V4), a population later.
+
+Evolution always reverse-engineers the test, so there are two loops:
+
+- **(a) Rules against the test.** Evolution tightens rules until agents stop finding seams the test catches (C1).
+- **(b) The test against the author's intent.** The author reads the winning rules and run stories in plain English. Each "that's not what I meant" is a fix to the oracle (C2). The evolved rules are a readable mirror of what the test rewards.
+
+Proven (bounded, k stated): rule properties (no conflicts, no deadlock, bounded sanctions, repair path) and gate soundness. Measured: the gap between "safe by the rules" and "safe by what the author meant". The second loop is the more original result.
 
 ## 1a. Single-agent and multi-agent: one pipeline
 
@@ -36,19 +51,21 @@ Under the convergence question (ADR 0003), one agent is only an instrument smoke
 
 > When rules for LLM agents are written formally, gated by a solver, and repeatedly tightened from the seams agents find (runs that pass the gate but violate intent), does the number of new seams per round slow, and where does it plateau?
 
+Alongside it, a second question (ADR 0005): as the author reads rules and run stories in plain English and corrects the test, do the "not what I meant" moments per round fall toward a plateau? That measures how well a person's intent can be formalized through conversation.
+
 This turns the founding bet, "maybe not provable, but we can hill-climb toward good enough", into a measured curve. Proofs move Goodhart's law to the gap between spec and intent; the question is whether closing that gap is a converging process or whack-a-mole.
 
 Earlier framing (superseded): whether formal, proof-checked rule systems beat free-text rules. The prior-art check found that comparison already done for single agents (section 4).
 
 ## 3. Narrowest defensible claim
 
-A refinement loop for LLM agents in which:
+Two loops (ADR 0005). Loop (a), rules against the test, is the refinement loop below. Loop (b), the test against the author's intent, adds a sixth element: the author reads rules and run stories in plain English, and each "that's not what I meant" becomes a logged change to the oracle, with a timestamp. Each oracle version gets its own curve. The patcher still never sees the oracle. Loop (a) is a refinement loop for LLM agents in which:
 
 1. rules are written as ADICO-derived cards, compiled to a transition system, and enforced per action by a solver gate;
 2. an intent oracle independent of the spec (environment outcomes plus a frozen, versioned judge rubric) flags seams; the patcher never sees the oracle;
 3. an LLM patcher writes new cards from failing traces; the solver rejects patches that add conflicts, deadlock, or remove a repair path; the author audits a sample;
 4. de facto rules mined from traces are diffed against the written rules; emergent norms are proposed back as cards and adopted only with the author's yes;
-5. the reported result is seams per round across rounds and seeds, its plateau, and rule-count growth (bloat guard).
+5. the reported result is seams per round across rounds and seeds, its plateau, and rule-count growth (bloat guard); for loop (b), "not what I meant" moments per round, per oracle version.
 
 It is evaluated first in a five-agent fishery commons (GovSim dynamics).
 
@@ -167,6 +184,7 @@ Slices and their pass/fail checks are in docs/plan.md (V1 to V5).
 | ID | Question | Prediction (draft) |
 |---|---|---|
 | C1 | Does refinement converge? | New seams per round decrease toward a plateau on at least 3 seeds, without the bloat guard tripping |
+| C2 | Does the test converge on intent (loop b)? | "Not what I meant" moments per round decrease toward a plateau, per oracle version; preregister how to tell this from author fatigue before V4 |
 | F1 | Does mechanism crowd out normative competence? | Hard-gated agents fail worse than sanctioned agents when the gate is removed or misses a case |
 | F2 | Does who patches matter? | AI-patched and human-patched specs reach different plateaus |
 | F3 | Is the de jure vs de facto distance informative? | It predicts collapse earlier than violation counts |
@@ -198,7 +216,7 @@ S1 and E0 to E4 are superseded (docs/claims.md). Use multiple seeds, report mode
 
 ## 11. First milestones
 
-See docs/plan.md: V1 adversarial novelty search; V2 loop on a scripted mock agent; V3 one real LLM agent as calibration; V4 first five-agent curve; V5 one-page write-up and review council.
+See docs/plan.md and ADR 0005 (workbench, built-in-progress; V4 runs through it): V1 adversarial novelty search; V2 loop on a scripted mock agent; V3 one real LLM agent as calibration; V4 first five-agent curve; V5 one-page write-up and review council.
 
 ## 12. Open questions
 
