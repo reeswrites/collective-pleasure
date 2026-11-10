@@ -950,6 +950,22 @@ def analyze_v6(res=None):
     cc = lambda ys: _np.corrcoef(xs, ys)[0, 1] if len(set(xs)) > 1 else float("nan")
     pr(f"  pooled (n={len(pooled)}) corr(inertia, s_non)={cc([r['s_non'] for r in pooled]):+.3f} corr(inertia, pleasure)={cc([r['pleasure'] for r in pooled]):+.3f}"
        f" corr(inertia, dissolved)={cc([float(r['left'] > 0) for r in pooled]):+.3f} corr(inertia, review changes)={cc([float(sum(x['changed'] for x in r['reviews'])) for r in pooled]):+.3f}")
+    for coh in ("ctl", "prs"):
+        rs = [r for r in pooled if r["cohort"] == coh]
+        xc = [r["inertia"] for r in rs]
+        pr(f"  cohort {coh} (n={len(rs)}): corr(inertia, s_non)={_np.corrcoef(xc, [r['s_non'] for r in rs])[0, 1]:+.3f} corr(inertia, pleasure)={_np.corrcoef(xc, [r['pleasure'] for r in rs])[0, 1]:+.3f}"
+           f"; inert>=.75 n={sum(1 for x in xc if x >= 0.75)} pleasure={_m(r['pleasure'] for r in rs if r['inertia'] >= 0.75):.4f} s_non={_m(r['s_non'] for r in rs if r['inertia'] >= 0.75):.4f};"
+           f" inert<.75 n={sum(1 for x in xc if x < 0.75)} pleasure={_m(r['pleasure'] for r in rs if r['inertia'] < 0.75):.4f} s_non={_m(r['s_non'] for r in rs if r['inertia'] < 0.75):.4f}")
+    pr("== agreements with the floor OFF (pot formed): ", {arm: round(_m(r["pot"] for r in A(off, arm)), 3) for arm in ARMS}, "ON:", {arm: round(_m(r["pot"] for r in A(on, arm)), 3) for arm in ARMS})
+    pr("== flagged consented deals per arm (floor ON): n, s_non, pleasure, dissolved, held weeks, breaches")
+    for arm in ARMS:
+        rows = [r for r in A(on, arm) if r["pot"] and r["flagged"]]
+        pr(f"  {arm:15s} n={len(rows)} s_non={_m(r['s_non'] for r in rows):.4f} pleasure={_m(r['pleasure'] for r in rows):.4f} dissolved={_m(r['left'] > 0 for r in rows):.3f}"
+           f" held_weeks={sum(r['stay_held'] for r in rows)} (runs {sum(1 for r in rows if r['stay_held'])}) breaches={sum(r['stay_breaches'] for r in rows)} (runs {sum(1 for r in rows if r['stay_breaches'])}); breach term:",
+           dict(Counter(r["bundle"]["breach"] for r in rows)))
+    pr("== outside option vs in-pot baseline (week 0, mean over members): outside", f"{_m(v for r in on for v in r['outside'].values()):.3f}", "in-pot default baseline",
+       f"{_m(v for r in on for v in r['baseline'].values()):.3f}", "; share of members with outside > baseline:", f"{_m(r['outside'][k] > r['baseline'][k] for r in on for k in r['outside']):.3f}",
+       "; best outside is the friend arrangement:", f"{_m(r['outside_detail'][k]['friend'] > r['outside_detail'][k]['alone'] for r in on for k in r['outside_detail']):.3f}")
     pr("== P1 presser gain vs imposed bundle by partner's real outside option (pot, floor ON, all arms)")
     ent = []
     for r in on:

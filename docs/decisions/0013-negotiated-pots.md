@@ -28,3 +28,16 @@ Seed v2 (docs/seeds/author-household-norms-2026-11-10.md) put "everything shared
 - Negotiate by short rollouts of each bundle: up to 2916 bundles per member per round, too slow for 57 pairings x 3 seeds x 3 variants; recorded as the calibration to do.
 - Impose a default pot rule and let members opt out: that is the rejected reading with an exit.
 - Let a negotiation exclude a member of a 3-member table: not in v1 (a 3-member table forms a 3-member pot or none).
+
+## Amendment 2026-11-10 (v2): the exit floor is the boundary of consent
+
+Context. Negotiation v1 (docs/results/negotiation.md) missed four of six predictions. The proof filter caught only a forfeit exit; the closed-form outside option almost never bound, so "accept only if better than the outside option" did not protect a weak partner (the Free-rider's partner went from 0.104 to 0.186 non-offsettable level); a stay commitment held in 1 of 45 runs. The author asked how to "steel up" negotiation with a floor, and said of binding: "you can bind someone not to leave if negotiated but maybe also test models where that isnt allowed" (docs/seeds/author-household-norms-2026-11-10.md).
+
+Decision. Negotiation v2 (prereg docs/results/negotiation-v2-prereg.md):
+
+1. **An exit floor is the boundary of consent.** Every agreement must leave each member, on leaving, with at least 13 weeks of the hedonic model's living cost in their own resources (26 units, ASSUMED), checked by the proof step before anyone lives under the agreement and enforced by the world at the moment of leaving (a top-up from the leaver's own pooled share only). Below the floor no consent counts: the check blocks the agreement. Above the floor consent governs: stay commitments, uneven splits and breach costs are allowed, because the author's position is that binding is permitted if negotiated. Such deals are not blocked; those that would have failed v1's exit-within-k check are flagged in the log, so their outcomes can be read separately.
+2. **Outside options are simulated, not assumed.** Each member's outside option is the better of a 26-week rollout of living alone and of living with Friend C, by the member's own persona evaluation; cached by (persona, role, holdings, seed, mode, state); the in-pot value is a rollout on the same scale. The bundle terms stay a proxy (a scale of 0.2 per proxy unit, ASSUMED, uncalibrated).
+3. **Terms are reviewed every 13 weeks.** Any member may propose a change; unchanged terms continue; stay commitments expire at a review unless renewed; a review change may not push a member below the floor, or further below than the current terms.
+4. **Three start arms measure default inertia:** fair default, wants first, wants first with fair fallback on the terms nobody cares about.
+
+Consequences. The proof filter now has a second, quantitative gate whose threshold is a decision of the author's, not of the agents; the floor is the only place the model forbids a consented term. The free-exit variant ("test models where that isnt allowed") is not rerun in v2 and remains the v1 comparison. Amendment 1 to the prereg (floor also at leaving; review floor measured against current terms) was made after an exploratory pilot and before the full run.
