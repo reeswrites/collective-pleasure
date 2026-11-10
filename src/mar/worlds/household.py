@@ -709,7 +709,8 @@ from itertools import combinations
 from .. import hedonic as HD
 
 WEEKS, MONTH_WEEKS, UNITS, PASSES = 156, 4, 10, 3           # 3 years; a 4-week "month" (ASSUMED simplification)
-V2_COST = {"work": 4, "rest": 2, "see_friend": 2, "together": 2, "spend_shared": 1, "spend_self": 1, "request": 1}
+V2_COST = {"work": 4, "rest": 2, "see_friend": 2, "together": 2, "spend_shared": 1, "spend_self": 1, "request": 1,
+           "veto": 1, "take_shared": 1}
 V2_INCOME = {"A": 6, "B": 5}                                # per work block (ASSUMED)
 V2_ACTIONS = PARTNER_ACTIONS + ("rest", "together")
 BILLS = {2: 10, 1: 6, 0: 0}                                 # monthly shared need by partners in the household
@@ -722,6 +723,15 @@ SHOCK_DURATION = {"job_loss": (8, 26), "illness": (3, 8), "move": (4, 4)}       
 SHOCK_SOURCES = {"job_loss": "BLS JOLTS layoffs and discharges about 1.0-1.1 percent of employment per month",
                  "illness": "ASSUMED", "new_connection": "ASSUMED",
                  "move": "Census CPS 2022 mover rate 8.7 percent (secondary-source reading)"}
+
+
+# ---- v3a pressing physics (docs/results/household-v3a-prereg.md; all ASSUMED) ----
+VETO_KINDS = {"no_contact": "see_friend", "spend": "spend_self"}   # veto kind -> the target action it blocks
+VETO_WEEKS = 4
+REQUEST_KINDS_V3 = REQUEST_KINDS + ("time",)
+PRESS_FRICTION = 0.10      # offsettable suffering per `time` request received in a week
+TAKE_SHARED = 3            # units moved from the partner's pooled share to own money; at most once a week
+V3_VARIANTS = V2_VARIANTS + ("author_seed_nocontrol", "no_pressure_wall", "no_pressure_sanctioned", "share_duty")
 
 
 class PyGate:
@@ -891,6 +901,7 @@ class WeeklyWorld:
         self.run = Run()
         self.units = {}
         self.wk = {}
+        self.hook = None        # optional callable(world, week), called at the start of each week before anyone acts
 
     def other(self, r):
         return "B" if r == "A" else "A"
@@ -1087,6 +1098,8 @@ class WeeklyWorld:
                        "friend_initiated": 0, "sanctioned": 0, "conn_hit": 0.0, "sec_hit": 0.0} for r in "AB"}
         self.units = {r: UNITS for r in "AB"}
         self.start_shocks(w, ev)
+        if self.hook:
+            self.hook(self, w)
         probes = {r: self.probe(r, w) for r in "AB"}
         rec = {"blocked": {r: set() for r in "AB"}, "c_attempts": 0, "c_blocked": 0}
         for ps in range(PASSES):

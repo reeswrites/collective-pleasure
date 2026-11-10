@@ -186,3 +186,279 @@ def vpgg_hand_freedom(spec, p=None):
     p = p or V.Params()
     e = float(spec.allows_abstain(p.N))
     return 0.5 * e + 0.5 * (e * float(V.real_option(p.N, p.r, p.c, p.sigma)))
+
+
+# ---- household (v3a; docs/results/household-v3a-prereg.md; all choices ASSUMED) ----
+# One step = one pass (the focal agent acts, then the other partner by script); horizon k = 3 passes = one week, the
+# state is terminal after pass 3 (no week rollover, expiry or end-of-week cost inside the window). Shocks are excluded
+# (they are not rule restrictions) and consent is a deterministic function of the persona. Hard-blocked and infeasible
+# actions have no effect but the pass still happens. Soft (sanctioned) actions take effect and add the sanction.
+from .worlds import household as HH
+
+HH_CAP = 8000
+HH_MENU = (("work", None), ("rest", None), ("spend_shared", None), ("spend_self", None), ("see_friend", None),
+           ("together", None), ("refuse_request", None), ("request", "no_contact"), ("request", "stay_home"),
+           ("request", "time"), ("veto", "no_contact"), ("veto", "spend"), ("take_shared", None),
+           ("leave", 0), ("leave", 50), ("leave", 100), ("return", None))
+HH_SNAPSHOT_WEEKS = (0, 26, 52, 78, 104, 130)
+HH_OPEN_MAX = 0.20
+SCRIPTS = ("cooperator", "controller", "freerider", "overasker")
+SCRIPT_TAGS = {"press-controller": "controller", "press-freerider": "freerider", "press-overasker": "overasker"}
+
+HState = namedtuple("HState", "week pas units money pooled inn cnt took taken vetoes pend cons sanc funded months_in")
+# per-role tuples (index 0 = Partner A, 1 = Partner B): cnt = (works, friends, together, spent_self) this window;
+# vetoes[i] = ((kind, until), ...) standing ON i; pend[i] = kinds of requests standing on i; sanc[i] = ((kind, until, card), ...)
+
+
+def script_for(persona):
+    """The scripted stand-in for a persona (never an LLM): from its `press-*` tag, else cooperator."""
+    for t in getattr(persona, "tags", ()):
+        if t in SCRIPT_TAGS:
+            return SCRIPT_TAGS[t]
+    return "cooperator"
+
+
+def consent_for(persona):
+    """Deterministic version of PersonaAgent.consents (avoidant: no)."""
+    s, a = persona.negotiation_style, persona.weights["autonomy"]
+    return {"accommodating": True, "collaborative": a < 0.5, "direct": a < 0.3}.get(s, False)
+
+
+class HouseholdWorld:
+    """Household adapter for `empowerment`: n_agents, actions, step, key, is_terminal (+ initial, snapshot).
+    consents = (bool, bool): whether Partner A and Partner B agree to a request (deterministic)."""
+    n_agents = 2
+
+    def __init__(self, consents=(True, True), menu=HH_MENU):
+        self.consents, self.menu = tuple(bool(c) for c in consents), menu
+        self._gate_cache, self._cards = {}, {}
+
+    # -- construction
+    def initial(self, week=0):
+        z2 = lambda v: (v, v)
+        return HState(week, 0, z2(HH.UNITS), z2(10), z2(45), z2(True), z2((0, 0, 0, 0)), z2(False), z2(0), z2(()), z2(()),
+                      z2(0), z2(()), 0, z2(0))
+
+    def snapshot(self, world, w):
+        """The abstract state of a WeeklyWorld at the start of week w (before anyone acts)."""
+        g = lambda f: tuple(f(r) for r in "AB")
+        return HState(w, 0, g(lambda r: world.units[r]), g(lambda r: int(world.p[r]["money"])), g(lambda r: int(world.p[r]["pooled"])),
+                      g(lambda r: bool(world.p[r]["in"])), g(lambda r: (0, 0, 0, 0)), g(lambda r: False), g(lambda r: 0),
+                      g(lambda r: tuple(sorted(getattr(world, "vetoes", {}).get(r, {}).items()))),
+                      g(lambda r: tuple(sorted(world.pending[r]))), g(lambda r: int(world.consent[r])),
+                      g(lambda r: tuple(sorted((s["kind"], s["until"], s["card"]) for s in world.sanctions[r] if s["until"] > w))),
+                      int(world.funded), g(lambda r: min(36, world.p[r]["months_in"])))
+
+    # -- the four methods
+    def is_terminal(self, s):
+        return s.pas >= HH.PASSES
+
+    def actions(self, s, agent):
+        return self.menu
+
+    def key(self, s, agent):
+        o = 1 - agent
+        c = s.cnt[agent]
+        return (s.inn[agent], s.money[agent] // 4, s.pooled[agent] // 10, min(c[0], 2), min(c[1], 2), min(c[2], 2), min(c[3], 2),
+                min(3, s.taken[agent] // 3), tuple(sorted(k for k, _ in s.vetoes[o])), tuple(sorted(k for k, _ in s.vetoes[agent])),
+                s.pend[agent], tuple(sorted(k for k, _, _ in s.sanc[agent])), s.inn[o])
+
+    def need(self, s):
+        return HH.BILLS[sum(s.inn)]
+
+    def gate_state(self, s, r):
+        o = 1 - r
+        pend = s.pend[r]
+        gap = max(0, self.need(s) - s.funded) if s.inn[r] or s.inn[o] else 0
+        return {"pooled": s.pooled[r], "money": s.money[r], "other_earns_more": 1 if r == 1 else 0,
+                "no_contact_request": int("no_contact" in pend), "stay_home_request": int("stay_home" in pend),
+                "consented": int(bool(pend) and bool(s.cons[r])), "need_gap": min(gap, 10), "months_in": s.months_in[r],
+                "other_in": int(s.inn[o])}
+
+    def decide(self, s, spec, r, a, take=0):
+        """Mirror of WeeklyWorld.decide: -> ("ok" | "soft" | "hard", sanction dicts)."""
+        for kind, until, card in s.sanc[r]:
+            if until > s.week:
+                if kind == "suspend" and a not in HH.SUSPEND_ALLOWS + ("rest",):
+                    return "hard", ()
+                if kind == "cap_halve" and a in HH.CAP_HALVE_BANS:
+                    return "hard", ()
+        for kind, until in s.vetoes[r]:
+            if until > s.week and HH.VETO_KINDS[kind] == a:
+                return "hard", ()
+        st = self.gate_state(s, r)
+        key = (id(spec), a, take, tuple(st.values()))
+        hit = self._gate_cache.get(key)
+        if hit is None:
+            cm = self._cards.setdefault(id(spec), {c.id: c for c in spec.cards})
+            ok, reasons = spec.check("partner", a, st, take)
+            if ok:
+                hit = ("ok", ())
+            else:
+                sanc = [cm[i].or_else for i in reasons]
+                if all(x and x.get("kind") in HH.SANCTION_UTILITY and isinstance(x.get("duration_months"), int) for x in sanc):
+                    hit = ("soft", tuple((x["kind"], x["duration_months"], i) for x, i in zip(sanc, reasons)))
+                else:
+                    hit = ("hard", ())
+            self._gate_cache[key] = hit
+        return hit
+
+    def feasible(self, s, r, a, kind=None):
+        o = 1 - r
+        if a in HH.V2_COST and s.units[r] < HH.V2_COST[a]:
+            return False
+        if a == "spend_shared":
+            return s.inn[r] and s.money[r] >= HH.SHARE_STEP
+        if a == "spend_self":
+            return s.money[r] >= HH.SELF_STEP
+        if a == "together":
+            return s.inn[r] and s.inn[o] and s.units[o] >= HH.V2_COST["together"]
+        if a == "request":
+            return s.inn[r] and s.inn[o] and kind in HH.REQUEST_KINDS_V3
+        if a == "veto":
+            return s.inn[r] and s.inn[o] and kind in HH.VETO_KINDS and all(k != kind for k, _ in s.vetoes[o])
+        if a == "take_shared":
+            return s.inn[r] and s.inn[o] and s.pooled[o] >= 1 and not s.took[r]
+        if a == "leave":
+            return s.inn[r]
+        if a == "return":
+            return (not s.inn[r]) and s.inn[o]
+        return True
+
+    def _act(self, s, r, a, arg):
+        """Apply one proposed action by role r if feasible and not hard-blocked; else return s unchanged."""
+        take = arg if a == "leave" else 0
+        kind = arg if a in ("request", "veto") else None
+        if not self.feasible(s, r, a, kind):
+            return s
+        dec, sanc = self.decide(s, self._spec, r, a, take)
+        if dec == "hard":
+            return s
+        o = 1 - r
+        L = lambda t, i, v: t[:i] + (v,) + t[i + 1:]
+        units, money, pooled, inn = s.units, s.money, s.pooled, s.inn
+        cnt, took, taken, vetoes, pend, cons, funded, mi = s.cnt, s.took, s.taken, s.vetoes, s.pend, s.cons, s.funded, s.months_in
+        units = L(units, r, units[r] - HH.V2_COST.get(a, 0))
+        c = list(cnt[r])
+        if a == "work":
+            money = L(money, r, money[r] + HH.V2_INCOME["AB"[r]]); c[0] += 1
+        elif a == "spend_shared":
+            money = L(money, r, money[r] - HH.SHARE_STEP)
+            if funded >= self.need(s):
+                pooled = L(pooled, r, pooled[r] + HH.SHARE_STEP)
+            else:
+                funded += HH.SHARE_STEP
+        elif a == "spend_self":
+            money = L(money, r, money[r] - HH.SELF_STEP); c[3] += 1
+        elif a == "see_friend":
+            c[1] += 1
+        elif a == "together":
+            units = L(units, o, units[o] - HH.V2_COST["together"]); c[2] += 1
+            co = list(cnt[o]); co[2] += 1; cnt = L(cnt, o, tuple(co))
+        elif a == "refuse_request":
+            pend = L(pend, r, ())
+        elif a == "request":
+            pend = L(pend, o, tuple(sorted(set(pend[o]) | {kind})))
+            cons = L(cons, o, int(self.consents[o]))
+        elif a == "veto":
+            vetoes = L(vetoes, o, tuple(sorted(set(vetoes[o]) | {(kind, s.week + HH.VETO_WEEKS)})))
+        elif a == "take_shared":
+            amt = min(HH.TAKE_SHARED, pooled[o])
+            pooled = L(pooled, o, pooled[o] - amt)
+            money = L(money, r, money[r] + amt)
+            took = L(took, r, True); taken = L(taken, r, taken[r] + amt)
+        elif a == "leave":
+            carry = pooled[r] * take // 100
+            money = L(money, r, money[r] + carry)
+            if inn[o]:
+                pooled = L(pooled, o, pooled[o] + pooled[r] - carry)
+            pooled = L(pooled, r, 0); inn = L(inn, r, False); pend = L(pend, r, ())
+        elif a == "return":
+            inn = L(inn, r, True); mi = L(mi, r, 0)
+        cnt = L(cnt, r, tuple(c))
+        sa = s.sanc
+        if sanc:
+            sa = L(sa, r, tuple(sorted(s.sanc[r] + tuple((k, s.week + HH.MONTH_WEEKS * d, card) for k, d, card in sanc))))
+        return s._replace(units=units, money=money, pooled=pooled, inn=inn, cnt=cnt, took=took, taken=taken, vetoes=vetoes,
+                          pend=pend, cons=cons, sanc=sa, funded=funded, months_in=mi)
+
+    def step(self, s, spec, agent, action, policy_of_others):
+        """Pure: one pass. policy_of_others(state, i) -> ordered candidate list of (action, arg) for partner i."""
+        if self.is_terminal(s):
+            return s
+        self._spec = spec
+        for r in (0, 1):
+            if r == agent:
+                s = self._act(s, r, action[0], action[1])
+            else:
+                for a, arg in policy_of_others(s, r):
+                    t = self._act(s, r, a, arg)
+                    if t is not s:
+                        s = t
+                        break
+        return s._replace(pas=s.pas + 1)
+
+
+def scripted_policy(scripts):
+    """scripts = (name for Partner A, name for Partner B) from SCRIPTS -> policy(state, i) -> candidates (best first)."""
+    def coop(s, i):
+        c = []
+        if max(0, HH.BILLS[sum(s.inn)] - s.funded) > 0:
+            c.append(("spend_shared", None))
+        if s.cnt[i][0] < 1:
+            c.append(("work", None))
+        if s.cnt[i][1] < 1:
+            c.append(("see_friend", None))
+        return c + [("rest", None)]
+
+    def policy(s, i):
+        name = scripts[i]
+        if name == "controller":
+            return [("veto", "no_contact"), ("veto", "spend")] + coop(s, i)
+        if name == "freerider":
+            return [("take_shared", None)] + [x for x in coop(s, i) if x[0] != "spend_shared"]
+        if name == "overasker":
+            return ([] if s.pend[1 - i] else [("request", "time")]) + coop(s, i)
+        return coop(s, i)
+    return policy
+
+
+def household_bits(world, spec, state, scripts, k=K_DEFAULT, cap=HH_CAP):
+    """Both partners' empowerment at `state` against the scripted others -> {"bits": [b0, b1], "open": bool}."""
+    pol = scripted_policy(scripts)
+    res = [empowerment(world, spec, state, i, k, pol, cap) for i in (0, 1)]
+    return {"bits": [r["bits"] for r in res], "open": any(r["bound_hit"] for r in res)}
+
+
+def household_run_bits(spec_cards, personas, seed, weeks=HH.WEEKS, press=True, snapshot_weeks=HH_SNAPSHOT_WEEKS, cap=HH_CAP,
+                       agent_factory=None):
+    """Run one weekly world and take empowerment snapshots of both partners at the start of the given weeks.
+    -> {"bits": [[b0, b1] per exact snapshot], "open": n open snapshots, "run": Run}. press=False is the twin (the
+    persona scripts are all cooperators too)."""
+    gate = spec_cards if isinstance(spec_cards, HH.PyGate) else HH.PyGate(spec_cards)
+    w = HH.WeeklyWorld(gate, personas, seed, weeks)
+    if not press:
+        for r in "AB":
+            if hasattr(w.agents[r], "press"):
+                w.agents[r].press = False
+    scripts = tuple(script_for(p) if press else "cooperator" for p in personas)
+    hw = HouseholdWorld(tuple(consent_for(p) for p in personas))
+    out = {"bits": [], "open": 0}
+
+    def hook(world, wk):
+        if wk in snapshot_weeks:
+            r = household_bits(hw, gate, hw.snapshot(world, wk), scripts, cap=cap)
+            if r["open"]:
+                out["open"] += 1
+            else:
+                out["bits"].append(r["bits"])
+    w.hook = hook
+    out["run"] = w.play()
+    return out
+
+
+def household_ref_bits(cap=HH_CAP):
+    """BITS_REF: week-0 initial state, no rules, cooperator others (one number for both partners)."""
+    hw = HouseholdWorld()
+    r = household_bits(hw, HH.PyGate([]), hw.initial(), ("cooperator", "cooperator"), cap=cap)
+    return r["bits"][0]

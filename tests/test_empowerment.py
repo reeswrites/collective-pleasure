@@ -153,3 +153,113 @@ def test_power_seeking_index_hand_computed():
     assert r["psi"] == 0 and not r["power_seeking"]
     # a shared collapse: own down, others down -> not flagged
     assert not E.power_seeking_index([[4, 4], [0, 0]], 0)["power_seeking"]
+
+
+# ---- household adapter (v3a) ----
+from itertools import product as _product
+
+from mar import personas as PE
+from mar.worlds import household as HH
+
+PERS = {p.id: p for p in PE.load_dir(ROOT / "personas")}
+COOP = ("cooperator", "cooperator")
+
+
+def test_household_step_is_pure_and_deterministic():
+    hw = E.HouseholdWorld()
+    s0 = hw.initial()
+    g = HH.PyGate(HH.load_variant("baseline"))
+    pol = E.scripted_policy(COOP)
+    a = hw.step(s0, g, 0, ("work", None), pol)
+    b = hw.step(s0, g, 0, ("work", None), pol)
+    assert a == b and s0 == hw.initial() and a is not s0
+    assert a.money[0] == 10 + HH.V2_INCOME["A"] and a.pas == 1 and a.units[0] == HH.UNITS - 4
+
+
+def test_household_empowerment_exact_bits_and_cap_gives_open():
+    hw = E.HouseholdWorld()
+    g = HH.PyGate(HH.load_variant("baseline"))
+    r = E.empowerment(hw, g, hw.initial(), 0, 3, E.scripted_policy(COOP), cap=E.HH_CAP)
+    assert r["verdict"] == "exact" and r["reachable"] > 100 and 0 < r["bits"] < 12 and r["expanded"] < E.HH_CAP
+    assert r == E.empowerment(hw, g, hw.initial(), 0, 3, E.scripted_policy(COOP), cap=E.HH_CAP)   # no RNG
+    o = E.empowerment(hw, g, hw.initial(), 0, 3, E.scripted_policy(COOP), cap=60)
+    assert o["verdict"] == "open" and o["bound_hit"] and o["reachable"] <= r["reachable"]
+
+
+def test_household_terminal_after_one_week_of_passes():
+    hw, g = E.HouseholdWorld(), HH.PyGate([])
+    s, pol = hw.initial(), E.scripted_policy(COOP)
+    for _ in range(HH.PASSES):
+        assert not hw.is_terminal(s)
+        s = hw.step(s, g, 0, ("rest", None), pol)
+    assert hw.is_terminal(s) and hw.step(s, g, 0, ("work", None), pol) is s
+
+
+def test_household_veto_blocks_and_lowers_the_victims_empowerment():
+    hw = E.HouseholdWorld()
+    g = HH.PyGate([])
+    s = hw.initial()
+    vetoed = s._replace(vetoes=((), (("no_contact", 4),)))
+    assert hw.decide(s, g, 1, "see_friend")[0] == "ok" and hw.decide(vetoed, g, 1, "see_friend")[0] == "hard"
+    assert hw.decide(vetoed, g, 1, "spend_self")[0] == "ok"
+    pol = E.scripted_policy(COOP)
+    assert E.empowerment(hw, g, vetoed, 1, 3, pol)["bits"] < E.empowerment(hw, g, s, 1, 3, pol)["bits"]
+    # a wall on veto removes it from the others' reachable moves: the controller's script has no effect on the victim
+    wall = HH.PyGate(HH.load_variant("baseline"))
+    ctrl = E.scripted_policy(("controller", "cooperator"))
+    assert E.empowerment(hw, g, s, 1, 3, ctrl)["bits"] < E.empowerment(hw, g, s, 1, 3, pol)["bits"]
+    assert E.empowerment(hw, wall, s, 1, 3, ctrl)["bits"] <= E.empowerment(hw, wall, s, 1, 3, pol)["bits"]
+
+
+def test_household_key_counts_power_held_and_amounts_taken():
+    hw, g = E.HouseholdWorld(), HH.PyGate([])
+    s, pol = hw.initial(), E.scripted_policy(COOP)
+    v = hw.step(s, g, 0, ("veto", "spend"), pol)
+    assert hw.key(v, 0) != hw.key(s, 0) and hw.key(v, 1) != hw.key(s, 1)       # held by A, standing on B
+    t = hw.step(s, g, 0, ("take_shared", None), pol)
+    assert t.pooled == (45, 42) and t.money[0] == 13 and hw.key(t, 0) != hw.key(s, 0)
+    assert hw.step(t, g, 0, ("take_shared", None), pol).taken == t.taken      # once a week
+
+
+def test_household_soft_card_takes_effect_and_adds_a_sanction():
+    hw = E.HouseholdWorld()
+    soft = HH.PyGate(HH.load_variant("needs_duty"))
+    s = hw.initial()
+    assert hw.decide(s, soft, 0, "spend_self")[0] == "soft"                  # need unfunded
+    t = hw.step(s, soft, 0, ("spend_self", None), E.scripted_policy(("cooperator", "cooperator")))
+    assert t.sanc[0] and t.sanc[0][0][0] == "warn" and t.money[0] == 8
+
+
+@pytest.mark.parametrize("variant", HH.V2_VARIANTS)
+def test_household_adapter_agrees_with_the_weekly_world_gate(variant):
+    """Faithfulness: on real states from a run, the adapter's decision equals WeeklyWorld.decide for every action."""
+    gate = HH.PyGate(HH.load_variant(variant))
+    w = HH.WeeklyWorld(gate, (PERS["p-anchor"], PERS["p-wanderer"]), 1, 40)
+    hw, n = E.HouseholdWorld(), [0]
+
+    def hook(world, wk):
+        s = hw.snapshot(world, wk)
+        for r, role in enumerate("AB"):
+            for a in HH.PARTNER_ACTIONS + ("rest", "together"):
+                for take in ((0, 50, 100) if a == "leave" else (0,)):
+                    assert hw.decide(s, gate, r, a, take)[0] == world.decide(role, a, wk, take)[0], (variant, wk, role, a)
+                    n[0] += 1
+    w.hook = hook
+    w.play()
+    assert n[0] > 40 * 2 * 9
+
+
+def test_household_run_bits_takes_snapshots_and_is_deterministic():
+    pair = (PERS["p-anchor"], PERS["p-wanderer"])
+    r1 = E.household_run_bits(HH.load_variant("baseline"), pair, 0, weeks=30, snapshot_weeks=(0, 26))
+    r2 = E.household_run_bits(HH.load_variant("baseline"), pair, 0, weeks=30, snapshot_weeks=(0, 26))
+    assert r1["open"] == 0 and len(r1["bits"]) == 2 and r1["bits"] == r2["bits"]
+    assert all(0 < b < 12 for row in r1["bits"] for b in row)
+
+
+def test_household_ref_bits_is_the_open_world_maximum_for_cooperator_others():
+    ref = E.household_ref_bits()
+    hw = E.HouseholdWorld()
+    for v in ("baseline", "trap", "no_cards"):
+        g = HH.PyGate([] if v == "no_cards" else HH.load_variant(v))
+        assert E.household_bits(hw, g, hw.initial(), COOP)["bits"][0] <= ref + 1e-9
