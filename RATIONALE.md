@@ -72,7 +72,7 @@ It is evaluated first in a five-agent fishery commons (GovSim dynamics).
 | Conflict-checking a rule set before use, LLM-evolved rules | Done Oct 2026, single agent, stateless allow/deny | VEPA (2610.12813) |
 | Enforcement in a GovSim-derived fishery | Done Jul 2026, LM verifiers, no formal rules | Ye & Steinhardt (2607.09766) |
 | Agent-written executable laws in GovSim | Done Sep 2026, sandbox-tested, not formal | Rehm (2609.22600) |
-| Convergence of a refinement loop for LLM agents | Not found so far (V1 checking) | nearest formal analogue: CEGAR / CEGIS |
+| Convergence of a refinement loop for LLM agents | Partial curves exist (RvB 2601.19726, Kumar 2602.00755); the seam-count curve with a blinded oracle was not found (V1, 2026-11-10) | nearest formal analogue: CEGAR / CEGIS |
 
 The 2026-11-10 re-check (docs/prior-art/2026-11-10.md) held about 70% for the original pipeline but showed its parts are mostly taken, which is why the question moved to convergence (ADR 0003). **Re-run the check before any write-up; this area produces about one relevant paper a month.**
 

@@ -8,7 +8,7 @@ Predictions must be committed before runs. Do not edit a prediction after its ru
 |---|---|---|---|---|
 | C1 | Under the refinement loop (ADR 0003), new seams per round decrease across rounds toward a plateau, on at least 3 seeds, without the bloat guard tripping | untested - preregister exact fit, rounds, seeds and thresholds before V4 | none | docs/pitch.md |
 | C1-bloat | Rule count grows sublinearly in rounds and agent action space stays above a preregistered floor | untested - preregister with C1 | none | ADR 0003 decision 7 |
-| N1 | No published work measures seams-per-round convergence of a spec refinement loop for LLM agents with an oracle independent of the spec | under check (V1) | docs/prior-art/2026-11-10.md | ADR 0003 |
+| N1 | No published work measures the per-round rate of new gate-passing intent violations ("seams") in a solver-checked, LLM-patched rule loop for a multi-agent LLM commons, with the patcher blinded to an independent environment-plus-frozen-judge oracle, and diffs the written rules against rules mined from traces. "LLM patches rules, solver rejects conflicts" alone is not claimed (VEPA, AutoCedar do it) | narrowed, V1 pass (2026-11-10) | docs/prior-art/2026-11-10-v1-convergence.md | ADR 0003 |
 
 ## Follow-ups (not preregistered)
 

@@ -7,7 +7,7 @@ Status: pre-results. Direction set 2026-11-10 (ADR 0003, docs/pitch.md). Every s
 | Slice | What | Budget | Validation (pass / fail) |
 |---|---|---|---|
 | V0 | Prior-art check, repeated | done | docs/prior-art/2026-11-10.md: full pipeline not pre-empted; gating, prompt-vs-gate and conflict-checking are prior art |
-| V1 | Adversarial novelty search on the convergence loop | hours | Pass: no work measures seams-per-round convergence of a refinement loop for LLM agents with an independent oracle. Fail: narrow the claim to what survives, or stop |
+| V1 | Adversarial novelty search on the convergence loop | hours | Done 2026-11-10: PASS with a narrower claim; no paper pre-empts the full design (docs/prior-art/2026-11-10-v1-convergence.md). Pass: no work measures seams-per-round convergence of a refinement loop for LLM agents with an independent oracle. Fail: narrow the claim to what survives, or stop |
 | V2 | The loop on a scripted mock agent: tiny fishery, ADICO cards to Z3 gate, planted seam (per-catch cap, no per-month cap), outcome oracle, scripted patch, solver patch checks | half a day | Pass: oracle flags the planted seam; patch closes it; solver rejects a deliberately conflicting patch; mined de facto rules equal the written ones under the gate |
 | V3 | Instrument calibration with one real LLM agent (cheap open model), same harness | a day | Pass: all four V2 checks hold with a real model; measured $ and minutes per round. No claims about convergence |
 | V4 | First curve: five-agent swarm, ~10 rounds, 3 seeds, LLM patcher, outcome oracle (judge rubric optional). Preregister C1 before the first run | two to three days | Result either way: slope, plateau with uncertainty, rule count per round. Bloat guard checked |
@@ -26,3 +26,4 @@ The earlier milestones (ADICO to LTS export cross-checked against philosophy-eng
 ## Log
 
 - 2026-11-10: repo scaffolded; prior-art check repeated; interview set the convergence question (ADR 0003); V1 launched.
+- 2026-11-10: V1 done. Pass with a narrower claim (N1 reworded in docs/claims.md). RvB and Kumar et al. have partial per-round curves; full text of VEPA and RvB still to read before any write-up.

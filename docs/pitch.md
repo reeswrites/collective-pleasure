@@ -32,6 +32,7 @@ written rules (ADICO cards) --compile--> transition system --gate--> agents act 
 ## Why it might be new, and why others may not have done it
 
 - Formal-methods people know counterexample-guided refinement (CEGAR, CEGIS) and its convergence results for finite systems, but don't run LLM agents. LLM-agent people run fixed specs. The pieces exist; the loop with an independent intent oracle, LLM counterexample generators, and rules that can grow from agent behavior was not found (see docs/prior-art/).
+- RvB (2601.19726) and Kumar et al. (2602.00755) already show per-round curves for simpler loops (defense rate, constitution fitness). The new measure is the seam count against an oracle the patcher never sees, plus the de jure vs de facto diff (V1, docs/prior-art/2026-11-10-v1-convergence.md).
 - Measuring a seam needs intent separated from spec. Most work uses the spec as its own judge, so "zero violations" is circular.
 
 ## Fastest validations
