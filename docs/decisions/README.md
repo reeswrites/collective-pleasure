@@ -18,3 +18,4 @@ One line per ADR. Status as of 2026-11-10. Overview of where the project stands:
 | 0012 | The evolution loop | accepted, amended (v2) | Population, proof filter, Pareto selection, world interface. v2 adds fresh adversaries and a redundancy check |
 | 0013 | Negotiated pots | in progress (another agent) | Pot terms are negotiated by those who share the pot, not imposed |
 | 0014 | Freedom is equal liberty minus domination | accepted | Compatible options minus options held at another's sufferance; withdrawal is not domination |
+| 0015 | Formal statistics | accepted | A statistics layer (bootstrap, permutation, exact binomial, Holm, power), a retrofit of today's results, and new prereg rules. Template in docs/templates/prereg.md |

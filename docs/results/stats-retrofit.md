@@ -40,7 +40,7 @@ Counts are predictions (rows of the prereg table as the results file scored them
 
 ## What changes under statistics
 
-No committed verdict flips: all 81 recomputed point verdicts agree with the results files. What changes is how much weight each carries.
+No committed verdict flips: all 30 testable recomputed point verdicts agree with the results files. What changes is how much weight each carries.
 
 - **Misses that are not robust.** Bargaining 4b (exit lowered cooperation by 0.019) has an interval of about -0.065 to +0.026 over 25 pairings, so it cannot be told from the 0.01 slack, let alone from no effect. Evolution v2 prediction 1 (7 of 18 runs, need 10) has an exact interval of 0.17 to 0.64 that reaches the 0.56 line. Household v1 prediction 1b (trap freedom 0.487 against 0.45) is within noise over six mixes. These stay recorded as misses, but they are weak evidence that the underlying thing is false.
 - **Holds that are weak.** Every Evolution v2 row that held does so with an interval that reaches the threshold; the headline "varied training narrows the exam gap" has a seam_free difference interval of 0 to 0.27 over 9 pairs, and would need about 240 pairs to resolve a 0.05 gap at its observed spread. Evolution v1 rows 1 and 3 are held with the same caveat.
