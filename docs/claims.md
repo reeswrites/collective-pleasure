@@ -9,6 +9,9 @@ Predictions must be committed before runs. Do not edit a prediction after its ru
 | C1 | Under the refinement loop (ADR 0003), new seams per round decrease across rounds toward a plateau, on at least 3 seeds, without the bloat guard tripping | untested - preregister exact fit, rounds, seeds and thresholds before V4 | none | docs/pitch.md |
 | C1-bloat | Rule count grows sublinearly in rounds and agent action space stays above a preregistered floor | untested - preregister with C1 | none | ADR 0003 decision 7 |
 | N1 | No published work measures the per-round rate of new gate-passing intent violations ("seams") in a solver-checked, LLM-patched rule loop for a multi-agent LLM commons, with the patcher blinded to an independent environment-plus-frozen-judge oracle, and diffs the written rules against rules mined from traces. "LLM patches rules, solver rejects conflicts" alone is not claimed (VEPA, AutoCedar do it) | narrowed, V1 pass (2026-11-10) | docs/prior-art/2026-11-10-v1-convergence.md | ADR 0003 |
+| D2a | Under the format experiment (ADR 0004), ADICO ties STRUCT on outcomes and seam curve | draft prediction - finalize and commit before the format run (ADR 0004) | none | ADR 0004 |
+| D2b | ADICO beats STRUCT on mined-norm expressibility, because it separates sanctioned rules from unsanctioned norms and names the sanctioner | draft prediction - finalize and commit before the format run (ADR 0004) | none | ADR 0004 |
+| D2c | TEXT shows more seams and more post-translation failures than both gated formats | draft prediction - finalize and commit before the format run (ADR 0004) | none | ADR 0004 |
 
 ## Follow-ups (not preregistered)
 
