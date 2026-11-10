@@ -56,3 +56,23 @@ docs/surprises.md, under `## 2026-11-10: evolution v2 (fishery)`:
 ## Does and does not show
 
 Shows: the v2 engine runs end to end and deterministically offline with a redundancy filter, a non-exhausting seam measure, a non-trivial 4-objective front, and varied vs fixed training arms; redundancy rejects or repairs about a quarter of proof-passing mutants. Does not show: that varied training solves overfitting (suggestive at best, 5 of 9 pairs), anything about LLM agents, or that the frontier is a rich trade-off curve (3 to 4 vectors).
+
+## Correction 2026-11-10 (reconciling "5 of 9" and "6 of 9", the one run behind the seam_free clause, the repaired count)
+
+Recomputed from `runs/evolve-v2/summary.json` (gapavg = mean of the sustainability and seam_free gaps, reference minus exam 2; fixed minus varied):
+
+| pair | fixed gap | varied gap | difference |
+|---|---|---|---|
+| v2 s0 | 0.738 | 0.522 | +0.217 |
+| v2 s1 | 0.732 | -0.016 | +0.747 |
+| v2 s2 | 0.729 | 0.729 | 0.000 |
+| minimal s0 | 0.751 | 0.732 | +0.019 |
+| minimal s1 | 0.725 | 0.674 | +0.051 |
+| minimal s2 | 0.729 | 0.729 | 0.000 |
+| tight s0 | 0.396 | 0.142 | +0.254 |
+| tight s1 | 0.553 | -0.002 | +0.555 |
+| tight s2 | 0.728 | 0.729 | -0.001 |
+
+- **6 versus 5.** The table's "varied smaller in 6/9" counts every pair with a strictly positive difference, including minimal s0 (+0.019). The discussion's "5 of 9" drops that one and counts pairs with a difference of at least 0.05 (v2 s0, v2 s1, tight s0, tight s1, minimal s1). Both are true; the preregistered threshold ("at least 6") is met at exactly 6 only because of the +0.019 pair, and "0 pairs favour fixed" is false by 0.001 (tight s2, fixed marginally smaller). Two pairs are exact ties.
+- **The seam_free clause rests on one run.** Exam-2 seam_free (fixed 0.267, varied 0.356, +0.09) differs in a single run: v2 s1, where the varied elite scores 1.0 and the fixed elite 0.2. In the other 8 pairs the two arms score identically on exam-2 seam_free; without v2 s1 the difference is 0.000. The mean gap difference (+0.205) is also dominated by two pairs: v2 s1 (+0.747) and tight s1 (+0.555) are 71 percent of the sum. In tight s1 exam-2 seam_free is equal (0.4 and 0.4); the gap shrinks because the varied elite's reference seam_free is 0.333 against 1.0, the "reference fell" artifact, which is larger than "part of" the effect for the biggest contributors. "Met, by the thresholds" stands; "varied training narrowed the gap" is supported by at most a few runs.
+- **"Repaired" overstates what was kept.** 255 of the 381 flagged mutants were `patch` mutants whose pruned set was counted as repaired; in the code (`evolve.py`, redundancy branch) a repair whose pruned set already exists in the population is counted as repaired and also as a duplicate and discarded. From the logs: 1468 checked = 1278 accepted + 126 rejected + 64 discarded as duplicates, so 64 of the 255 "repaired" mutants were discarded, not kept as smaller rule sets (191 were kept). The 26.0 percent flagged share (381 of 1468) is unaffected. The sentence "pruning kept them as smaller rule sets" (here, and in docs/surprises.md) is about a quarter wrong.

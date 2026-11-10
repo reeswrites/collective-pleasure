@@ -83,3 +83,12 @@ Live ladder capability arm (6 models, $4.35): zero inventive seams, and no model
 
 - `negotiation LLM pilot prediction 4 (2026-11-10): FAIL, run excluded. Format errors were 4 of 39 turns = 0.103 (needed under 0.10) in the registered run, all of them replies cut off at the preregistered 700-token cap; predictions 1 to 3 got no verdict. An exploratory second draw of the same configuration had 1 of 43 (0.023). Prereg docs/results/negotiation-llm-prereg.md; results docs/results/negotiation-llm.md.`
 - `negotiation LLM pilot prediction 2 (2026-11-10): not met in either draw (reported without verdict for the registered run). Pressing personas' mean gain over the imposed bundle was +0.424 (run 1) and +0.413 (run 2) over n = 5 against scripted +0.525 over n = 3; the threshold needed at most +0.325.`
+
+## 2026-11-10: empowerment, prediction 1 (added later; omitted from the first ledger pass)
+
+- `empowerment prediction 1 (2026-11-10): FAIL. VPGG voluntary higher than compulsory in 14 of 15 compositions with none worse and mean difference at least 0.5 bits; actual strict in 11 of 15, compulsory HIGHER in CCLL (7 vs 9 reachable) and CDLL (4 vs 9), mean difference 0.460 bits. The LLLL tie was predicted; the other three misses were not. Prereg docs/results/empowerment-prereg.md; results docs/results/empowerment.md.`
+
+## 2026-11-10: household v1, predictions 1b and 2 (added later; omitted from the first ledger pass)
+
+- `household v1 prediction 1b (2026-11-10): FAIL on the threshold, PASS on the ordering. Trap freedom 0.487, the lowest of the seven variants as predicted, but above the 0.45 line; with a controller in the mix 0.29, without one 0.61 to 0.85. Results docs/results/household.md.`
+- `household v1 prediction 2 (2026-11-10): FAIL. free_chaotic freedom 0.995 (the freedom clause passes) but cooperation 0.765, equal to baseline's and not below 0.55. Results docs/results/household.md.`

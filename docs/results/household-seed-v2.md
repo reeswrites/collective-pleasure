@@ -152,3 +152,9 @@ This document and its prereg say the seed v2 wording was "read back and accepted
 - R8b/R8c's "pooled assets" now read "the shared pot".
 
 Seed v1's S4 and S5 are marked SUPERSEDED in their card sources and in rules/household/SUPERSEDED.md.
+
+## Correction 2026-11-10 ("never trapped" is 3 partner-weeks in two runs)
+
+Prediction 2's row says no partner "was ever trapped by a commitment" and the per-agent suffering paragraph says the trapped condition ran 0.0 weeks per partner in every non-trap variant. Recomputed from `runs/household-seed-v2/results.json` (`cond_weeks[role]["trapped"]`, every variant except trap): the sum is 3 partner-weeks, all in `author_seed_v2_bindable`, in two runs of the same pairing: (p-controller as A, p-overasker as B) seed 2, Partner A trapped 2 weeks; (p-overasker as A, p-controller as B) seed 2, Partner B trapped 1 week. That is the single pairing the row reports as the one positive difference (p-overasker with p-controller, +0.005). The null conclusion stands (3 partner-weeks in 2 of 1197 non-trap runs, against the 0.02 margin the prediction needed), but the sentence should read "almost never trapped (3 partner-weeks in two bindable runs of one pairing)", not "never". One wording fix on prediction 1: the extra non-offsettable level over `author_seed_nocontrol` is 0.0192 against 0.0093, i.e. 0.010 (0.0100 over the no-commitments ablation); the text's "0.009" is rounded from the two level figures it quotes.
+
+Not rerun after the pot fix (see ADR 0013's amendment): these numbers belong to the per-person-share world.
