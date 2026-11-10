@@ -33,3 +33,12 @@ Exploratory, no prediction: elite vs seed on exam 2 (by arm, by seed rule set); 
 ## Runtime
 
 Measured before writing this: one 9-run evaluation about 0.18 s, one proof check 0.01 s. Estimate: about 20 re-evaluations of 15 runs per generation x 13 generations, about 80 s per evolution run, 18 runs on 8 cores in a process pool, about 4 minutes. The script must finish in about 15 minutes. If a pilot shows it will not, the setup is shrunk by a committed amendment to this file (population or generations) BEFORE the real run.
+
+## Amendment 1 (2026-11-10, committed before the real run): setup shrunk for runtime
+
+An EXPLORATORY pilot (`scripts/evolve_v2_run.py --gens 2`, 3 generation records only, outputs overwritten by the real run) took 247 s on 8 processes for 18 runs of 3 generations, about 100 s per run. That is about 5x slower than the estimate above (more gated actions per run than the 0.18 s evaluation I timed), so 12 generations at population 10 would take roughly 20 to 40 minutes, over the budget of about 15. I saw the pilot's printed verdicts (2 generations, so none of them is informative about the predictions; they are not a result and are not cited). The shrink below is for runtime only and no threshold was chosen to fit them. Changes, all in force for the real run:
+
+- Population mu = 8, offspring lambda = 8, **8 generations after generation 0** (generations 0 to 8). Estimated cost about 0.55 of the original, about 10 minutes.
+- Prediction 1 windows: mean audit prevalence over generations 6 to 8 vs generations 0 to 2 (was 10 to 12 vs 0 to 2). Threshold 0.15 and counts (10 of 18; 4 of 9 per arm) unchanged.
+- Prediction 4: N = 4 (scaled from 6 of 12): saturation first happens after generation 4, or never, in >= 15 of 18 runs. "At generation 12" in the non-trivial-front test now reads "at the last generation (8)". Other thresholds unchanged.
+- Predictions 2, 3 and 5 and Exam 2, the adversary pool, the objectives and all operators are unchanged.
