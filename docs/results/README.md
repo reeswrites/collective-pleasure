@@ -1,0 +1,33 @@
+# Results index (2026-11-10)
+
+Every experiment run so far, in the order it ran. All ran on 2026-11-10. Scripted agents unless the row says otherwise. Findings are about rule systems and scripted agents, not people. Predictions are committed in the prereg file before any number exists, and a miss is a result. Claim-level status is in docs/claims.md. The one-line verdict per results file is also printed by `uv run mar results`.
+
+"Held" and "missed" count the rows of each prereg table as the results file scored them.
+
+| # | Experiment | What it tested | Prereg | Results | Verdict | Follow-up |
+|---|---|---|---|---|---|---|
+| 1 | V2 | Instrument calibration on a planted-seam fishery: gate, oracle, patch checks, miner (mock agents) | v2-prereg.md | v2.md | 4 held, 0 missed (the scripted patch needed one card fix first) | Done. V3 (one real model) was folded into the live ladder |
+| 2 | V2b | An English-like surface over the ADICO cards | v2b-prereg.md | v2b.md | 4 held, 0 missed. Round trip is lossless; readability was not tested with a reader | Reader test waits for the format experiment (ADR 0004, claim D2d) |
+| 3 | Workbench | The chat workbench: `mar` CLI, HTML reports, skill, logs | none (tooling) | workbench.md | Not a result. Built and tested offline | `mar household` is still a stub; chat commands are queued (docs/plan.md) |
+| 4 | Household v1 | Two scores (freedom, cooperation) on seven rule variants, monthly world | household-prereg.md | household.md | 3 held, 2 missed. Trap fails the proofs. No trade-off: the frontier is trivial and cooperation tracks who the agents are | Superseded by household v2 (weekly world, goals) |
+| 5 | Seam ladder | Graded planted seams L1 to L5, scripted agents of rising depth, "inventive" classification | seam-ladder-prereg.md | seam-ladder.md | 4 held, 0 missed. Instrument calibration: each agent finds the seams at or below its depth, none above | Live models on the same ladder: rows 16 and 17 |
+| 6 | VPGG rediscovery | Does the pipeline rediscover Hauert et al. 2002 (voluntary public goods with loners)? | vpgg-prereg.md | vpgg.md | NOT rediscovered. 4 held, 1 missed: persistence, payoff and frontier hold, the oscillation clause fails (std 0.013 to 0.020 against a floor of 0.05) | Missing cycles are deferred, logged as a negative result. Not tuned |
+| 7 | Bargaining rung | Rubinstein split and the outside-option principle through the gate | bargaining-prereg.md | bargaining.md | REDISCOVERED. 3 held, 1 missed (frontier clause 4b: exit lowered mean cooperation by 0.019 over heuristic mixes) | Rung 3 (network with cuttable ties) not built |
+| 8 | Empowerment | Empowerment as a second freedom score against the hand-made one | empowerment-prereg.md | empowerment.md | 8 held, 1 missed (prediction 1: VPGG voluntary beat compulsory in only 11 of 15 compositions; the patch restores exploiters' empowerment, as predicted) | Led to liberty (rows 14, 15) |
+| 9 | Evolution v1 | The evolution loop on the fishery: proof filter, Pareto selection, held-out exam | evolve-prereg.md | evolve.md | 3 held, 1 missed, 1 mixed. The seam curve fell mostly by exhaustion, objectives saturated, the elite overfit the exam | Fixed in v2 (row 10) |
+| 10 | Evolution v2 | Fresh-adversary prevalence, varied vs fixed training, efficiency, redundancy filter | evolve-v2-prereg.md | evolve-v2.md | 3 held, 2 missed. Varied training narrowed the exam gap in 5 of 9 pairs (suggestive). Overfitting stays large. Prevalence fell in 7 of 18 runs (needed 10) | Household adapter and the final exam (row 18) |
+| 11 | Household v2 (hedonic) | Goals, weekly clock, shocks, enforced sanctions, pleasure and two kinds of suffering | household-v2-prereg.md | household-v2.md | 2 held, 3 missed. Still no trade-off; the author seed equals baseline; the "hardest pair" was not hardest | Led to pressing personas (row 12) |
+| 12 | Household v3a | Pressing personas (controller, free-rider, over-asker) and empowerment-based freedom | household-v3a-prereg.md | household-v3a.md | 2 held, 3 missed. A trade-off between empowerment and cooperation shows in sign only, below the committed size. Pressing personas make households fail far more often. The power-seeking index never flags the controller | Author seed v2 (row 13) |
+| 13 | Author seed v2 | The author's corrected seed, with bindable and free-exit variants | household-seed-v2-prereg.md | household-seed-v2.md | 5 held, 2 missed. Commitments to stay never trapped anyone (null): 18 of 51 runs dissolved under both variants | Negotiation (row 19) replaces the stubbed pot terms |
+| 14 | Liberty v1 | Equal liberty minus a domination penalty (ADR 0014) | liberty-prereg.md | liberty.md | 6 held, 3 missed. Toy world right; VPGG voluntary beat compulsory in only 4 of 15, because exit counted as domination | The author's answer produced v2 |
+| 15 | Liberty v2 | Interference vs withdrawal; agreement-dependent options excluded | liberty-v2-prereg.md | liberty-v2.md | 6 held, 4 missed. VPGG sum flips from -19.6 to +5.263 bits, but two compositions still reverse and fishery F2, F3 miss | Liberty into the household (docs/plan.md, queue 3) |
+| 16 | Live ladder, capability arm | IT1: do models find inventive seams when asked to probe the rules? Six models, L1 to L5 | ladder-live-prereg.md | ladder-live.md (harness note only) | RUNNING, prereg committed. No result yet | Reads of candidate inventive seams by the author; ML1 needs its own prereg |
+| 17 | Live ladder, propensity arm | Do models find seams when they only play a persona? P1 to P4 | ladder-propensity-prereg.md | not yet | RUNNING, prereg committed. No result yet | Compared with row 16 only after both finish |
+| 18 | Household final exam | FX1 and FX2: held-out personas, pairings and conditions, used once | household-exam-prereg.md | not yet | DEFINED, NOT RUN. Waits for household evolution | Runs once, after household evolution |
+| 19 | Negotiation | Households negotiate their own terms and pots before living together (ADR 0013) | in progress (another agent) | in progress | IN PROGRESS | Not yet indexed |
+
+## Reading across the rows
+
+- Calibration rows (V2, V2b, seam ladder) held. The rows that tried to say something about the world mostly missed on their first prediction: VPGG cycles, household trade-offs, evolution objectives, the author seed binding.
+- The household has shown no freedom against cooperation trade-off at the committed size (rows 4, 11, 12). With pressing personas one appears in sign only. That is a finding about the personas as much as about the rules.
+- Every miss has a line in docs/negative-results.md. Surprises are in docs/surprises.md.
