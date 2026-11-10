@@ -78,3 +78,8 @@ Live ladder capability arm (6 models, $4.35): zero inventive seams, and no model
 
 - `negotiation v2.1 prediction 2 (2026-11-10): FAIL on the second clause. Apart-from-week-0 households are 118 of 200 failed runs = 0.590 (needed under 0.50; v2 0.717); overall fail rate 0.390 (needed at most 0.45; held). Prereg docs/results/negotiation-v2.1-prereg.md; results docs/results/negotiation-v2.1.md.`
 - `negotiation v2.1 prediction 5 (2026-11-10): FAIL. 254 of 256 week-0 pot runs were identical to v2, not all 256. Both differences are review outcomes and trace to the outside-option rollout cache keying the hedonic state at 0.1 resolution, so results depend on which runs a worker executed earlier.`
+
+## 2026-11-10: negotiation LLM pilot
+
+- `negotiation LLM pilot prediction 4 (2026-11-10): FAIL, run excluded. Format errors were 4 of 39 turns = 0.103 (needed under 0.10) in the registered run, all of them replies cut off at the preregistered 700-token cap; predictions 1 to 3 got no verdict. An exploratory second draw of the same configuration had 1 of 43 (0.023). Prereg docs/results/negotiation-llm-prereg.md; results docs/results/negotiation-llm.md.`
+- `negotiation LLM pilot prediction 2 (2026-11-10): not met in either draw (reported without verdict for the registered run). Pressing personas' mean gain over the imposed bundle was +0.424 (run 1) and +0.413 (run 2) over n = 5 against scripted +0.525 over n = 3; the threshold needed at most +0.325.`
