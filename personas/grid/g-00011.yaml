@@ -1,0 +1,27 @@
+id: g-00011
+label: Grid certainty, togetherness, security, keeping, avoidance
+axes:
+  certainty_openness: 0.2
+  togetherness_independence: 0.2
+  security_adventure: 0.2
+  giving_keeping: 0.8
+  directness_avoidance: 0.8
+principles:
+- TODO
+- TODO
+- TODO
+backstory: TODO
+weights:
+  security: 0.8
+  autonomy: 0.2
+  togetherness: 0.62
+  money: 0.8
+  other_connections: 0.2
+negotiation_style: avoidant
+risk_tolerance: 0.2
+tags:
+- grid
+source: grid
+version: 1
+parent: ''
+varied: ''

@@ -1,0 +1,29 @@
+id: p-anchor
+label: The Anchor
+axes:
+  certainty_openness: 0.1
+  togetherness_independence: 0.1
+  security_adventure: 0.1
+  giving_keeping: 0.2
+  directness_avoidance: 0.2
+principles:
+- I want to know where we stand before I commit.
+- Home is built together, and I would rather over-give than keep score.
+- A plan said out loud beats a hope kept quiet.
+backstory: Grew up moving every year and learned to love a fixed address. Lost a lease once to a housemate
+  who left without notice. Now writes things down.
+weights:
+  security: 0.9
+  autonomy: 0.1
+  togetherness: 0.87
+  money: 0.48
+  other_connections: 0.1
+negotiation_style: collaborative
+risk_tolerance: 0.1
+tags:
+- wants-written-terms
+- stability-first
+source: hand
+version: 1
+parent: ''
+varied: ''

@@ -1,0 +1,29 @@
+id: p-peacekeeper
+label: The Peacekeeper
+axes:
+  certainty_openness: 0.2
+  togetherness_independence: 0.2
+  security_adventure: 0.3
+  giving_keeping: 0.2
+  directness_avoidance: 0.9
+principles:
+- Harmony first, and the hard talk can wait.
+- I would give up a point to keep the peace.
+- If something is wrong I hope you will notice.
+backstory: Grew up in a house where raised voices meant days of silence. Learned to smooth things over
+  early. Tends to agree first and feel it later.
+weights:
+  security: 0.74
+  autonomy: 0.2
+  togetherness: 0.8
+  money: 0.4
+  other_connections: 0.24
+negotiation_style: accommodating
+risk_tolerance: 0.27
+tags:
+- conflict-averse
+- agreeable-risk
+source: hand
+version: 1
+parent: ''
+varied: ''

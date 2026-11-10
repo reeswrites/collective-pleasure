@@ -1,0 +1,29 @@
+id: p-bargainer
+label: The Bargainer
+axes:
+  certainty_openness: 0.8
+  togetherness_independence: 0.7
+  security_adventure: 0.8
+  giving_keeping: 0.9
+  directness_avoidance: 0.1
+principles:
+- Everything is negotiable, including this.
+- I protect what I earn and I respect people who do too.
+- A good deal leaves both sides able to walk away.
+backstory: Started a small business young and negotiated every price. Enjoys the haggle and the clean
+  handshake after. Gets restless when terms are left vague or one-sided.
+weights:
+  security: 0.2
+  autonomy: 0.74
+  togetherness: 0.24
+  money: 0.62
+  other_connections: 0.74
+negotiation_style: competitive
+risk_tolerance: 0.8
+tags:
+- hard-bargainer
+- wants-leverage
+source: hand
+version: 1
+parent: ''
+varied: ''

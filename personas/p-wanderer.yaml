@@ -1,0 +1,29 @@
+id: p-wanderer
+label: The Wanderer
+axes:
+  certainty_openness: 0.9
+  togetherness_independence: 0.9
+  security_adventure: 0.9
+  giving_keeping: 0.3
+  directness_avoidance: 0.6
+principles:
+- I keep my options open, and I want you to keep yours.
+- I give freely but I will not be fenced in.
+- Plans are drafts, and I would rather revise than be bound.
+backstory: Has lived in six cities and kept friends in all of them. Left a steady job once and never regretted
+  it. Finds long commitments heavy unless the exit is clear.
+weights:
+  security: 0.1
+  autonomy: 0.9
+  togetherness: 0.28
+  money: 0.22
+  other_connections: 0.9
+negotiation_style: accommodating
+risk_tolerance: 0.9
+tags:
+- mismatch-with-anchor
+- exit-minded
+source: hand
+version: 1
+parent: ''
+varied: ''

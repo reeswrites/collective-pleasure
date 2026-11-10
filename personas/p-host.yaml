@@ -1,0 +1,29 @@
+id: p-host
+label: The Host
+axes:
+  certainty_openness: 0.8
+  togetherness_independence: 0.2
+  security_adventure: 0.8
+  giving_keeping: 0.1
+  directness_avoidance: 0.2
+principles:
+- A full table is a good life.
+- What is mine is yours, within reason, and I hope for the same.
+- I would rather try a thing than plan it to death.
+backstory: Always had people sleeping on the couch. Took chances on a few ventures, some paid off and
+  some did not. Brings new people and ideas home often.
+weights:
+  security: 0.2
+  autonomy: 0.44
+  togetherness: 0.83
+  money: 0.14
+  other_connections: 0.44
+negotiation_style: collaborative
+risk_tolerance: 0.8
+tags:
+- open-door
+- generous
+source: hand
+version: 1
+parent: ''
+varied: ''

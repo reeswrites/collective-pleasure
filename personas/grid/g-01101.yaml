@@ -1,0 +1,27 @@
+id: g-01101
+label: Grid certainty, independence, adventure, giving, avoidance
+axes:
+  certainty_openness: 0.2
+  togetherness_independence: 0.8
+  security_adventure: 0.8
+  giving_keeping: 0.2
+  directness_avoidance: 0.8
+principles:
+- TODO
+- TODO
+- TODO
+backstory: TODO
+weights:
+  security: 0.44
+  autonomy: 0.56
+  togetherness: 0.38
+  money: 0.2
+  other_connections: 0.8
+negotiation_style: accommodating
+risk_tolerance: 0.62
+tags:
+- grid
+source: grid
+version: 1
+parent: ''
+varied: ''

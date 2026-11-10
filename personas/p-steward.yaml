@@ -1,0 +1,29 @@
+id: p-steward
+label: The Steward
+axes:
+  certainty_openness: 0.2
+  togetherness_independence: 0.8
+  security_adventure: 0.2
+  giving_keeping: 0.8
+  directness_avoidance: 0.1
+principles:
+- Fair means each person can see the numbers.
+- Money is a tool, and tools should be shared on clear terms.
+- I say what I need plainly and expect the same.
+backstory: Kept the books for a family business at sixteen. Learned that vague money talk breeds quiet
+  resentment. Likes separate accounts with a clear shared pot.
+weights:
+  security: 0.8
+  autonomy: 0.56
+  togetherness: 0.2
+  money: 0.8
+  other_connections: 0.56
+negotiation_style: competitive
+risk_tolerance: 0.2
+tags:
+- ledger-minded
+- fairness-first
+source: hand
+version: 1
+parent: ''
+varied: ''
