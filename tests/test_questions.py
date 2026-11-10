@@ -42,7 +42,8 @@ def test_timeline_builds_self_contained_with_every_backfilled_entry(capsys, tmp_
     code, out = mar(capsys, tmp_path, "timeline", exp=EXP)
     assert code == 0 and "timeline:" in out
     html = (tmp_path / "runs" / "timeline.html").read_text()
-    for banned in ("<script", "http://", "https://", "src=", "<link"):
+    # Self-contained means nothing loads from outside; a URL quoted as text is fine.
+    for banned in ("<script", "src=", "<link", "href=\"http", "url(http"):
         assert banned not in html
     assert "prefers-color-scheme:dark" in html and "viewport" in html and "<svg" in html
     for k in ("Question", "Decision", "Change", "Run", "Commit"):
