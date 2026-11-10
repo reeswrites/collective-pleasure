@@ -69,3 +69,9 @@ Objectives saturated by generation 3, so the frontier collapsed to a single corn
 ## 2026-11-10: live ladder, capability arm
 
 A depth-1 seam the greedy script finds every time was found by no LLM. The cause was the instrument, since symmetric adversaries leave no victim, not model weakness. L4, "found by every model", was symmetric no-contact requests, not capability. The mock tests had played one role against a passive partner, which hid the bug. A mock panel with both roles driven is now a pre-spend gate.
+
+## 2026-11-10: negotiation v2.1
+
+- `2026-11-10 negotiation v2.1: the v2 finding that making outside options real made households worse was an artifact of the disagreement point. With a failed negotiation meaning living apart, no-agreement households fell from s_non 0.159 and fail 0.809 to 0.0315 and 0.459, and overall s_non from 0.100 to 0.0361; agreement is still 0.46 to 0.54.`
+- `2026-11-10 negotiation v2.1: 82 of 257 households that failed to agree at week 0 formed a household at a later retry, and those late households did worse than week-0 pots (fail 0.549, 61 percent dissolved).`
+- `2026-11-10 negotiation v2: results depend slightly on run scheduling. The outside-option rollout cache rounds the hedonic state to 0.1, so 2 of 256 pot rows changed their review outcome when the worker workload changed.`
