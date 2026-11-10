@@ -36,3 +36,8 @@ The author's conversation of 2026-11-10 settled several framings. The questions 
 ## Amendment 2026-11-10
 
 Freedom is now defined in ADR 0014: equal liberty minus a domination penalty, where withdrawal does not count as domination. Plain empowerment is now one of three reported freedom measures, not the main one. Predictions MU1, AP1 and DM1 are still draft predictions.
+
+
+## Amendment 2026-11-10 (fidelity wording, per the scope review S4)
+
+The simple-models ladder checks the pipeline and its algebra against closed forms and published equilibria (VPGG, bargaining). It does not establish that the household is a faithful model of real households. Household fidelity needs its own battery of known real-world findings, which is in the backlog (docs/plan.md). The Guaranteed Safe AI reference is verified in docs/references.md.
