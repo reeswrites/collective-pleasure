@@ -1,5 +1,9 @@
 # Live seam ladder results
 
+## Status 2026-11-10
+
+The final preregistrations are `docs/results/ladder-live-prereg.md` (capability arm) and `docs/results/ladder-propensity-prereg.md` (propensity arm). Both were committed before any paid call. Both arms are running on frozen code exports with $12 caps. The `*-DRAFT.md` files are superseded drafts kept for history.
+
 Status: harness built and tested with mock backends only. **No model has been called; there are no results here.** Predictions are in `docs/results/ladder-live-prereg-DRAFT.md` (a draft until the author finalizes it).
 
 ## What exists

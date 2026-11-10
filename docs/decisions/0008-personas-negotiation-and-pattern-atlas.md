@@ -26,3 +26,7 @@ LLM agents are not people. Anything this produces is a tested starting point for
 - The household agent owns the world code. What the world must expose for personas is listed in docs/results/personas.md.
 - Slices still to do: a negotiation phase in the world, the LLM generator for free personas and grid story layers, template evolution, the atlas clustering.
 - The hand personas are the author's to edit. Nothing in docs/claims.md is added here; predictions go there before runs.
+
+## Status note 2026-11-10
+
+For the negotiation protocol, see ADR 0013. For the author corrections, see `docs/seeds/author-household-norms-2026-11-10.md`.

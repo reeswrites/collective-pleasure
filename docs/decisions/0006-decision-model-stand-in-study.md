@@ -47,3 +47,7 @@ Jev swarms look more orderly: lower behavior spread, fewer seams and fewer emerg
 - Per-run cost and model builds are already recorded in experiments/log.jsonl.
 - The household world needs a second environment and the same agent interface; it follows only if the fishery result is worth extending.
 - Caveat: a bucketed single-choice decision is a much narrower action channel than free text. A pass shows that the narrow channel suffices for this fishery, not for social simulation in general.
+
+## Status note 2026-11-10
+
+This ADR remains proposed. Its experiment (the decision-model stand-in study) has not run yet. The live ladder (ADR 0007, `docs/results/ladder-live-prereg.md`) now covers part of the model comparison here.

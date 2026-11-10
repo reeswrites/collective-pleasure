@@ -35,3 +35,7 @@ Drafts IT1 and ML1 in docs/claims.md. Finalize and commit before the first paid 
 - docs/plan.md gains the MVP demo slice and pending items.
 - ADR 0006's stand-in study is the screening-tier question inside the model ladder.
 - Nothing is open for the author from this ADR. The author pushed main and the branch to GitHub (private repo) on 2026-11-10 (the push from Claude Code had been blocked by auto mode).
+
+## Status note 2026-11-10
+
+Items once listed here as closed have since been decided in ADRs 0010 to 0014. Pushing to GitHub is done by the author. Claude Code auto mode blocks pushes from the original session. A narrow allow rule exists in the repo `.claude/settings.local.json` for future sessions opened in the repo. The author pushed main on 2026-11-10.

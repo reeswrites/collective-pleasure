@@ -55,3 +55,7 @@ The experiment runs after V4's setup is fixed. It needs the swarm, because mined
 - A negative result for ADICO goes to docs/negative-results.md and triggers ADR 0002's kill criterion.
 - Four formats need four compile paths to the solver (F-EN reuses the ADICO path through the parser). F-TEXT also needs the translator and a way to measure its error rate.
 - Until the run, ADICO stays as the authoring layer on the strength of ADR 0002 only.
+
+## Status note 2026-11-10
+
+This ADR remains proposed. Its experiment (the rule-format arms) has not run yet.

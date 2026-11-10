@@ -31,3 +31,7 @@ Endogenous rupture, deliberately not built now. Tension accumulates from mismatc
 
 - scripts/household_run.py runs v2 by default (`--v1` keeps the old run); report: runs/household-v2/frontier.html (not committed).
 - The negotiation phase of ADR 0008 is still stubbed (fixed exit terms in rules/household/author_seed/).
+
+## Amendment 2026-11-10
+
+The stubbed negotiation is replaced by negotiation v1 (ADR 0013, in progress). This follows the author correction that shared pots are negotiated by everyone who shares them. See `docs/seeds/author-household-norms-2026-11-10.md`, "On the shared pot".

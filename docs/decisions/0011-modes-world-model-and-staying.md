@@ -32,3 +32,7 @@ The author's conversation of 2026-11-10 settled several framings. The questions 
 - The rediscovery test's missing cycles (ADR 0009, docs/negative-results.md) stay logged as a negative result and are deferred.
 - Claims MU1, AP1 and DM1 are drafted in docs/claims.md. None is finalized.
 - Version 3 scope is in docs/plan.md.
+
+## Amendment 2026-11-10
+
+Freedom is now defined in ADR 0014: equal liberty minus a domination penalty, where withdrawal does not count as domination. Plain empowerment is now one of three reported freedom measures, not the main one. Predictions MU1, AP1 and DM1 are still draft predictions.

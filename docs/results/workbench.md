@@ -17,7 +17,7 @@ Status: tooling, not a result. Nothing here says anything about whether refineme
 | `mar empower --world fishery\|vpgg` | empowerment vs the hand-made freedom score (the script computes both worlds; this shows one plus the judge lines) | none; `runs/empowerment/summary.json` | no |
 | `mar ladder --model kind:id --max-usd N [--dry-run] [--report-only]` | live seam ladder; always prints the estimate first; refuses live without `--max-usd` | `runs/ladder_live/report.html` | yes |
 | `mar results` | one-line verdict per `docs/results/*.md` (prereg files skipped) and the latest `report.html` paths | n/a | no |
-| `mar household` | stub: "household commands land after the seed v2 run" | n/a | n/a |
+| `mar household` | stub: "household commands land after the negotiation build (ADR 0013)" | n/a | n/a |
 
 These are thin: each loads the matching script by path and calls its `main()`; no logic is duplicated. Only `run`, `loop` and `sweep` write `experiments/log.jsonl`. Tests mock the scripts (`tests/test_cli.py`).
 
