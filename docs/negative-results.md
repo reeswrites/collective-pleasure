@@ -23,3 +23,7 @@ Experiments or checks that failed to show the predicted effect, reported as find
 ## 2026-11-10: bargaining rung 1, prediction 4b
 
 Allowing exit lowered mean cooperation by 0.019 over a heuristic-strategy mix, outside the committed 0.01 slack. The exit-allowed frontier advantage holds only for equilibrium players. Not retuned. Evidence: docs/results/bargaining.md.
+
+## 2026-11-10: first evolution run (fishery, scripted agents)
+
+The seam-curve fall is mostly exhaustion of a finite set of seam keys (agent mix x finding kind), so first-seen counts had to fall; it is not evidence of convergence. The evolved elite did not beat the seed spec on the held-out final exam (seam_free 0.25 vs 0.25; regrowth x1.5, 8 months, unseen agent mixes): it overfit the training conditions. Evidence: docs/results/evolve.md.

@@ -23,3 +23,7 @@ Executed actions are by construction allowed, so "every executed action passed t
 - **Sanctions are enforced and never fire.** With soft (sanctioned) cards, the persona agents never broke one in 360 runs (sanctions per run 0.0 in every variant): the estimated sanction cost always outweighed the gain, and requests (24 over 15 pairings in the trap, seed 0) are rare, so control rules are rarely tried. Enforcement is covered by unit tests only (tests/test_household_weekly.py). Evidence: docs/results/household-v2.md.
 - **The trap fails by construction of the definitions.** Being trapped (no exit retaining 25 percent) is a non-offsettable condition, and the trap's forfeit card removes the exit for everyone from week 0, so the trap fails in all 15 pairings. This shows the definition works; it is not independent evidence about the trap.
 - **Freedom saturates.** Every variant without a restriction card has freedom 1.000, so the freedom axis separates only the trap family.
+
+## 2026-11-10: first evolution run
+
+Objectives saturated by generation 3, so the frontier collapsed to a single corner and path dependence could not show. A deontic flip produced a rule that restates another; the proof checks catch conflicts and deadlock but not redundancy. "Front prevalence" measured after selection was blind to the drop it was meant to see. Evidence: docs/results/evolve.md.
