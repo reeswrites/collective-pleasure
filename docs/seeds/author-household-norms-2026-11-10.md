@@ -29,3 +29,11 @@ Asked whether a commitment can bind someone not to leave, the author answered, v
 > i guess you can bind someone not to leave if negotiated but maybe also test models where that isnt alllowed
 
 So seed v2 has two variants: v2-bindable (a negotiated commitment can bind a partner not to leave) and v2-free-exit (leaving can never be signed away). The wording of seed v2 (rules 1 to 8, as read back) was not changed by the author.
+
+## On the shared pot (2026-11-10)
+
+Read back: an agent had added "taking the other's share of the pot is not use for shared needs" (R3b). The author's answer, verbatim:
+
+> i think you have to negotiate shared pots with multiple agents or creating rules for it
+
+So pot terms are not imposed by the seed. They are negotiated by everyone who shares the pot (possibly more than two members), as rule cards that are proof-checked before anyone lives under them.
