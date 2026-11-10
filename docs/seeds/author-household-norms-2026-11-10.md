@@ -6,6 +6,10 @@ Recorded verbatim before any household results existed. This is the author's own
 
 > everything is shared for now and you cna ask anything and request is never about contorl everyone can see anyone freely
 
-## Prompts 4 and 5 (effort, leaving)
+## Prompt 5 (leaving), with a follow-up on sharing
+
+> everyheing hsould be shared always prolly iuneless we can later interpret actions nad see what possible rule tweaks could happen about conditionoality and leaving should be whenever and it triggers exit conditions that wer enegotiated before
+
+## Prompt 4 (effort)
 
 (not yet answered)
