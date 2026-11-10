@@ -41,7 +41,7 @@ def run_fishery(agents, gate, months=6, subrounds=12, seed=0, capacity=CAPACITY)
                     month_total += taken
                     caught[i] += taken
                 run.trace.append({"month": month, "subround": sub, "agent": i, "proposed": proposal,
-                                  "month_total_before": state["month_total"], "allowed": allowed,
+                                  "month_total_before": state["month_total"], "allowed": allowed, "executed": allowed,
                                   "reasons": list(reasons), "pool_before": before, "pool_after": pool})
         pool = min(capacity, pool * 2)
         run.outcomes.append({"month": month, "pool_end": pool, "catch": list(caught)})
