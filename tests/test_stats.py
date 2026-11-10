@@ -150,3 +150,35 @@ def test_seeds_for_power_matches_closed_form():
 def test_power_binomial():
     assert S.power_binomial(0.9, 0.1, 10, n_sim=200) > 0.9
     assert S.power_binomial(0.5, 0.5, 20, n_sim=400) < 0.08
+
+
+def _retrofit():
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location("stats_retrofit", Path(__file__).resolve().parent.parent / "scripts" / "stats_retrofit.py")
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["stats_retrofit"] = m
+    spec.loader.exec_module(m)
+    return m
+
+
+def test_retrofit_labels():
+    m = _retrofit()
+    ge = lambda est, lo, hi: m.Clause("x", est, lo, hi, 0.5, float("inf"))  # noqa: E731
+    assert ge(0.7, 0.6, 0.8).label == "holds robustly"
+    assert ge(0.7, 0.4, 0.8).label == "holds but CI crosses threshold"
+    assert ge(0.3, 0.2, 0.4).label == "miss robust"
+    assert ge(0.3, 0.2, 0.6).label == "miss but CI crosses threshold"
+    p = m.Pred("E", "1", "t", "held", [ge(0.7, 0.6, 0.8), ge(0.3, 0.2, 0.4)])
+    assert p.label == "miss robust" and not p.agrees
+    assert m.Pred("E", "2", "t", "held", reason="deterministic").label == "not testable"
+
+
+def test_retrofit_rate_clause_extremes():
+    m = _retrofit()
+    c = m.rate_clause("all runs", 9, 9, ">=", 9)
+    assert c.point_ok and c.label == "holds but CI crosses threshold"  # "every run" is never robust
+    c2 = m.rate_clause("most runs", 18, 18, ">=", 14)
+    assert c2.label == "holds robustly"
