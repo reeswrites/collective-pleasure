@@ -1,0 +1,12 @@
+id: T1-forfeit
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: pooled, op: gt, value: 0}
+- {expr: take, op: gt, value: 0}
+or_else: null
+gloss: A partner who leaves while assets are pooled leaves with nothing from the pool.
+source: 'household fixture. Motivation: the author''s note on brittle control (rules
+  that let one party restrict the other''s exits and outside ties) and Computational
+  Liberation''s exit and dependence properties.'

@@ -1,0 +1,13 @@
+id: V1-contact-veto-if-agreed
+attribute: partner
+deontic: must_not
+aim: see_friend
+conditions:
+- {expr: other_earns_more, op: eq, value: 1}
+- {expr: no_contact_request, op: eq, value: 1}
+- {expr: consented, op: eq, value: 1}
+or_else: null
+gloss: A partner may not see the friend if the higher earner asked and they agreed.
+source: 'household fixture. Motivation: the author''s note on brittle control (rules
+  that let one party restrict the other''s exits and outside ties) and Computational
+  Liberation''s exit and dependence properties.'

@@ -1,0 +1,11 @@
+id: D1-needs-first
+attribute: partner
+deontic: must_not
+aim: spend_self
+conditions:
+- {expr: need_gap, op: gt, value: 0}
+or_else: {kind: warn, duration_months: 1, sanctioner: household}
+gloss: A partner may not spend on themselves while this month's shared need is unfunded.
+source: 'household fixture. Motivation: the author''s note on brittle control (rules
+  that let one party restrict the other''s exits and outside ties) and Computational
+  Liberation''s exit and dependence properties.'

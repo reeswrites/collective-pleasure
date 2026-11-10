@@ -1,0 +1,13 @@
+id: T3-stay-home-veto
+attribute: partner
+deontic: must_not
+aim: work
+conditions:
+- {expr: other_earns_more, op: eq, value: 1}
+- {expr: stay_home_request, op: eq, value: 1}
+or_else: null
+gloss: A partner may not take work while the higher earner has asked them to stay
+  home.
+source: 'household fixture. Motivation: the author''s note on brittle control (rules
+  that let one party restrict the other''s exits and outside ties) and Computational
+  Liberation''s exit and dependence properties.'
