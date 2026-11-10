@@ -594,6 +594,245 @@ def main_v4(workers=8):
     return A
 
 
+# ---- negotiated pots (docs/results/negotiation-prereg.md): `--negotiate` ----
+# Seed v2 comparison: the old R3b card (imposed pot rule) comes from git history, commit 58b630a.
+import subprocess
+from collections import Counter
+from multiprocessing import Pool as _Pool
+
+from mar import negotiation as NG
+
+OUT5 = Path(__file__).parent.parent / "runs" / "negotiation"
+NEG_VARIANTS = ("author_seed_v2_bindable", "author_seed_v2_free_exit", "author_seed_v2_nocommit")
+SWEEP = (0.0, 0.25, 0.5, 0.75, 1.0)          # EXPLORATORY: share of the pooled share forfeited on a stay breach
+R3B_COMMIT = "58b630a"
+
+
+def imposed_cards(variant):
+    """The seed v2 card set before v2.1: the variant's cards plus the imposed R3b, recovered from git history."""
+    from mar.cards import make_card
+    import yaml
+    txt = subprocess.run(["git", "show", f"{R3B_COMMIT}:rules/household/{variant}/R3b-pot-no-take.yaml"], capture_output=True, text=True,
+                         check=True, cwd=Path(__file__).parent.parent).stdout
+    return H.load_variant(variant) + [make_card(yaml.safe_load(txt))]
+
+
+def _neg_summary(res):
+    return {"status": res.status, "agreed": res.agreed, "bundle": res.bundle, "n_proposals": len(res.proposals),
+            "members": res.members, "outside": res.outside, "utilities": res.utilities,
+            "agreed_by": next((p["proposer"] for p in res.proposals if p["outcome"] == "agreed"), None),
+            "agreed_at": next((p["k"] for p in res.proposals if p["outcome"] == "agreed"), None),
+            "rejections": [{"k": r["k"], "proposer": r["proposer"], "bundle": r["bundle"], "failed": r["failed"], "checks": r["checks"]}
+                           for r in res.rejections]}
+
+
+def _run_row(cards, personas, seed, deal, a, b, variant, cohort, forfeit=H.BREACH_FORFEIT):
+    run = H.run_weekly(cards, personas, seed, deal=deal, breach_forfeit=forfeit)
+    out = run.outcomes
+    hs = oracle.hedonic_summary(out)
+    tr = run.trace
+    first_breach = next((t["week"] for t in tr if t.get("breach") and t["action"] == "leave"), None)
+    return {"variant": variant, "a": a, "b": b, "cohort": cohort, "seed": seed,
+            **{k: hs[k] for k in ("class", "pairing_up", "fail", "pleasure", "s_off", "s_non")},
+            "s_non_role": {r: sum(o["hedonic"][r]["s_non"] for o in out) / len(out) for r in "AB"},
+            "left": sum(1 for r in "AB" if not out[-1]["partners"][r]["in"]),
+            "taken": sum(1 for t in tr if t["action"] == "take_shared" and t["executed"]),
+            "gifts": (run.meta or {}).get("gifts"), "commits": {k: (run.meta or {}).get(k) for k in ("made", "honored", "breached", "by_kind")} if run.meta else None,
+            "stay_held": sum(1 for t in tr if not t["allowed"] and "commitment: stay" in t["reasons"]),
+            "stay_breaches": sum(1 for t in tr if t.get("breach") and t["action"] == "leave"), "first_breach_week": first_breach,
+            "retained": {r: run.final[r]["retained"] for r in "AB"}, "sanctioned": sum(sum(o["sanctioned"].values()) for o in out)}
+
+
+def _live_task(args):
+    variant, a, b, seed, cohort = args
+    ps = _personas()
+    base = NG.base_cards(variant)
+    res = NG.negotiate([ps[a], ps[b]], variant, seed, base=base)
+    deal = NG.world_deal(res)
+    row = _run_row(NG.living_cards(base, res), (ps[a], ps[b]), seed, deal, a, b, variant, cohort)
+    row["neg"] = _neg_summary(res)
+    return row
+
+
+def _ref_task(args):
+    variant, a, b, seed, cohort = args
+    ps = _personas()
+    row = _run_row(imposed_cards(variant), (ps[a], ps[b]), seed, None, a, b, variant, cohort)
+    row["kind"] = "imposed"
+    return row
+
+
+def _tri_task(args):
+    a, b, c, seed = args
+    ps = _personas()
+    res = NG.negotiate([ps[a], ps[b], ps[c]], "author_seed_v2_bindable", seed)
+    return {"a": a, "b": b, "c": c, "seed": seed, "neg": _neg_summary(res)}
+
+
+def _sweep_task(args):
+    variant, a, b, seed, cohort, f = args
+    ps = _personas()
+    base = NG.base_cards(variant)
+    res = NG.negotiate([ps[a], ps[b]], variant, seed, base=base)
+    row = _run_row(NG.living_cards(base, res), (ps[a], ps[b]), seed, NG.world_deal(res), a, b, variant, cohort, forfeit=f)
+    row["forfeit"] = f
+    return row
+
+
+def _pool_map(fn, tasks, workers, tag, chunk=4):
+    out = []
+    with _Pool(workers) as pool:
+        for i, r in enumerate(pool.imap_unordered(fn, tasks, chunksize=chunk), 1):
+            out.append(r)
+            if i % 200 == 0:
+                print(f"  {tag} {i}/{len(tasks)}", flush=True)
+    return out
+
+
+def main_v5(workers=8):
+    t0 = time.time()
+    ps = _personas()
+    pr = pairings()
+    live = _pool_map(_live_task, [(v, a, b, sd, c) for v in NEG_VARIANTS for a, b, c in pr for sd in SEEDS], workers, "live")
+    ref = _pool_map(_ref_task, [(v, a, b, sd, c) for v in NEG_VARIANTS[:2] for a, b, c in pr for sd in SEEDS], workers, "imposed")
+    tri = _pool_map(_tri_task, [(a, b, c, sd) for a, b, _ in pr for c in sorted(ps) if c not in (a, b) for sd in SEEDS], workers, "tri", 16)
+    stay = sorted({(r["a"], r["b"], r["seed"], r["cohort"]) for r in live if r["variant"] == NEG_VARIANTS[0] and r["neg"]["agreed"]
+                   and r["neg"]["bundle"]["stay"]})
+    sweep = _pool_map(_sweep_task, [(NEG_VARIANTS[0], a, b, sd, c, f) for a, b, sd, c in stay for f in SWEEP], workers, "sweep")
+    OUT5.mkdir(parents=True, exist_ok=True)
+    (OUT5 / "results.json").write_text(json.dumps({"live": live, "imposed": ref, "tri": tri, "sweep": sweep}, default=str))
+    print(f"wrote {OUT5 / 'results.json'} in {time.time() - t0:.0f}s")
+    return live, ref, tri, sweep
+
+
+def _m(xs):
+    xs = list(xs)
+    return sum(xs) / len(xs) if xs else float("nan")
+
+
+def _pers_O():
+    return {i: NG.outside_option(p) for i, p in _personas().items()}
+
+
+def examples_v5():
+    """Three negotiated agreements and a proof-rejected one, rendered as rule cards (slice 3 of the prereg)."""
+    ps = _personas()
+    for a, b, v in (("p-controller", "p-peacekeeper", NEG_VARIANTS[0]), ("p-freerider", "p-host", NEG_VARIANTS[0]), ("p-anchor", "p-wanderer", NEG_VARIANTS[1])):
+        res = NG.negotiate([ps[a], ps[b]], v, 0)
+        print(f"--- {a} + {b}, {v}, seed 0: {res.status}, proposals {[(p['proposer'], p['outcome']) for p in res.proposals]}")
+        print("\n".join(NG.describe(res)))
+        for c in res.cards or []:
+            print("   ", H.render_card(c))
+        print("    checks:", [(c["check"], c["verdict"]) for c in NG.proof_check(NG.base_cards(v) + res.cards)["checks"]] if res.cards else None)
+    res = NG.negotiate([ps["p-anchor"], ps["p-host"]], NEG_VARIANTS[0], 0)
+    print("--- proof-rejected agreement:", [x["checks"] for x in [{"checks": r["checks"]} for r in res.rejections]])
+    for r in res.rejections:
+        print("    proposed by", r["proposer"], "at proposal", r["k"] + 1, r["bundle"], "failed", r["failed"])
+        print("    accepted by everyone, then:", r["checks"])
+    print("    next:", [(p["proposer"], p["outcome"], p["bundle"]["exit"]) for p in res.proposals], "->", res.status)
+    res = NG.negotiate([ps["p-anchor"], ps["p-peacekeeper"], ps["p-overasker"]], NEG_VARIANTS[0], 0)
+    print("--- three-member table:", res.status, "\n".join(NG.describe(res)))
+
+
+def analyze_v5(res=None):
+    """Prints the prereg-vs-actual numbers and tables from runs/negotiation/results.json."""
+    res = res or json.loads((OUT5 / "results.json").read_text())
+    live, ref, tri, sweep = res["live"], res["imposed"], res["tri"], res["sweep"]
+    ps, O = _personas(), _pers_O()
+    B = NEG_VARIANTS[0]
+    lv = lambda v=None, c=None: [r for r in live if (v is None or r["variant"] == v) and (c is None or r["cohort"] == c)]
+    print("== agreement (2-member tables)")
+    for v in (None,) + NEG_VARIANTS:
+        rs = lv(v)
+        print(f"  {v or 'all':28s} n={len(rs)} agreed={_m(r['neg']['agreed'] for r in rs):.3f}  status={dict(Counter(r['neg']['status'] for r in rs))}"
+              f"  mean proposals={_m(r['neg']['n_proposals'] for r in rs):.2f}")
+    for c in ("ctl", "prs"):
+        print(f"  cohort {c} bindable agreed={_m(r['neg']['agreed'] for r in lv(B, c)):.3f}")
+    print("== pred 2: proof filter rejected >=1 proposal, bindable 2-tables:",
+          f"{_m(bool(r['neg']['rejections']) for r in lv(B)):.3f}", "all variants:", f"{_m(bool(r['neg']['rejections']) for r in live):.3f}")
+    rej = [x for r in live for x in r["neg"]["rejections"]]
+    print("   rejections:", len(rej), "failed checks:", dict(Counter(f for x in rej for f in x["failed"])))
+    print("   rejected bundles' exit:", dict(Counter(x["bundle"]["exit"] for x in rej)), "change:", dict(Counter(x["bundle"]["change"] for x in rej)))
+    print("   negotiations that ended with no pot after a rejection:", sum(1 for r in live if r["neg"]["rejections"] and not r["neg"]["agreed"]),
+          "ended agreed after a rejection:", sum(1 for r in live if r["neg"]["rejections"] and r["neg"]["agreed"]))
+    print("== terms distribution (agreed, all variants / bindable)")
+    for t in NG.TERM_NAMES:
+        print(f"  {t:13s}", dict(Counter(r["neg"]["bundle"][t] for r in live if r["neg"]["agreed"])), "|",
+              dict(Counter(r["neg"]["bundle"][t] for r in lv(B) if r["neg"]["agreed"])))
+    print("== pred 3: presser's value of the agreed bundle minus the imposed bundle, by partner's outside option")
+    top, bot = [], []
+    for r in live:
+        if not r["neg"]["agreed"]:
+            continue
+        for who, role, other in ((r["a"], 0, r["b"]), (r["b"], 1, r["a"])):
+            if who in PRESSING_IDS:
+                d = NG.utility(ps[who], r["neg"]["bundle"], low=bool(role)) - NG.utility(ps[who], NG.IMPOSED, low=bool(role))
+                (top if O[other] >= 0.27 else bot if O[other] <= 0.10 else []).append(d)
+    print(f"  top-third partner O: n={len(top)} mean delta={_m(top):+.3f};  bottom-third: n={len(bot)} mean delta={_m(bot):+.3f}; gap={_m(top) - _m(bot):+.3f}")
+    print("  outside options:", {i: round(v, 3) for i, v in sorted(O.items(), key=lambda t: t[1])})
+    print("== pred 4: anchor x wanderer vs matched control pairs")
+    aw = [r for r in lv(c="ctl") if (r["a"], r["b"]) == ("p-anchor", "p-wanderer")]
+    pair_rate = {}
+    for r in lv(c="ctl"):
+        pair_rate.setdefault((r["a"], r["b"]), []).append(r["neg"]["agreed"])
+    others = [_m(v) for k, v in pair_rate.items() if k != ("p-anchor", "p-wanderer")]
+    print(f"  anchor-wanderer n={len(aw)} agreed={_m(r['neg']['agreed'] for r in aw):.3f}; other 14 control pairings mean={_m(others):.3f}; "
+          f"lowest pairing rates: {sorted((round(_m(v), 2), k) for k, v in pair_rate.items())[:4]}")
+    print("== pred 5: 3-member vs 2-member (bindable)")
+    print(f"  3-member n={len(tri)} agreed={_m(t['neg']['agreed'] for t in tri):.3f} proposals={_m(t['neg']['n_proposals'] for t in tri):.2f};"
+          f" 2-member bindable agreed={_m(r['neg']['agreed'] for r in lv(B)):.3f}")
+    trj = [x for t in tri for x in t["neg"]["rejections"]]
+    print(f"  3-member status={dict(Counter(t['neg']['status'] for t in tri))} rejections={len(trj)}; terms:",
+          {t: dict(Counter(x['neg']['bundle'][t] for x in tri if x['neg']['agreed'])) for t in ('taking', 'exit')})
+    print("== outcomes: negotiated vs imposed (seed v2 with R3b)")
+    for coh in ("prs", "ctl", None):
+        for v in NEG_VARIANTS[:2]:
+            for name, rows in (("negotiated", lv(v, coh)), ("imposed", [r for r in ref if r["variant"] == v and (coh is None or r["cohort"] == coh)])):
+                print(f"  {coh or 'all':3s} {v[-10:]:10s} {name:10s} n={len(rows):3d} s_non={_m(r['s_non'] for r in rows):.4f} fail={_m(r['fail'] for r in rows):.3f} "
+                      f"pleasure={_m(r['pleasure'] for r in rows):.4f} dissolved={_m(r['left'] > 0 for r in rows):.3f} taken={_m(r['taken'] for r in rows):.2f}")
+    print("== negotiated bindable: pot vs no pot")
+    for lab, rows in (("pot", [r for r in lv(B) if r["neg"]["agreed"]]), ("no pot", [r for r in lv(B) if not r["neg"]["agreed"]])):
+        print(f"  {lab:7s} n={len(rows)} s_non={_m(r['s_non'] for r in rows):.4f} fail={_m(r['fail'] for r in rows):.3f} pleasure={_m(r['pleasure'] for r in rows):.4f}")
+    print("== controller's partner s_non / freerider taking (bindable)")
+    for v, rows in ((B, lv(B)), ("imposed", [r for r in ref if r["variant"] == B])):
+        ctl = [r for r in rows if "p-controller" in (r["a"], r["b"])]
+        pc = lambda r: "B" if r["a"] == "p-controller" else "A"
+        fr = [r for r in rows if "p-freerider" in (r["a"], r["b"])]
+        print(f"  {v[-10:]:10s} controller runs n={len(ctl)} partner s_non={_m(r['s_non_role'][pc(r)] for r in ctl):.4f}; freerider runs n={len(fr)} take_shared per run={_m(r['taken'] for r in fr):.2f}")
+    print("== per pressing persona (bindable): presser / partner non-offsettable level and take_shared per run; taking term agreed")
+    for pid in PRESSING_IDS:
+        for name, rows in (("negotiated", lv(B)), ("imposed", [r for r in ref if r["variant"] == B])):
+            rs = [r for r in rows if pid in (r["a"], r["b"])]
+            own = lambda r: "A" if r["a"] == pid else "B"
+            oth = lambda r: "B" if r["a"] == pid else "A"
+            print(f"  {pid:13s} {name:10s} n={len(rs)} presser={_m(r['s_non_role'][own(r)] for r in rs):.4f} partner={_m(r['s_non_role'][oth(r)] for r in rs):.4f} "
+                  f"taken={_m(r['taken'] for r in rs):.2f}", dict(Counter((r["neg"]["bundle"]["taking"] if r["neg"]["agreed"] else "no pot") for r in rs)) if name == "negotiated" else "")
+    for t in ("allowed", "forbidden", "repay"):
+        rs = [r for r in lv(B, "prs") if r["neg"]["agreed"] and r["neg"]["bundle"]["taking"] == t]
+        print(f"  prs households under taking={t}: n={len(rs)} s_non={_m(r['s_non'] for r in rs):.4f}")
+    print("== stay commitments in negotiated bindable runs")
+    st = [r for r in lv(B) if r["neg"]["agreed"] and r["neg"]["bundle"]["stay"]]
+    print(f"  stay agreed in {len(st)} runs; stay breaches={sum(r['stay_breaches'] for r in st)}; blocked attempts (held)={sum(r['stay_held'] for r in st)}; "
+          f"dissolved={_m(r['left'] > 0 for r in st):.3f}; first breach weeks={sorted(r['first_breach_week'] for r in st if r['first_breach_week'] is not None)}")
+    print("== EXPLORATORY breach-forfeit sweep (stay pairings)")
+    for f in SWEEP:
+        rows = [r for r in sweep if r["forfeit"] == f]
+        kept = [r["retained"][x] for r in rows for x in "AB" if r["retained"][x] is not None and r["stay_breaches"]]
+        print(f"  forfeit {f:4.2f} n={len(rows)} breaches={sum(r['stay_breaches'] for r in rows)} held={sum(r['stay_held'] for r in rows)} "
+              f"dissolved={_m(r['left'] > 0 for r in rows):.3f} s_non={_m(r['s_non'] for r in rows):.4f} fail={_m(r['fail'] for r in rows):.3f} "
+              f"retained(breach runs)={_m(kept):.3f}")
+
+
+if __name__ == "__main__" and "--negotiate" in sys.argv:
+    if "--examples" in sys.argv:
+        examples_v5()
+    elif "--analyze" in sys.argv:
+        analyze_v5()
+    else:
+        analyze_v5(dict(zip(("live", "imposed", "tri", "sweep"), main_v5())))
+    sys.exit(0)
+
+
 if __name__ == "__main__" and "--seed-v2" in sys.argv:
     main_v4()
     sys.exit(0)
