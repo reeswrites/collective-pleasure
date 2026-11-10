@@ -13,3 +13,7 @@ Unexpected observations, each dated and with its evidence. Purpose: keep results
 - **`must` reads backwards in the SLEEC trigger form.** Under the card semantics the conditions of a `must` are what compliance requires, not a trigger, so "when X, must" would misstate C1. The surface needed a separate template ("must ... only when"). Evidence: src/mar/english.py, tests/test_english.py.
 - **The gloss already is the natural English.** The sentence, gloss and source together are long, and the gloss says the same thing more loosely. The F-EN reader-test advantage over ADICO YAML depends on whether the reader sees the gloss (ADR 0004 caveat).
 - **The conflicting patch C1 also fails the repair-path check (d)** naming F1 (its sanction leaves no allowed action when C1 is present), in both YAML and English authoring. V2 only predicted (a) and (b).
+
+## 2026-11-10: "seam" check is trivially true per action
+
+Executed actions are by construction allowed, so "every executed action passed the gate" holds for any gated run. A seam is therefore any oracle failure of a gated run. In the V2 exploiter fixture, 278 of 288 proposals were blocked (all by F2, asking for more than the pool held), and the collapse came from the 10 allowed catches. The workbench verdict text now says this instead of implying no action was blocked. Evidence: workbench agent report, commit 6b362c2.
