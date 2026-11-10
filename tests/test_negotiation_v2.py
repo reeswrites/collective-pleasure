@@ -203,3 +203,69 @@ def test_the_floor_on_a_review_is_no_worse_than_the_current_terms_already_leave(
     assert N.floor_check(b(exit="equal_split", contribution="none"), hold, current=cur)["ok"]    # a change that leaves exit alone passes
     assert N.floor_check(b(exit="proportional"), hold, current=cur)["ok"]
     assert not N.floor_check(b(exit="forfeit"), hold, current=cur)["ok"]    # but nothing may make a leaver worse off than now
+
+
+# ---- v2.1: a failed negotiation means living apart (docs/results/negotiation-v2.1-prereg.md) ----
+def _week0(a, b, arm="fair_default", seed=0):
+    return N.week0(PERS[a], PERS[b], arm, seed, BASE)
+
+
+def test_per_member_solo_mode_and_the_string_form_agree():
+    w = H.WeeklyWorld(N._solo_cards(), (PERS["p-anchor"], PERS["p-host"]), 0, 4, deal={"pot": False, "commits": []})
+    w.solo = "friend"
+    assert w.with_friend("A") and w.with_friend("B")
+    w.solo = {"A": "alone", "B": "friend"}
+    assert not w.with_friend("A") and w.with_friend("B")
+    w.solo = None
+    assert not w.with_friend("A")
+
+
+def test_a_failed_negotiation_lives_apart_each_on_own_holdings_in_their_better_outside_mode():
+    res = _week0("p-steward", "p-overasker")
+    assert not res.pot
+    L = N.Lived(PERS["p-steward"], PERS["p-overasker"], "fair_default", 0, BASE, res, weeks=14, apart=True)
+    assert L.apart and L.bundle is None
+    assert all(not L.world.p[r]["in"] and L.world.p[r]["money"] == H.NO_POT_MONEY and L.world.p[r]["pooled"] == 0 for r in "AB")
+    assert L.world.solo == {r: N.apart_mode(res.outside_detail[pid]) for r, pid in zip("AB", res.members)}
+    assert N.apart_mode({"alone": 1.0, "friend": 0.5}) == "alone" and N.apart_mode({"alone": 0.5, "friend": 1.0}) == "friend"
+
+
+def test_v2_behaviour_is_the_default_still_sharing_the_house():
+    res = _week0("p-steward", "p-overasker")
+    L = N.Lived(PERS["p-steward"], PERS["p-overasker"], "fair_default", 0, BASE, res, weeks=14)
+    assert not L.apart and all(L.world.p[r]["in"] for r in "AB") and L.world.solo is None
+
+
+def test_retry_at_a_review_is_held_while_apart_and_forms_a_household_when_agreed():
+    res = _week0("p-wanderer", "p-overasker")           # no pot at week 0; v2.1 pilot: a pot forms at the week-13 retry
+    assert not res.pot
+    L = N.Lived(PERS["p-wanderer"], PERS["p-overasker"], "fair_default", 0, BASE, res, weeks=15, apart=True)
+    L.play()
+    assert [x["week"] for x in L.retries] == [13]
+    x = L.retries[0]
+    assert x["formed"] and not L.apart and L.bundle == x["bundle"]
+    assert all(L.world.p[r]["in"] for r in "AB") and L.world.solo is None and L.world.pot
+    assert all(c["from"] == 13 for c in L.world.commits)
+
+
+def test_form_pot_pools_at_most_the_start_share_and_keeps_the_rest_private():
+    res = _week0("p-steward", "p-overasker")
+    L = N.Lived(PERS["p-steward"], PERS["p-overasker"], "fair_default", 0, BASE, res, weeks=2, apart=True)
+    L.world.p["A"]["money"], L.world.p["B"]["money"] = 30, 100
+    N.form_pot(L.world, BASE, b(stay=52, breach=0.5, requests="mutual"), 13, list(res.members))
+    assert (L.world.p["A"]["money"], L.world.p["A"]["pooled"]) == (0, 30)
+    assert (L.world.p["B"]["money"], L.world.p["B"]["pooled"]) == (55, 45)
+    stay = [c for c in L.world.commits if c["kind"] == "stay"]
+    assert len(stay) == 2 and all(c["from"] == 13 and c["until"] == 13 + 52 for c in stay)
+    assert L.world.breach_forfeit == 0.5
+
+
+def test_a_week0_pot_household_is_unchanged_by_the_fix():
+    res = _week0("p-anchor", "p-host")
+    assert res.pot
+    runs = []
+    for apart in (False, True):
+        L = N.Lived(PERS["p-anchor"], PERS["p-host"], "fair_default", 0, BASE, res, weeks=30, apart=apart)
+        r = L.play()
+        runs.append(([o["hedonic"] for o in r.outcomes], r.exits))
+    assert runs[0] == runs[1]

@@ -742,10 +742,39 @@ def _apply_terms(world, base, bundle, w, ids, renew):
             world.commits.append({"kind": "requests", "by": who, "to": oth[who], "type": "stay_home", "from": w, "until": w + STAY_WEEKS, "breached": 0})
 
 
+POOL_SHARE = START_HOLDINGS[1]      # what each member puts into the pooled share when a household forms later than week 0 (ASSUMED)
+
+
+def apart_mode(detail):
+    """The better of the two outside arrangements by the member's own rollouts ({"alone": x, "friend": y}); alone if unknown."""
+    return "friend" if detail and detail["friend"] > detail["alone"] else "alone"
+
+
+def form_pot(world, base, bundle, w, ids):
+    """v2.1: two partners living apart move in together at week w under `bundle` (a shared household with a pot). Each puts
+    min(POOL_SHARE, own money) into the pooled share; the agreed cards and commitments (a stay runs from w) take effect."""
+    for r in "AB":
+        p = world.p[r]
+        put = min(POOL_SHARE, int(p["money"]))
+        p["money"] -= put
+        p["pooled"] += put
+        p["in"], p["months_in"], p["weeks_out"] = True, 0, 0
+    world.solo, world.pot = None, True
+    world.pending = {"A": set(), "B": set()}
+    cards = list(base) + compile_bundle(bundle, ids)
+    world.gate = H.PyGate(cards)
+    world.cards = {c.id: c for c in cards}
+    world.breach_forfeit = bundle["breach"]
+    world.commits = [dict(c, **{"from": w, "until": w + (bundle["stay"] if c["kind"] == "stay" else STAY_WEEKS)})
+                     for c in deal_from_bundle(bundle)["commits"]]
+
+
 class Lived:
     """A household living under a negotiated bundle, with a review every REVIEW_EVERY weeks while both partners are in."""
 
-    def __init__(self, pa, pb, arm, seed, base, res, floor=True, reviews=True, weeks=H.WEEKS):
+    def __init__(self, pa, pb, arm, seed, base, res, floor=True, reviews=True, weeks=H.WEEKS, apart=False):
+        """apart=True is negotiation v2.1: a failed negotiation means the partners live separately (and may retry at reviews).
+        The default False is v2's behaviour (no pot, still sharing the house), kept so the v2 results stay reproducible."""
         self.pa, self.pb, self.arm, self.seed, self.base, self.floor, self.reviews = pa, pb, arm, seed, base, floor, reviews
         self.res, self.log = res, []
         self.bundle = dict(res.bundle) if res.pot else None
@@ -753,6 +782,11 @@ class Lived:
         deal = deal_from_bundle(res.bundle) if res.pot else {"pot": False, "commits": []}
         self.world = H.WeeklyWorld(cards, (pa, pb), seed, weeks, deal=deal, breach_forfeit=res.bundle["breach"] if res.pot else 1.0)
         self.world.floor_amount = FLOOR if floor else None     # amendment 1: the floor also holds at the moment of leaving
+        self.apart, self.retries = apart and not res.pot, []
+        if self.apart:
+            self.world.solo = {r: apart_mode(res.outside_detail.get(p.id)) for r, p in zip("AB", (pa, pb))}
+            for r in "AB":                                       # v2.1: no agreement = no shared household
+                self.world.p[r]["in"] = False
 
     def review(self, w, last):
         world, ps = self.world, (self.pa, self.pb)
@@ -782,11 +816,39 @@ class Lived:
                          "floor_blocks": len(res.floor_blocks), "rejections": len(res.rejections), "status": res.status,
                          "outside": res.outside, "baseline": res.baseline, "flagged": res.flagged})
 
+    def retry(self, w, last):
+        """v2.1: partners who live apart try again (docs/results/negotiation-v2.1-prereg.md). Outside option = the better of alone and
+        with Friend C over the next 26 weeks from the live state; in-pot value = the same evaluation of a copy of the live world turned
+        into a household under the fair default. Agreement -> they move in together at this week under the agreed terms."""
+        world, ps = self.world, (self.pa, self.pb)
+        ids = [self.pa.id, self.pb.id]
+        O, modes = {}, {}
+        for r, p in zip("AB", ps):
+            O[p.id], d = outside_value(p, r, world.p[r]["money"], self.seed, world.hed[r])
+            modes[r] = apart_mode(d)
+        hyp = copy.deepcopy(world)
+        hyp.hook = None
+        form_pot(hyp, self.base, FAIR_DEFAULT, w, ids)
+        fwd = forward_values(hyp, w, last)
+        hold = {r: (hyp.p[r]["money"], hyp.p[r]["pooled"]) for r in "AB"}
+        res = negotiate_v2(list(ps), self.arm, self.seed, base=self.base, W={self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, O=O,
+                           ref=FAIR_DEFAULT, status_quo=None, holdings=hold, floor=self.floor, review=True, week=w)
+        self.retries.append({"week": w, "formed": res.pot, "status": res.status, "bundle": dict(res.bundle) if res.pot else None,
+                             "floor_blocks": len(res.floor_blocks), "rejections": len(res.rejections), "outside": dict(O),
+                             "baseline": {self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, "modes": dict(modes)})
+        if res.pot:
+            form_pot(world, self.base, res.bundle, w, ids)
+            self.bundle, self.apart = dict(res.bundle), False
+        else:
+            world.solo = modes
+
     def play(self):
         world = self.world
         last = {"busy": {"A": False, "B": False}}
         for w in range(world.weeks):
-            if self.reviews and self.bundle is not None and w and w % REVIEW_EVERY == 0 and all(world.p[r]["in"] for r in "AB"):
+            if self.reviews and self.apart and w and w % REVIEW_EVERY == 0:
+                self.retry(w, last)
+            elif self.reviews and self.bundle is not None and w and w % REVIEW_EVERY == 0 and all(world.p[r]["in"] for r in "AB"):
                 self.review(w, last)
             last = {"busy": world.step_week(w, last)}
         world.run.final = {r: dict(world.p[r]) for r in "AB"}

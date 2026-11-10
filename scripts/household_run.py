@@ -842,11 +842,13 @@ ARMS = NG.ARMS
 
 
 def _v2_task(args):
-    arm, a, b, seed, cohort, floor = args
+    arm, a, b, seed, cohort, floor = args[:6]
+    apart = len(args) > 6 and args[6]          # negotiation v2.1: a failed negotiation means living apart
     ps = _personas()
     base = NG.base_cards(BIND)
     res = NG.week0(ps[a], ps[b], arm, seed, base, floor=floor)
-    L = NG.Lived(ps[a], ps[b], arm, seed, base, res, floor=floor)
+    L = NG.Lived(ps[a], ps[b], arm, seed, base, res, floor=floor, apart=apart)
+    modes0 = dict(L.world.solo) if L.apart else None
     run = L.play()
     row = _row_from_run(run, seed, a, b, BIND, cohort)
     inr, same = NG.inertia(res.bundle) if res.pot else (None, None)
@@ -856,6 +858,11 @@ def _v2_task(args):
                 "floor_blocks": [{"k": f["k"], "proposer": f["proposer"], "bundle": f["bundle"], "fails": f["fails"]} for f in res.floor_blocks],
                 "rejections": [{"k": r["k"], "failed": r["failed"], "bundle": r["bundle"]} for r in res.rejections],
                 "reviews": [{k: v for k, v in x.items() if k not in ("outside", "baseline")} for x in L.log]})
+    if apart:
+        fin = run.final
+        row.update({"apart0": not res.pot, "apart_end": bool(L.apart), "modes": modes0,
+                    "retries": [{k: v for k, v in x.items() if k not in ("outside", "baseline")} for x in L.retries],
+                    "formed_week": next((x["week"] for x in L.retries if x["formed"]), None)})
     if res.pot:
         row["presser_delta"] = {r: NG.utility(ps[x], res.bundle, low=r == "B") - NG.utility(ps[x], NG.IMPOSED, low=r == "B")
                                 for r, x in (("A", a), ("B", b)) if x in PRESSING_IDS}
@@ -876,6 +883,94 @@ def main_v6(workers=8, seeds=SEEDS, pilot=False):
     (OUT6 / ("pilot.json" if pilot else "results.json")).write_text(json.dumps(out, default=str))
     print(f"wrote {OUT6} in {time.time() - t0:.0f}s ({len(live)} v2 runs, {len(imp)} imposed, {len(v1)} v1)")
     return out
+
+
+OUT61 = Path(__file__).parent.parent / "runs" / "negotiation-v2.1"
+
+
+def main_v61(workers=8, seeds=SEEDS, pilot=False):
+    """Negotiation v2.1 (docs/results/negotiation-v2.1-prereg.md): v2's design, floor ON only, a failed negotiation = living apart."""
+    t0 = time.time()
+    pr = pairings()
+    if pilot:
+        pr = pr[:6] + pr[-6:]
+    live = _pool_map(_v2_task, [(arm, a, b, sd, c, True, True) for arm in ARMS for a, b, c in pr for sd in seeds], workers, "v2.1", 4)
+    OUT61.mkdir(parents=True, exist_ok=True)
+    (OUT61 / ("pilot.json" if pilot else "results.json")).write_text(json.dumps({"live": live, "seconds": time.time() - t0}, default=str))
+    print(f"wrote {OUT61} in {time.time() - t0:.0f}s ({len(live)} v2.1 runs)")
+    return live
+
+
+def analyze_v61(live=None):
+    """Prereg docs/results/negotiation-v2.1-prereg.md: prints every number the v2.1 results page quotes."""
+    if live is None:
+        live = json.loads((OUT61 / "results.json").read_text())["live"]
+    v2 = {(r["arm"], r["a"], r["b"], r["seed"]): r for r in json.loads((OUT6 / "results.json").read_text())["live"] if r["floor"]}
+    pr = print
+    A = lambda rs, arm: [r for r in rs if r["arm"] == arm]
+    apart = [r for r in live if r["apart0"]]
+    tog = [r for r in live if not r["apart0"]]
+    v2n = [r for r in v2.values() if not r["pot"]]
+    pr(f"== runs {len(live)}; week-0 pot {len(tog)}, apart from week 0 {len(apart)}")
+    pr("== per arm: week-0 pot rate / apart / retries held / formed by retry / apart all 156 weeks / s_non / pleasure / fail")
+    for arm in ARMS:
+        rs = A(live, arm)
+        ap = [r for r in rs if r["apart0"]]
+        pr(f"  {arm:15s} n={len(rs)} pot0={_m(r['pot'] for r in rs):.3f} apart={len(ap)} retries={sum(len(r['retries']) for r in ap)}"
+           f" formed={sum(1 for r in ap if r['formed_week'] is not None)} apart_end={sum(1 for r in ap if r['apart_end'])}"
+           f" s_non={_m(r['s_non'] for r in rs):.4f} pleasure={_m(r['pleasure'] for r in rs):.4f} fail={_m(r['fail'] for r in rs):.3f}")
+    pr("== P1 s_non: all runs", f"{_m(r['s_non'] for r in live):.4f} (v2 0.1000; need <= 0.070);",
+       f"apart from week 0 {_m(r['s_non'] for r in apart):.4f} (v2 no-pot {_m(r['s_non'] for r in v2n):.4f}; need <= 0.100);",
+       f"pot households {_m(r['s_non'] for r in tog):.4f}")
+    fails = sum(r["fail"] for r in live)
+    afail = sum(r["fail"] for r in apart)
+    pr(f"== P2 failures: fail rate all {_m(r['fail'] for r in live):.3f} (need <= 0.45; v2 0.565); apart fail rate {_m(r['fail'] for r in apart):.3f} (v2 0.809);"
+       f" apart share of failed runs {afail}/{fails} = {afail / max(1, fails):.3f} (need < 0.50; v2 0.717)")
+    pr("== P3 presser gain vs imposed bundle by partner's real outside option (week-0 pot, all arms)")
+    ent = []
+    for r in live:
+        if r["pot"] and r["cohort"] == "prs":
+            for role, d in r["presser_delta"].items():
+                ent.append((r["outside"][r["b"] if role == "A" else r["a"]], d))
+    os_ = sorted(x[0] for x in ent)
+    lo, hi = os_[len(os_) // 3], os_[2 * len(os_) // 3]
+    top, bot = [d for o, d in ent if o >= hi], [d for o, d in ent if o <= lo]
+    pr(f"  top third n={len(top)} mean {_m(top):+.3f}; bottom third n={len(bot)} mean {_m(bot):+.3f}; gap {_m(top) - _m(bot):+.3f}  (v2: +0.989 n=57, +0.609 n=63, +0.379)")
+    pr("== P4 Free-rider's partner s_non")
+    def frp(rows):
+        return [r["s_non_role"]["B" if r["a"] == "p-freerider" else "A"] for r in rows if "p-freerider" in (r["a"], r["b"])]
+    p4 = frp(live)
+    pr(f"  n={len(p4)} mean={_m(p4):.4f} (need <= 0.114; v2 {_m(frp(v2.values())):.4f}) holds={_m(p4) <= 0.114}; apart n={len(frp(apart))} mean {_m(frp(apart)):.4f}; pot n={len(frp(tog))} mean {_m(frp(tog)):.4f}")
+    same = [(r, v2[(r["arm"], r["a"], r["b"], r["seed"])]) for r in tog]
+    ident = [all(abs(r[k] - o[k]) < 1e-12 for k in ("s_non", "pleasure", "s_off")) and r["left"] == o["left"] and r["exits"] == o["exits"] for r, o in same]
+    pr(f"== P5 bit-identity of week-0 pot runs with v2: {sum(ident)} of {len(ident)} identical; week-0 pot flags equal v2: "
+       f"{all(r['pot'] == v2[(r['arm'], r['a'], r['b'], r['seed'])]['pot'] for r in live)}")
+    pr("== apart households: living arrangement, retries, and who formed a pot later")
+    pr("  modes (A, B):", dict(Counter((r["modes"]["A"], r["modes"]["B"]) for r in apart)))
+    pr("  retry rounds held:", sum(len(r["retries"]) for r in apart), "; households formed by retry:", sum(1 for r in apart if r["formed_week"] is not None),
+       "; weeks:", dict(Counter(r["formed_week"] for r in apart if r["formed_week"] is not None)))
+    late = [r for r in apart if r["formed_week"] is not None]
+    pr(f"  late-formed (n={len(late)}): dissolved after {_m(r['left'] > 0 for r in late) if late else float('nan'):.3f}; terms:",
+       dict(Counter((r['bundle'] or {}).get('stay', None) for r in late)) if late else None)
+    for lab, rows in (("apart all 156 weeks", [r for r in apart if r["apart_end"]]), ("apart then formed", late), ("pot at week 0", tog), ("v2 no-pot (cohabiting)", v2n)):
+        pr(f"  {lab:24s} n={len(rows):3d} s_non={_m(r['s_non'] for r in rows):.4f} pleasure={_m(r['pleasure'] for r in rows):.4f} fail={_m(r['fail'] for r in rows):.3f}"
+           f" wb={_m(r['wb'][x] for r in rows for x in 'AB'):.4f}")
+    pr("== cohorts: s_non, fail, pleasure (v2.1 vs v2 floor ON)")
+    for coh in ("prs", "ctl"):
+        a1 = [r for r in live if r["cohort"] == coh]
+        a2 = [r for r in v2.values() if r["cohort"] == coh]
+        pr(f"  {coh}: v2.1 s_non={_m(r['s_non'] for r in a1):.4f} fail={_m(r['fail'] for r in a1):.3f} pleasure={_m(r['pleasure'] for r in a1):.4f}"
+           f" | v2 s_non={_m(r['s_non'] for r in a2):.4f} fail={_m(r['fail'] for r in a2):.3f} pleasure={_m(r['pleasure'] for r in a2):.4f}")
+    pr("== pressing personas' partners s_non (v2.1 / v2)")
+    for who in PRESSING_IDS:
+        def part(rows):
+            return [r["s_non_role"]["B" if r["a"] == who else "A"] for r in rows if who in (r["a"], r["b"])]
+        pr(f"  {who:13s} {_m(part(live)):.4f} / {_m(part(v2.values())):.4f}")
+    wk = lambda r: "A" if r["outside"][r["a"]] < r["outside"][r["b"]] else "B"
+    pr(f"== weaker partner (lower real outside option) lived wellbeing: v2.1 {_m(r['wb'][wk(r)] for r in live):.4f}; v2 {_m(r['wb'][wk(r)] for r in v2.values()):.4f}")
+    st = [r["rollout_stats"] for r in live]
+    pr("== rollouts per worker process at its last run (max over workers): weeks", max(s["rollout_weeks"] for s in st), "rollouts", max(s["rollouts"] for s in st))
+    return live
 
 
 def examples_v6():
@@ -1057,6 +1152,16 @@ def analyze_v6(res=None):
         ev = [e for r in rows for e in r["exits"] if e["role"] == weak(r)]
         pr(f"  {lab}: weaker partner's exits n={len(ev)} below 26: {_m(e['assets'] < NG.FLOOR for e in ev):.3f} mean assets {_m(e['assets'] for e in ev):.1f}")
     return res
+
+
+if __name__ == "__main__" and "--negotiate-v2-1" in sys.argv:
+    if "--analyze" in sys.argv:
+        analyze_v61()
+    elif "--pilot" in sys.argv:
+        analyze_v61(main_v61(pilot=True, seeds=(0,)))
+    else:
+        analyze_v61(main_v61())
+    sys.exit(0)
 
 
 if __name__ == "__main__" and "--negotiate-v2" in sys.argv:

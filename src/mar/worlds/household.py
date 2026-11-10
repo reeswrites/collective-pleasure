@@ -977,7 +977,8 @@ class WeeklyWorld:
         self.hook = None        # optional callable(world, week), called at the start of each week before anyone acts
         self.floor_amount = None   # negotiation v2: a leaver always carries at least min(this, own money + own pooled share) out; None = off
         self.exit_log = []         # executed leaves: week, role, assets carried out (money + carried share)
-        self.solo = None        # negotiation v2 outside-option rollouts: None | "alone" | "friend" (living with Friend C)
+        self.solo = None        # negotiation v2 outside-option rollouts: None | "alone" | "friend" (living with Friend C) for both
+        #                         partners, or (v2.1) a dict {"A": mode, "B": mode} when the partners live separately by their own choice
         self.personas = {"A": pa, "B": pb}
         self.mech = any(c.aim in MECH_AIMS for c in self.gate.cards)
         self.commits, self.gifts = [], {"partner": 0, "friend": 0}
@@ -994,6 +995,11 @@ class WeeklyWorld:
 
     def other(self, r):
         return "B" if r == "A" else "A"
+
+    def with_friend(self, r):
+        """Is this partner living with Friend C (negotiation v2 / v2.1 solo mode)?"""
+        s = self.solo
+        return (s.get(r) if isinstance(s, dict) else s) == "friend"
 
     # -- seed v2: commitments (negotiation stub, honoring, breach)
     def _commit_ok(self, who, aim):
@@ -1328,7 +1334,7 @@ class WeeklyWorld:
         hrow = {}
         for r in "AB":
             me, wk = self.p[r], self.wk[r]
-            cost = HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if (me["in"] or self.solo == "friend") else 1.5)
+            cost = HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if (me["in"] or self.with_friend(r)) else 1.5)
             me["money"] -= cost
             if me["money"] < 0:                         # household savings as a safety net (ASSUMED)
                 draw = min(me["pooled"], -me["money"] + 2)
@@ -1358,8 +1364,8 @@ class WeeklyWorld:
             assets = me["money"] + me["pooled"]
             ill = 0.3 if me["ill"] else 0.0
             h.tick(rest_actions=wk["rests"], work_blocks=wk["works"], friend_visits=wk["friends"], together=wk["together"],
-                   friend_initiated=wk["friend_initiated"] + (1 if self.solo == "friend" else 0),
-                   cohabiting=(me["in"] and oth["in"]) or self.solo == "friend", assets=assets,
+                   friend_initiated=wk["friend_initiated"] + (1 if self.with_friend(r) else 0),
+                   cohabiting=(me["in"] and oth["in"]) or self.with_friend(r), assets=assets,
                    money=me["money"], extra_rest_drain=ill, extra_security_drain=wk["sec_hit"],
                    connection_penalty=wk["conn_hit"] + (0.1 if self.moved else 0.0))
             pr = self.probe(r, w)
