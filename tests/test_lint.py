@@ -78,7 +78,7 @@ def test_e_gloss_exception_not_in_formal_fields():
 
 
 def test_f_unknown_action_and_variable():
-    assert ("f", "fail") in kinds(hh([card("Q", "may", "amend")]))
+    assert ("f", "fail") in kinds(hh([card("Q", "may", "teleport")]))
     assert ("f", "fail") in kinds(hh([card("Q", "must_not", "work", [("weather", "gt", 1)])]))
     assert ("f", "fail") in kinds(hh([card("Q", "may", "work", attribute="robot")]))
 
@@ -114,5 +114,6 @@ def test_whole_repo_lint_runs_and_names_known_findings():
     res = {r["name"]: r for r in L.lint_all(negotiated=6)}
     assert res["fishery"]["status"] == "pass"
     assert res["fishery-en+patch"]["status"] == "fail"      # the deliberately conflicting C1 patch fixture
-    assert res["household/author_seed_v2_bindable"]["status"] == "fail"
+    for v in ("bindable", "free_exit", "nocommit"):         # exceptions are formal on the cards (R5/R5c via bound_request): no e finding
+        assert res[f"household/author_seed_v2_{v}"]["status"] == "pass", v
     assert "## Every finding" in L.markdown(list(res.values()))

@@ -2,7 +2,8 @@ id: R5-may-refuse
 attribute: partner
 deontic: may
 aim: refuse_request
-conditions: []
+conditions:
+- {expr: bound_request, op: eq, value: 0}
 or_else: null
-gloss: A partner may always refuse a request, unless they earlier chose to bind themselves to it; then they must honor it or accept the consequence they agreed to.
-source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back" (2026-11-10), the author''s words: "the person can ask and the other person can always say no unless chosen bound". Seed v2 rule R5. The permission is on `refuse_request`; the ''unless chosen bound'' clause is carried by the commitment mechanics of the world (a request commitment forces consent and blocks refusal; breach costs the agreed fine). Seed v2.1 (2026-11-10): R3b removed; pot terms are negotiated by everyone who shares the pot (docs/decisions/0013-negotiated-pots.md).'
+gloss: A partner may refuse any request they have not bound themselves to honor.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back" (2026-11-10), the author''s words: "the person can ask and the other person can always say no unless chosen bound". Seed v2 rule R5. The permission is on `refuse_request`; the ''unless chosen bound'' clause is carried formally by the condition `bound_request = 0` (formalized 2026-11-10: the permission holds only for a request the partner has not bound themselves to) together with card R5c, which forbids refusing a bound request; the world''s commitment mechanics do the same in code (a request commitment forces consent and blocks refusal; breaking it costs the agreed fine). Seed v2.1 (2026-11-10): R3b removed; pot terms are negotiated by everyone who shares the pot (docs/decisions/0013-negotiated-pots.md).'

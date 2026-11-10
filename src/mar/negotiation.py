@@ -128,13 +128,13 @@ GLOSS = {
     ("taking", "allowed"): "A member may draw from the pot for themselves.",
     ("taking", "forbidden"): "No member may draw from the pot for themselves; it pays the shared bills and what a leaver carries out.",
     ("taking", "repay"): "A member who draws from the pot for themselves may not spend on themselves at all for two months (the code's cap_halve sanction bars self-spending; nothing models making it good).",
-    ("change", "unanimous"): "The pot terms change only when every member consents. (Declared only: the world has no amend action; reviews every 13 weeks accept any change all members agree to, whatever this term says.)",
-    ("change", "propose_accept"): "Any member may propose a change to the pot terms and the others may accept it. (Declared only: no amend action; see rules/README.md.)",
-    ("change", "frozen"): "The pot terms can never be changed. (Declared only: no amend action; it matters only in the proof check that a frozen pot needs an exit.)",
+    ("change", "unanimous"): "The pot terms change only when every other member accepts the proposed change and the new terms pass the proof checks (the `amend` action; reviews every 13 weeks also accept any change all members agree to).",
+    ("change", "propose_accept"): "Any member may propose a change to the pot terms; it takes effect when a majority of members (the proposer counts) accept it and the new terms pass the proof checks (the `amend` action).",
+    ("change", "frozen"): "The pot terms can never be changed by an amend action. (Reviews every 13 weeks still accept any change all members agree to; the card matters in the proof check that a frozen pot needs an exit.)",
     ("exit", "equal_split"): "A member who leaves carries half of the whole pot and leaves the other half in it.",
     ("exit", "proportional"): "A member who leaves carries what they put into the pot (at most what it holds) and leaves the rest in it. A floor may top this up (card FLOOR-exit-floor).",
     ("exit", "forfeit"): "A member who leaves carries none of the pot, except what the exit floor tops up (card FLOOR-exit-floor).",
-    ("stay", STAY_WEEKS): "Every member commits to stay for 52 weeks; leaving earlier forfeits the breach share of what the exit term would let them carry (the whole of it unless the breach cost term says otherwise).",
+    ("stay", STAY_WEEKS): "Every member commits to stay for 52 weeks; leaving earlier forfeits the breach share of what the exit term would let them carry (the breach cost term sets that share; the whole of it by default).",
     ("requests", "mutual"): "Every member commits to honor the others' stay-home requests for 52 weeks (a bound stay-home request bars seeing the friend and spending on oneself).",
 }
 
@@ -841,6 +841,54 @@ class Lived:
         self.log.append({"week": w, "changed": res.changed, "from": before, "to": dict(new), "stay_renewed": renew if (cur["stay"] or new["stay"]) else None,
                          "floor_blocks": len(res.floor_blocks), "rejections": len(res.rejections), "status": res.status,
                          "outside": res.outside, "baseline": res.baseline, "flagged": res.flagged})
+
+    def accepts(self, r, new):
+        """Does member r accept a change to `new`? Their own closed-form term values (ASSUMED proxy): strictly better than now."""
+        p = self.pa if r == "A" else self.pb
+        return term_sum(p, r == "B", new) > term_sum(p, r == "B", self.bundle)
+
+    def amend(self, proposer, new, w, accepts=None):
+        """The negotiated change rule (term N4) as an action. proposer ("A" | "B") proposes the full bundle `new`; the others accept
+        (accepts: {role: bool}, default each member's own closed-form value) per the change rule; the card gate decides whether the
+        rule lets the change be made (unanimous: only with the others' consent; frozen: never); the new terms are recompiled and
+        proof-checked (plus the exit floor and the base rules' menu) BEFORE anyone lives under them. -> a log dict with `outcome`:
+        "amended" | "blocked by the change rule" | "not enough accepted" | "rejected by the proof checks" | "blocked by the floor"
+        | "not allowed by the base rules" | "no pot"."""
+        world, ids = self.world, [self.pa.id, self.pb.id]
+        rec = {"week": w, "proposer": proposer, "from": dict(self.bundle) if self.bundle else None, "to": dict(new)}
+        self.amendments = getattr(self, "amendments", [])
+        self.amendments.append(rec)
+        if self.bundle is None:
+            rec["outcome"] = "no pot"
+            return rec
+        acc = {r: (r == proposer) or bool(accepts[r] if accepts and r in accepts else self.accepts(r, new)) for r in "AB"}
+        rec["accepted"] = dict(acc)
+        everyone_else = all(v for r, v in acc.items() if r != proposer)
+        st = world.state(proposer, w)
+        st["consented"] = int(everyone_else)
+        ok, reasons = world.gate.check("partner", "amend", st)
+        if not ok:
+            rec["outcome"], rec["reasons"] = "blocked by the change rule", reasons
+            return rec
+        if not (everyone_else if self.bundle["change"] == "unanimous" else sum(acc.values()) * 2 > len(acc)):
+            rec["outcome"] = "not enough accepted"
+            return rec
+        menu = menu_of(self.base)
+        if (new["stay"] and not menu["stay"]) or (new["requests"] == "mutual" and not menu["requests"]):
+            rec["outcome"] = "not allowed by the base rules"
+            return rec
+        hold = {r: world.hold(r) for r in "AB"}
+        if self.floor and not floor_check(new, hold, current=self.bundle)["ok"]:
+            rec["outcome"] = "blocked by the floor"
+            return rec
+        pc = proof_check(list(self.base) + compile_bundle(new, ids) + floor_cards(FLOOR if self.floor else None))
+        if not pc["ok"]:
+            rec["outcome"], rec["checks"] = "rejected by the proof checks", [c["check"] for c in pc["fails"]]
+            return rec
+        _apply_terms(world, self.base, new, w, ids, bool(new["stay"]))
+        self.bundle = dict(new)
+        rec["outcome"] = "amended"
+        return rec
 
     def retry(self, w, last):
         """v2.1: partners who live apart try again (docs/results/negotiation-v2.1-prereg.md). Outside option = the better of alone and

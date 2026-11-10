@@ -311,3 +311,52 @@ def test_a_week0_pot_household_is_unchanged_by_the_fix():
         r = L.play()
         runs.append(([o["hedonic"] for o in r.outcomes], r.exits))
     assert runs[0] == runs[1]
+
+
+# ---- the amend action (term N4, the negotiated change rule) ----
+def _lived(change):
+    base_b = b(change=change)
+    cards = N.compile_bundle(base_b, ["p-controller", "p-peacekeeper"])
+    res = N.week0(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE)
+    res.bundle, res.cards, res.status = dict(base_b), cards, "agreed"
+    return N.Lived(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE, res, weeks=20)
+
+
+def test_amend_unanimous_needs_the_others_accept_then_recompiles_the_terms():
+    L = _lived("unanimous")
+    refused = L.amend("A", b(change="unanimous", use="needs_only"), 5, accepts={"B": False})
+    assert refused["outcome"] == "blocked by the change rule" and refused["reasons"] == ["N4-change-unanimous"]
+    assert L.bundle["use"] == "any_use"
+    done = L.amend("A", b(change="unanimous", use="needs_only"), 5, accepts={"B": True})
+    assert done["outcome"] == "amended" and L.bundle["use"] == "needs_only"
+    assert "N2-use-needs_only" in L.world.cards and "N2-use-any_use" not in L.world.cards      # recompiled into the live gate
+
+
+def test_amend_frozen_never_changes_and_propose_accept_goes_by_majority():
+    assert _lived("frozen").amend("A", b(change="frozen", use="needs_only"), 5, accepts={"B": True})["outcome"] == "blocked by the change rule"
+    L = _lived("propose_accept")
+    assert L.amend("A", b(change="propose_accept", use="needs_only"), 5, accepts={"B": False})["outcome"] == "not enough accepted"
+    assert L.amend("A", b(change="propose_accept", use="needs_only"), 5, accepts={"B": True})["outcome"] == "amended"
+
+
+def test_amend_is_proof_checked_and_floor_checked_before_it_takes_effect():
+    L = _lived("unanimous")
+    bad = L.amend("A", b(exit="forfeit"), 5, accepts={"B": True})
+    assert bad["outcome"] in ("blocked by the floor", "rejected by the proof checks") and L.bundle["exit"] == "equal_split"
+    nonstay = N.base_cards("author_seed_v2_free_exit")        # free exit: no commitment to stay may be made, so a stay amendment is refused
+    L2 = _lived("unanimous")
+    L2.base = nonstay
+    assert L2.amend("A", b(stay=52, breach=0.5), 5, accepts={"B": True})["outcome"] == "not allowed by the base rules"
+
+
+def test_the_bound_request_flag_is_exposed_and_the_cards_read_it():
+    cards = H.load_variant(BIND)
+    gate = H.PyGate(cards)
+    st = {n: 0 for n in H.STATE_VARS}
+    assert gate.check("partner", "refuse_request", st)[0]
+    assert not gate.check("partner", "refuse_request", dict(st, bound_request=1))[0]
+    assert gate.check("partner", "refuse_request", dict(st, bound_request=1))[1] == ["R5c-honor-bound-request"]
+    w = H.WeeklyWorld(cards, (PERS["p-controller"], PERS["p-peacekeeper"]), 0, 10)
+    assert w.state("A", 0)["bound_request"] == 0
+    w.bound_req["A"]["stay_home"] = 4
+    assert w.state("A", 0)["bound_request"] == 1 and w.state("A", 4)["bound_request"] == 0

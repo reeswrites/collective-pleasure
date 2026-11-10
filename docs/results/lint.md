@@ -80,3 +80,33 @@ No finding was a clear bug, so no rule card was changed other than declaring L5'
   weekly world's mechanisms that are not cards (README table) are outside every check; `or_else` sanctions are treated as soft walls
   for the may check and as walls by the deadlock and exit checks (the worlds' own convention); the friend role has no cards in any
   set, so its check passes trivially.
+
+## Formalization pass, before and after (2026-11-10, same day, later)
+
+The author asked that rules have no hidden flaws. The exceptions in the glosses are now on the cards, not only in code.
+
+| rule set | before | after |
+|---|---|---|
+| household/author_seed_v2_bindable | fail (3: e on R3a, R3a2, R5) | pass |
+| household/author_seed_v2_free_exit | fail (3) | pass |
+| household/author_seed_v2_nocommit | fail (3) | pass |
+| negotiated/* (sample of 40) | fail (180 findings: f on N4 `amend`, e on N6-stay-52, R3a, R3a2, R5) | pass (0 of 40 fail; only the b2 notes on N5a-exit-forfeit remain) |
+| fishery-en+patch | fail (deliberate conflicting fixture) | unchanged |
+
+What changed:
+
+- **R5 (may refuse) is now formal.** The world exposes a new state variable `bound_request` (1 if the standing request on the actor is one they
+  earlier chose to bind themselves to honor; commitment mechanics unchanged). R5 reads `may refuse_request when bound_request = 0`, and a new
+  card R5c reads `must_not refuse_request when bound_request = 1`, so the card set alone says what the commitment code does. The code still
+  lets a bound partner under heavy load break it and pay the agreed fine; R5c's gloss says so. The freedom probe sets the flag to 0, because a
+  bind the partner chose is not a rule restriction (measured freedom is unchanged).
+- **R3a and R3a2 (pot)**: the "unless terms they negotiate say otherwise" clause was not a condition on the card; it is the fact that negotiated
+  pot terms are separate cards that add limits. The gloss now says exactly that (this card sets no limit of its own; limits come only from
+  negotiated pot cards) with no informal exception. The meaning is unchanged: with no negotiated terms either may use the pot for anything
+  (the author's "1").
+- **N6-stay-52**: the "unless the breach cost term says otherwise" was a default value of a parameter, not an exception; the gloss now says the
+  breach cost term sets the share (the whole of it by default).
+- **N4 (change rule) is now an action.** `amend` is a world action and `Lived.amend` implements it: the proposer proposes a full bundle, the
+  others accept (unanimous: every other member, via the card gate's `consented`; propose_accept: a majority, proposer counts; frozen: never),
+  and the new terms are recompiled, floor-checked, checked against what the base rules let members commit to, and proof-checked before they take
+  effect. Tests: tests/test_negotiation_v2.py. The earlier "Reading of the findings" bullets on `author_seed_v2_*` and on N4 are superseded by this pass.

@@ -37,7 +37,7 @@ Everything the world enforces must appear on a card or be listed here.
 | Mechanism | Where | Card |
 | --- | --- | --- |
 | Exit floor: a leaver carries at least 26 units (13 weeks of living costs), topped up from the pot, never above their equal half | `WeeklyWorld.carry_out`, `negotiation.floor_check` | `FLOOR-exit-floor` (source: Claude's default, approved by the author 2026-11-10) |
-| Change rules (N4 unanimous / propose_accept / frozen) | none: **declared only**. The world has no `amend` action; reviews every 13 weeks accept any change all members agree to. `frozen` matters only in the proof check that a frozen pot needs an exit | N4 cards say so in their gloss |
+| Change rules (N4 unanimous / propose_accept / frozen) | the `amend` action (`Lived.amend`, 2026-11-10): the proposer proposes a full bundle, the others accept (unanimous: all others, via the card gate's `consented`; propose_accept: a majority, proposer counts; frozen: never), and the new terms are recompiled, floor-checked and proof-checked before they take effect. Reviews every 13 weeks still accept any change all members agree to | N4 cards say so in their gloss |
 | Vetoes, 4 weeks, cannot be refused | `VETO_WEEKS` | R6 forbids them in seed v2 |
 | Bound requests (4 weeks) block `see_friend` and `spend_self` for a bound `stay_home` request | `BOUND_BLOCKS` | N7 / R5b |
 | Breach: a bound partner breaks a commitment only at non-offsettable load 0.2 or more; stay breach carries out `1 - breach` of the exit term; request breach costs 3 money | `BREACH_N`, `REQUEST_FINE`, `breach_forfeit` | R5 / R8d / N6 name the consequence; the numbers are code constants |

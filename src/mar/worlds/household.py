@@ -15,7 +15,8 @@ Card vocabulary. Cards select their action by `aim` and their actor by `attribut
 aim "any" applies to every action. Condition variables (all integers):
   pooled (actor's share of pooled assets), money (actor's private money), other_earns_more (1 for Partner B),
   no_contact_request / stay_home_request (1 if the other partner has such a request standing on the actor),
-  consented (1 if the actor agreed to the standing request), need_gap (unfunded part of this month's shared
+  consented (1 if the actor agreed to the standing request), bound_request (1 if the standing request is one the actor
+  earlier chose to bind themselves to honor; seed v2 commitments), need_gap (unfunded part of this month's shared
   need), months_in (months in the household), other_in (1 if the other partner is in the household),
   take (percent of the actor's pooled share carried out on `leave`; 0 for every other action).
 """
@@ -37,18 +38,20 @@ RULES = ROOT / "rules" / "household"
 # ---- vocabulary and bounds -------------------------------------------------------------------
 
 STATE_VARS = ("pooled", "money", "other_earns_more", "no_contact_request", "stay_home_request", "consented",
-              "need_gap", "months_in", "other_in")
+              "need_gap", "months_in", "other_in", "bound_request")
+OPTIONAL_VARS = {"bound_request": 0}     # state producers that predate a variable may omit it; it then reads as this default
 VAR_NAMES = STATE_VARS + ("take",)
 Z = dict(zip(VAR_NAMES, z3.Ints(" ".join(VAR_NAMES))))
 BOUNDS = {"pooled": (0, 100), "money": (0, 100), "other_earns_more": (0, 1), "no_contact_request": (0, 1),
           "stay_home_request": (0, 1), "consented": (0, 1), "need_gap": (0, 10), "months_in": (0, 36),
-          "other_in": (0, 1), "take": (0, 100)}
+          "other_in": (0, 1), "bound_request": (0, 1), "take": (0, 100)}
 PHRASES = {"pooled": "the pooled share", "money": "the private money", "other_earns_more": "the earns-more flag",
            "no_contact_request": "the no-contact request flag", "stay_home_request": "the stay-home request flag",
            "consented": "the consent flag", "need_gap": "the unfunded need", "months_in": "the months in the household",
-           "other_in": "the other-partner-in flag", "take": "the share taken"}
+           "other_in": "the other-partner-in flag", "bound_request": "the bound-request flag",
+           "take": "the share taken"}
 PARTNER_ACTIONS = ("work", "spend_shared", "spend_self", "see_friend", "refuse_request", "request", "leave", "return")
-EXTRA_ACTIONS = ("gift_pooled", "give", "commit_stay", "commit_request")   # harness-only move (side channel); the formal model in seam_depth does not have it
+EXTRA_ACTIONS = ("gift_pooled", "give", "commit_stay", "commit_request", "amend")   # harness-only move (side channel); the formal model in seam_depth does not have it
 GIFT = 8
 FRIEND_ACTIONS = ("work", "spend_self", "see_friend", "refuse_request")
 K_DEFAULT = 3
@@ -106,6 +109,7 @@ class HouseholdGate:
 
     def check(self, kind, action, state, take=0):
         """-> (allowed, reasons) for one proposed action; reasons are violated card ids."""
+        state = {**OPTIONAL_VARS, **state}
         key = (kind, action, take, tuple(state[n] for n in STATE_VARS))
         if key not in self._cache:
             sub = [(Z[n], z3.IntVal(state[n])) for n in STATE_VARS] + [(Z["take"], z3.IntVal(take))]
@@ -773,7 +777,7 @@ class PyGate:
         key = (kind, action)
         if key not in self._by:
             self._by[key] = [c for c in self.cards if c.attribute == kind and c.aim in (action, "any")]
-        env = {**state, "take": take}
+        env = {**OPTIONAL_VARS, **state, "take": take}
         reasons = [c.id for c in self._by[key] if self._viol(c, env)]
         return not reasons, reasons
 
@@ -1094,7 +1098,8 @@ class WeeklyWorld:
         return {"pooled": self.pool, "money": int(me["money"]), "other_earns_more": 1 if r == "B" else 0,
                 "no_contact_request": int("no_contact" in pend), "stay_home_request": int("stay_home" in pend),
                 "consented": int(bool(pend) and bool(self.consent[r])), "need_gap": min(gap, 10),
-                "months_in": min(36, me["months_in"]), "other_in": int(o["in"])}
+                "months_in": min(36, me["months_in"]), "other_in": int(o["in"]),
+                "bound_request": int(any(u > w for u in self.bound_req[r].values()))}
 
     def decide(self, r, a, w, take=0, st=None, commit=True):
         """-> ("ok" | "soft" | "hard" | "breach", sanction dicts, reasons). Enforcement: a card with a sanction is soft (it may be
@@ -1124,6 +1129,7 @@ class WeeklyWorld:
     def probe(self, r, w):
         """Freedom probe (rules only: shocks are not rule restrictions)."""
         me, st = self.p[r], self.state(r, w)
+        st["bound_request"] = 0      # the probe measures what the rules restrict; a bind the partner chose is not a rule restriction
         ok = lambda a, take=0: self.decide(r, a, w, take, st, commit=False)[0] != "hard"
         if me["in"]:
             retained = max([self.retained_fraction(r, t) for t in PROBE_TAKES if ok("leave", t)] or [0.0])
