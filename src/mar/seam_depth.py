@@ -62,8 +62,18 @@ class Forced:
         return self.base.propose(o)
 
 
+_KEYS = {}
+
+
 def _key(cards):
-    return tuple(c.to_yaml() for c in cards)
+    """Canonical key of a card list. Memoised by card identity (cards are loaded once per rule set): the YAML dump per rollout was
+    most of the search time."""
+    ident = tuple(id(c) for c in cards)
+    hit = _KEYS.get(ident)
+    if hit is None or any(a is not b for a, b in zip(hit[0], cards)):
+        hit = (tuple(cards), tuple(c.to_yaml() for c in cards))
+        _KEYS[ident] = hit
+    return hit[1]
 
 
 _GATES, _ROLLS = {}, {}
