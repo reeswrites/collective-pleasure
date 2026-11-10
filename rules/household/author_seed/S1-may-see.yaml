@@ -1,0 +1,8 @@
+id: S1-may-see
+attribute: partner
+deontic: may
+aim: see_friend
+conditions: []
+or_else: null
+gloss: A partner may always see anyone, including the friend.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, the author''s own words: "everyone can see anyone freely". Encoded as a permission.'

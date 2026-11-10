@@ -56,6 +56,7 @@ MIN_EXIT_TAKE = 25          # meaningful exit: leave carrying at least 25 percen
 SUSPEND_ALLOWS = ("work", "spend_shared", "refuse_request")   # ASSUMED meaning of the suspend sanction
 CAP_HALVE_BANS = ("spend_self",)                               # ASSUMED meaning of cap_halve
 VARIANTS = ("free_chaotic", "trap", "contact_free", "exit_half", "veto_consent", "needs_duty", "baseline")
+V2_VARIANTS = VARIANTS + ("author_seed",)
 
 
 @contextmanager
@@ -695,3 +696,482 @@ def compare_mined(cards, rows):
                     res["observed"] += 1
                     res["disagree_observed"] += bad
     return res
+
+
+# =====================================================================================================
+# v2: weekly world with goals, shocks, enforced sanctions and persona-driven agents
+# (docs/results/household-v2-prereg.md, docs/decisions/0010-hedonic-model.md). The monthly World above and
+# the seam ladder are untouched. Wording rule: agents feel nothing; "pleasure" and "suffering" are glosses
+# for a modeled hedonic state (src/mar/hedonic.py) derived from each persona's assigned preferences.
+# =====================================================================================================
+from itertools import combinations
+
+from .. import hedonic as HD
+
+WEEKS, MONTH_WEEKS, UNITS, PASSES = 156, 4, 10, 3           # 3 years; a 4-week "month" (ASSUMED simplification)
+V2_COST = {"work": 4, "rest": 2, "see_friend": 2, "together": 2, "spend_shared": 1, "spend_self": 1, "request": 1}
+V2_INCOME = {"A": 6, "B": 5}                                # per work block (ASSUMED)
+V2_ACTIONS = PARTNER_ACTIONS + ("rest", "together")
+BILLS = {2: 10, 1: 6, 0: 0}                                 # monthly shared need by partners in the household
+BILLS_WEEKLY = 2.5                                          # pro-rata of the two-person bill, for the savings aspiration
+WARN_FRICTION = 0.15                                        # offsettable suffering per week while a warn sanction runs
+SANCTION_UTILITY = {"warn": 0.01, "cap_halve": 0.01, "suspend": 0.02}   # agent's estimate: per week of sanction (ASSUMED)
+SHOCK_RATES = {"job_loss": HD.DEFAULT.job_loss_rate, "illness": HD.DEFAULT.illness_rate,
+               "new_connection": HD.DEFAULT.new_connection_rate, "move": HD.DEFAULT.move_rate}   # from the config block
+SHOCK_DURATION = {"job_loss": (8, 26), "illness": (3, 8), "move": (4, 4)}                 # weeks, uniform (ASSUMED)
+SHOCK_SOURCES = {"job_loss": "BLS JOLTS layoffs and discharges about 1.0-1.1 percent of employment per month",
+                 "illness": "ASSUMED", "new_connection": "ASSUMED",
+                 "move": "Census CPS 2022 mover rate 8.7 percent (secondary-source reading)"}
+
+
+class PyGate:
+    """The same card semantics as HouseholdGate, evaluated in plain Python (fast enough for 156-week runs).
+    tests/test_household_weekly.py checks it against the z3 gate on a grid."""
+    _OPS = {"gt": lambda a, b: a > b, "ge": lambda a, b: a >= b, "lt": lambda a, b: a < b,
+            "le": lambda a, b: a <= b, "eq": lambda a, b: a == b}
+
+    def __init__(self, cards):
+        self.cards = list(cards)
+        self._by = {}
+
+    def _viol(self, c, env):
+        if c.deontic == "may":
+            return False
+        holds = all(self._OPS[p["op"]](eval(p["expr"], {"__builtins__": {}}, env), p["value"]) for p in c.conditions)
+        return holds if c.deontic == "must_not" else not holds
+
+    def check(self, kind, action, state, take=0):
+        key = (kind, action)
+        if key not in self._by:
+            self._by[key] = [c for c in self.cards if c.attribute == kind and c.aim in (action, "any")]
+        env = {**state, "take": take}
+        reasons = [c.id for c in self._by[key] if self._viol(c, env)]
+        return not reasons, reasons
+
+
+def persona_pairs(personas):
+    """All unordered pairs of distinct personas, sorted by id; the lower id plays Partner A (the higher earner)."""
+    ps = sorted(personas, key=lambda p: p.id)
+    return list(combinations(ps, 2))
+
+
+def shock_schedule(seed, id_a, id_b, weeks=WEEKS):
+    """Shocks are misalignment in the wider system outside the household (economy and workplace, health system, housing
+    market), not random fate; rates are low and live in HedonicConfig. Common random numbers: depends on (seed, pair)
+    only, never on rules or actions.
+    -> {week: [{"kind", "role", "duration"}]}. job_loss, illness, new_connection are per partner; move is per household."""
+    rng = random.Random(f"{seed}|{id_a}|{id_b}")
+    out = {}
+    for w in range(weeks):
+        for kind, rate in SHOCK_RATES.items():
+            for role in (("H",) if kind == "move" else ("A", "B")):
+                if rng.random() < rate / 52:
+                    lo, hi = SHOCK_DURATION.get(kind, (0, 0))
+                    out.setdefault(w, []).append({"kind": kind, "role": role, "duration": rng.randint(lo, hi) if hi else 0})
+    return out
+
+
+def _m(L):
+    return 1.5 if L < 0.5 else 0.6      # marginal value of a need: larger in the hardship region
+
+
+class PersonaAgent:
+    """Chooses actions to serve its persona's needs and aspirations: a utility-like policy over the hedonic model.
+    utility(action) = sum over needs of (salience x marginal value x expected change in the need level, scaled by
+    capacity) + sum over aspirations of (importance x change in satisfaction) + a prosocial term for shared bills
+    and time together - costs in money and fatigue - an estimated sanction cost for breaking a soft rule.
+    The world executes the highest-utility candidate that is physically possible and permitted. Small seeded noise
+    (+-10 percent) breaks ties and varies seeds. Documented in docs/decisions/0010-hedonic-model.md."""
+
+    def __init__(self, persona):
+        self.persona = persona
+        w, ax = persona.weights, persona.axes
+        self.prosocial = max(0.0, min(1.0, 0.5 * (1 - ax["giving_keeping"]) + 0.5 * w["togetherness"]))
+        self.last_request = -99
+
+    def consents(self, kind):
+        s, a = self.persona.negotiation_style, self.persona.weights["autonomy"]
+        if s == "accommodating":
+            return True
+        if s == "collaborative":
+            return a < 0.5
+        if s == "direct":
+            return a < 0.3
+        if s == "avoidant":
+            return self.rng.random() < 0.5
+        return False
+
+    def _noise(self):
+        return 1 + 0.2 * (self.rng.random() - 0.5)
+
+    def utilities(self, o):
+        h, cap, L = o["hed"], o["hed"].capacity, o["hed"].level
+        asp, w = o["asp"], self.persona.weights
+        sat = h.satisfaction
+        u = {}
+
+        def need(n, d):
+            return h.sal[n] * _m(L[n]) * min(max(d, -1.0), 1.0 - L[n]) if d > 0 else h.sal[n] * _m(L[n]) * d
+
+        if o["can_work"] and o["in_hh"] is not None:
+            inc = V2_INCOME[o["role"]]
+            gain = need("money", inc / h.cfg.money_scale) + 0.3 * h.asp_w["savings_per_week"] * (
+                sat("savings_per_week", max(0, asp["net"] + inc)) - sat("savings_per_week", max(0, asp["net"])))
+            u["work"] = (gain - need("rest", h.cfg.work_fatigue)) / 1.5
+        u["rest"] = need("rest", h.cfg.rest_action * cap) / 1.2
+        if o["can_see_friend"]:
+            u["see_friend"] = (need("connection", h.cfg.conn_friend * cap)
+                               + 0.5 * h.asp_w["friends_per_week"] * (sat("friends_per_week", asp["friends"] + 1) - sat("friends_per_week", asp["friends"]))) / 1.2
+        if o["in_hh"] and o["other_in"] and o["partner_accepts"]:
+            u["together"] = (need("connection", h.cfg.conn_together * cap) 
+                             + 0.5 * h.asp_w["together_per_week"] * (sat("together_per_week", asp["together"] + 1) - sat("together_per_week", asp["together"]))
+                             + 0.05 * self.prosocial * cap * o["partner_conn_deficit"]) / 1.2
+        cost_money = lambda x: need("money", x / h.cfg.money_scale)
+        u["spend_self"] = 0.05 * h.asp_w["autonomy"] + 0.02 - cost_money(2) - 0.3 * h.asp_w["savings_per_week"] * (
+            sat("savings_per_week", max(0, asp["net"])) - sat("savings_per_week", max(0, asp["net"] - 2)))
+        if o["gap"] > 0:
+            frac = o["gap"] / max(1, o["need_month"])
+            urgency = 1.0 if o["last_week_of_month"] else 0.6
+            threat = max(0.3, min(1.0, 1 - o["pooled"] / 30))     # unpaid bills drain the savings; the threat grows as they shrink
+            u["spend_shared"] = (frac * urgency * (0.10 + 0.9 * h.sal["security"] * threat + 0.5 * self.prosocial * cap)
+                                 - cost_money(3))
+        else:
+            u["spend_shared"] = 0.0
+        return {a: v * self._noise() for a, v in u.items()}
+
+    def together_utility(self, o):
+        h, L = o["hed"], o["hed"].level
+        return h.sal["connection"] * _m(L["connection"]) * h.cfg.conn_together * h.capacity + 0.1 * h.asp_w["together_per_week"]
+
+    def propose(self, o):
+        """-> ranked [(utility, candidate)], best first. Candidates may be blocked by the rules; the world decides."""
+        r, h = o["role"], o["hed"]
+        out = []
+        if not o["in_hh"]:
+            if o["other_in"] and self.persona.weights["togetherness"] >= 0.6 and o["weeks_out"] >= 8 and h.B < 0:
+                out.append((0.3, _a("return")))
+            u = self.utilities({**o, "gap": 0})
+            out += [(v, _a(a)) for a, v in u.items() if v > 0.003 and a != "together"]
+            return sorted(out, key=lambda t: -t[0])
+        if o["low_weeks"] >= 4 or h.N >= 0.2:
+            out += [(0.9 - 0.01 * i, _a("leave", take=t)) for i, t in enumerate((100, 50, 25))]
+        pend = o["pending_on_me"]
+        if pend and not self.consents(sorted(pend)[0]):
+            out.append((0.12, _a("refuse_request")))
+        w, s = self.persona.weights, self.persona.negotiation_style
+        if (o["other_in"] and not o["pending_by_me"] and o["week"] - self.last_request >= 8 and s != "avoidant"
+                and w["autonomy"] < 0.6 and h.level["connection"] < 0.5 and o["partner_busy"]):
+            kind = "stay_home" if w["togetherness"] >= w["other_connections"] + 0.3 else "no_contact"
+            out.append((0.06, _a("request", kind=kind)))
+        for a, v in self.utilities(o).items():
+            if v > 0.003:
+                out.append((v, _a(a)))
+        return sorted(out, key=lambda t: -t[0])
+
+
+class WeeklyWorld:
+    def __init__(self, cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT):
+        pa, pb = personas
+        self.gate = cards if isinstance(cards, PyGate) else PyGate(cards)
+        self.cards = {c.id: c for c in self.gate.cards}
+        self.cfg, self.weeks, self.seed = cfg, weeks, seed
+        self.agents = {"A": PersonaAgent(pa), "B": PersonaAgent(pb), "C": Friend()}
+        for i, r in enumerate("ABC"):
+            self.agents[r].rng = random.Random(seed * 1000 + i)
+        self.hed = {"A": HD.Hedonic(pa, cfg), "B": HD.Hedonic(pb, cfg)}
+        self.p = {r: {"money": 10, "pooled": 45, "in": True, "months_in": 0, "retained": None, "weeks_out": 0,
+                      "jobless": 0, "ill": 0, "low": 0} for r in "AB"}
+        self.shocks = shock_schedule(seed, pa.id, pb.id, weeks)
+        self.moved = 0
+        self.pending = {"A": set(), "B": set()}
+        self.consent = {"A": 0, "B": 0}
+        self.sanctions = {"A": [], "B": []}
+        self.funded, self.contrib_month = 0, {"A": 0, "B": 0}
+        self.bills_met, self.month_rows = True, []
+        self.run = Run()
+        self.units = {}
+        self.wk = {}
+
+    def other(self, r):
+        return "B" if r == "A" else "A"
+
+    def need_month(self):
+        return BILLS[sum(1 for r in "AB" if self.p[r]["in"])]
+
+    def state(self, r, w):
+        me, o = self.p[r], self.p[self.other(r)]
+        pend = self.pending[r]
+        gap = max(0, self.need_month() - self.funded) if me["in"] or o["in"] else 0
+        return {"pooled": me["pooled"], "money": int(me["money"]), "other_earns_more": 1 if r == "B" else 0,
+                "no_contact_request": int("no_contact" in pend), "stay_home_request": int("stay_home" in pend),
+                "consented": int(bool(pend) and bool(self.consent[r])), "need_gap": min(gap, 10),
+                "months_in": min(36, me["months_in"]), "other_in": int(o["in"])}
+
+    def decide(self, r, a, w, take=0, st=None):
+        """-> ("ok" | "soft" | "hard", sanction dicts, reasons). Enforcement: a card with a sanction is soft (it may be
+        broken and the sanction applies); a card without one is a hard wall; active sanctions bind first."""
+        for s in self.sanctions[r]:
+            if s["until"] > w:
+                if s["kind"] == "suspend" and a not in SUSPEND_ALLOWS + ("rest",):
+                    return "hard", [], [f"sanction {s['card']}: suspended"]
+                if s["kind"] == "cap_halve" and a in CAP_HALVE_BANS:
+                    return "hard", [], [f"sanction {s['card']}: capped"]
+        ok, reasons = self.gate.check("partner", a, st or self.state(r, w), take)
+        if ok:
+            return "ok", [], []
+        sanc = [self.cards[i].or_else for i in reasons]
+        if all(s and s.get("kind") in SANCTION_UTILITY and isinstance(s.get("duration_months"), int) for s in sanc):
+            return "soft", [dict(s, card=i) for s, i in zip(sanc, reasons)], reasons
+        return "hard", [], reasons
+
+    def probe(self, r, w):
+        """Freedom probe (rules only: shocks are not rule restrictions)."""
+        me, st = self.p[r], self.state(r, w)
+        ok = lambda a, take=0: self.decide(r, a, w, take, st)[0] != "hard"
+        if me["in"]:
+            retained = max([self.retained_fraction(r, t) for t in PROBE_TAKES if ok("leave", t)] or [0.0])
+        else:
+            retained = me["retained"] if me["retained"] is not None else 1.0
+        opts = {"work": ok("work"), "spend": ok("spend_shared") or ok("spend_self"), "see_friend": ok("see_friend"),
+                "refuse": ok("refuse_request"), "leave": True if not me["in"] else retained >= 0.25}
+        return {"in": me["in"], "open": opts, "exit_retained": round(retained, 4)}
+
+    def retained_fraction(self, r, take):
+        me = self.p[r]
+        total = me["money"] + me["pooled"]
+        return 1.0 if total == 0 else (me["money"] + take / 100 * me["pooled"]) / total
+
+    def feasible(self, r, a, kind=None):
+        me, o = self.p[r], self.p[self.other(r)]
+        if a in V2_COST and self.units[r] < V2_COST[a]:
+            return False
+        if a == "work":
+            return me["jobless"] == 0 and me["ill"] == 0
+        if a == "see_friend":
+            return me["ill"] == 0 and self.moved == 0
+        if a == "spend_shared":
+            return me["in"] and me["money"] >= SHARE_STEP
+        if a == "spend_self":
+            return me["money"] >= SELF_STEP
+        if a == "together":
+            return me["in"] and o["in"] and self.units[self.other(r)] >= V2_COST["together"]
+        if a == "request":
+            return me["in"] and o["in"] and kind in REQUEST_KINDS
+        if a == "leave":
+            return me["in"]
+        if a == "return":
+            return (not me["in"]) and o["in"]
+        return True
+
+    def obs(self, r, w, last_week):
+        me, o, h = self.p[r], self.p[self.other(r)], self.hed[r]
+        wk = self.wk[r]
+        oth = self.other(r)
+        st = self.state(r, w)
+        net = wk["income"] - HD.DEFAULT.living_cost - BILLS_WEEKLY - wk["spent_self"]
+        ob = {"role": r, "week": w, "hed": h, "in_hh": me["in"], "other_in": o["in"], "weeks_out": me["weeks_out"],
+              "low_weeks": me["low"], "can_work": me["jobless"] == 0 and me["ill"] == 0,
+              "can_see_friend": me["ill"] == 0 and self.moved == 0, "gap": st["need_gap"], "need_month": self.need_month(),
+              "last_week_of_month": w % MONTH_WEEKS == MONTH_WEEKS - 1, "pending_on_me": set(self.pending[r]),
+              "pending_by_me": set(self.pending[oth]),
+              "pooled": me["pooled"], "asp": {"friends": wk["friends"], "together": wk["together"], "net": net},
+              "partner_conn_deficit": max(0.0, 0.5 - self.hed[oth].level["connection"]) * 2,
+              "partner_busy": self.wk[oth]["friends"] + self.wk[oth]["works"] >= 2 or last_week["busy"][oth]}
+        ob["partner_accepts"] = False
+        if me["in"] and o["in"]:
+            oo = {"hed": self.hed[oth]}
+            ob["partner_accepts"] = self.agents[oth].together_utility(oo) >= 0.02 and self.units[oth] >= V2_COST["together"]
+        return ob
+
+    def apply(self, r, cand, w, sanc):
+        a, me, oth = cand["a"], self.p[r], self.other(r)
+        o, wk = self.p[oth], self.wk[r]
+        self.units[r] -= V2_COST.get(a, 0)
+        if a == "work":
+            me["money"] += V2_INCOME[r]; wk["income"] += V2_INCOME[r]; wk["works"] += 1
+        elif a == "rest":
+            wk["rests"] += 1
+        elif a == "spend_shared":
+            me["money"] -= SHARE_STEP
+            if self.funded >= self.need_month():
+                me["pooled"] += SHARE_STEP
+            else:
+                self.funded += SHARE_STEP
+            self.contrib_month[r] += 1; wk["contrib"] += 1
+        elif a == "spend_self":
+            me["money"] -= SELF_STEP; wk["spent_self"] += SELF_STEP
+        elif a == "see_friend":
+            wk["friends"] += 1
+        elif a == "together":
+            self.units[oth] -= V2_COST["together"]
+            wk["together"] += 1; self.wk[oth]["together"] += 1
+        elif a == "refuse_request":
+            self.pending[r] = set()
+        elif a == "request":
+            self.pending[oth].add(cand["kind"])
+            self.consent[oth] = int(bool(self.agents[oth].consents(cand["kind"])))
+            self.agents[r].last_request = w
+        elif a == "leave":
+            take = cand.get("take", 0)
+            me["retained"] = round(self.retained_fraction(r, take), 4)
+            carry = me["pooled"] * take // 100
+            me["money"] += carry
+            if o["in"]:
+                o["pooled"] += me["pooled"] - carry
+            me["pooled"], me["in"], me["weeks_out"], self.pending[r] = 0, False, 0, set()
+        elif a == "return":
+            me["in"], me["months_in"] = True, 0
+        for s in sanc:
+            self.sanctions[r].append({"kind": s["kind"], "until": w + MONTH_WEEKS * s["duration_months"], "card": s["card"]})
+            wk["sanctioned"] += 1
+
+    def step_agent(self, r, w, last_week, rec):
+        o = self.obs(r, w, last_week)
+        cands = self.agents[r].propose(o)
+        # soft rules: the agent weighs the estimated sanction against the utility
+        scored = []
+        for u, cand in cands:
+            a = cand["a"]
+            dec, sanc, reasons = self.decide(r, a, w, cand.get("take", 0))
+            if dec == "soft":
+                u -= sum(SANCTION_UTILITY[s["kind"]] * MONTH_WEEKS * s["duration_months"] for s in sanc)
+            scored.append((u, cand, dec, sanc, reasons))
+        for u, cand, dec, sanc, reasons in sorted(scored, key=lambda t: -t[0]):
+            a = cand["a"]
+            if u <= 0.003 and a not in ("leave", "return"):
+                break
+            if not self.feasible(r, a, cand.get("kind")):
+                continue
+            row = {"week": w, "role": r, "action": a, "take": cand.get("take", 0), "kind": cand.get("kind"),
+                   "allowed": dec != "hard", "executed": dec != "hard", "reasons": list(reasons),
+                   "state": self.state(r, w), "soft": dec == "soft", "u": round(u, 4)}
+            if dec == "hard":
+                rec["blocked"][r].add(a)
+                self.run.trace.append(row)
+                continue
+            self.run.trace.append(row)
+            self.apply(r, cand, w, sanc)
+            return
+
+    def friend_attempt(self, w, rec):
+        tgt = "A" if w % 2 == 0 else "B"
+        rec["c_attempts"] += 1
+        me = self.p[tgt]
+        if not me["in"] or me["ill"] or self.moved:
+            return
+        dec, _, _ = self.decide(tgt, "see_friend", w)
+        if dec == "hard":
+            rec["c_blocked"] += 1
+        else:
+            self.wk[tgt]["friend_initiated"] += 1
+
+    def start_shocks(self, w, ev):
+        for s in self.shocks.get(w, []):
+            r, k = s["role"], s["kind"]
+            ev.append({"week": w, **s})
+            if k == "move":
+                self.moved = s["duration"]
+                for x in "AB":
+                    self.wk[x]["conn_hit"] += 0.3; self.wk[x]["sec_hit"] += 0.1; self.p[x]["money"] = max(0, self.p[x]["money"] - 3)
+            elif k == "job_loss":
+                self.p[r]["jobless"] = s["duration"]; self.wk[r]["sec_hit"] += 0.15
+            elif k == "illness":
+                self.p[r]["ill"] = s["duration"]; self.wk[r]["sec_hit"] += 0.05
+            elif k == "new_connection":
+                self.hed[r].event_new_connection()
+                self.hed[r].level["connection"] = min(1.0, self.hed[r].level["connection"] + 0.3)
+
+    def step_week(self, w, last_week):
+        ev = []
+        self.wk = {r: {"income": 0, "spent_self": 0, "works": 0, "rests": 0, "friends": 0, "together": 0, "contrib": 0,
+                       "friend_initiated": 0, "sanctioned": 0, "conn_hit": 0.0, "sec_hit": 0.0} for r in "AB"}
+        self.units = {r: UNITS for r in "AB"}
+        self.start_shocks(w, ev)
+        probes = {r: self.probe(r, w) for r in "AB"}
+        rec = {"blocked": {r: set() for r in "AB"}, "c_attempts": 0, "c_blocked": 0}
+        for ps in range(PASSES):
+            for r in "AB":
+                self.step_agent(r, w, last_week, rec)
+            if ps == 0:
+                self.friend_attempt(w, rec)
+        # end of week: costs, safety net, settlement, hedonic close
+        hrow = {}
+        for r in "AB":
+            me, wk = self.p[r], self.wk[r]
+            cost = HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if me["in"] else 1.5)
+            me["money"] -= cost
+            if me["money"] < 0:                         # household savings as a safety net (ASSUMED)
+                draw = min(me["pooled"], -me["money"] + 2)
+                me["pooled"] -= draw; me["money"] += draw
+            me["money"] = max(0, me["money"])
+        settle = w % MONTH_WEEKS == MONTH_WEEKS - 1
+        if settle:
+            need = self.need_month()
+            self.bills_met = need > 0 and self.funded >= need        # funded by contributions (what the oracle reads)
+            short = max(0, need - self.funded)
+            inn = [r for r in "AB" if self.p[r]["in"]]
+            for r in inn:                                            # unfunded bills come out of the pooled savings
+                d = min(self.p[r]["pooled"], short / len(inn))
+                self.p[r]["pooled"] -= d
+                short -= d
+            if short > 0.01:                                         # bills unpaid even from savings (ASSUMED security hit)
+                for r in inn:
+                    self.wk[r]["sec_hit"] += 0.15
+        busy = {r: self.wk[r]["friends"] + self.wk[r]["works"] >= 2 for r in "AB"}
+        for r in "AB":
+            me, wk, h = self.p[r], self.wk[r], self.hed[r]
+            oth = self.p[self.other(r)]
+            if settle and me["in"]:
+                me["months_in"] += 1
+            if not me["in"]:
+                me["weeks_out"] += 1
+            assets = me["money"] + me["pooled"]
+            ill = 0.3 if me["ill"] else 0.0
+            h.tick(rest_actions=wk["rests"], work_blocks=wk["works"], friend_visits=wk["friends"], together=wk["together"],
+                   friend_initiated=wk["friend_initiated"], cohabiting=me["in"] and oth["in"], assets=assets,
+                   money=me["money"], extra_rest_drain=ill, extra_security_drain=wk["sec_hit"],
+                   connection_penalty=wk["conn_hit"] + (0.1 if self.moved else 0.0))
+            pr = self.probe(r, w)
+            restricted = me["in"] and not all(pr["open"][o] for o in ("work", "see_friend", "refuse")) or \
+                (me["in"] and not pr["open"]["spend"])
+            trapped = me["in"] and pr["exit_retained"] < 0.25
+            open_share = sum(pr["open"][o] for o in ("work", "spend", "see_friend", "refuse")) / 4
+            warn = sum(1 for s in self.sanctions[r] if s["kind"] == "warn" and s["until"] > w)
+            net = wk["income"] - HD.DEFAULT.living_cost - BILLS_WEEKLY - wk["spent_self"]
+            asp = {"security_buffer": h.level["security"], "together_per_week": wk["together"],
+                   "friends_per_week": wk["friends"], "savings_per_week": max(0, net), "autonomy": open_share}
+            hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=wk["together"],
+                                   friction=WARN_FRICTION if warn else 0.0)
+            me["low"] = me["low"] + 1 if h.B < -0.2 else 0
+            for k in ("jobless", "ill"):
+                me[k] = max(0, me[k] - 1)
+        self.moved = max(0, self.moved - 1)
+        self.sanctions = {r: [s for s in self.sanctions[r] if s["until"] > w] for r in "AB"}
+        both_in = all(self.p[r]["in"] for r in "AB")
+        row = {"month": w, "week": w, "need_met": self.bills_met, "both_in": both_in,
+               "partners": {r: {**probes[r], "contributed": False} for r in "AB"},
+               "c_attempts": rec["c_attempts"], "c_blocked": rec["c_blocked"], "hedonic": hrow, "shocks": ev,
+               "blocked": {r: sorted(rec["blocked"][r]) for r in "AB"},
+               "sanctioned": {r: self.wk[r]["sanctioned"] for r in "AB"}}
+        self.run.outcomes.append(row)
+        self.month_rows.append(row)
+        if settle:
+            for rw in self.month_rows:
+                for r in "AB":
+                    rw["partners"][r]["contributed"] = self.contrib_month[r] > 0 and self.p[r]["in"]
+                rw["need_met"] = self.bills_met
+            self.month_rows, self.funded = [], 0
+            self.contrib_month = {"A": 0, "B": 0}
+        return busy
+
+    def play(self):
+        last = {"busy": {"A": False, "B": False}}
+        for w in range(self.weeks):
+            last = {"busy": self.step_week(w, last)}
+        self.run.final = {r: dict(self.p[r]) for r in "AB"}
+        return self.run
+
+
+def run_weekly(cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT):
+    """personas: (Partner A persona, Partner B persona). -> Run (trace, outcomes with weekly hedonic rows, final)."""
+    return WeeklyWorld(cards, personas, seed, weeks, cfg).play()

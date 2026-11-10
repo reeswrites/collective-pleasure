@@ -49,11 +49,12 @@ class HedonicConfig:
     conn_friend_initiated: float = 0.15
     money_scale: float = 8.0          # money level = money / money_scale
     living_cost: float = 2.0          # per agent per week
-    sec_decay: float = 0.02
+    sec_decay: float = 0.01
     sec_refill: float = 0.03
-    sec_assets: float = 60.0          # assets at which security refill is full
+    sec_assets: float = 25.0          # assets at which security refill is full
     # non-offsettable conditions (ASSUMED)
     denied_below: float = 0.15
+    denied_min_salience: float = 0.12  # a need the persona barely cares about is not 'denied' (calibration deviation)
     onset_weeks: int = 4
     trapped_intensity: float = 0.5
     denied_intensity: float = 0.5
@@ -68,6 +69,12 @@ class HedonicConfig:
     together_event: float = 0.10
     new_connection_event: float = 0.30
     glow_decay: float = 0.5
+    # exogenous shocks: misalignment in the WIDER system outside the household (economy and workplace, health system,
+    # housing market), not random fate. Rates per person-year (move: per household-year); low and tunable.
+    job_loss_rate: float = 0.12       # BLS JOLTS layoffs and discharges, about 1.0-1.1 percent of employment per month
+    illness_rate: float = 0.08        # ASSUMED
+    new_connection_rate: float = 0.20  # ASSUMED (a good surprise from the wider world)
+    move_rate: float = 0.087          # Census CPS 2022 mover rate, 8.7 percent (secondary-source reading)
     # classification (ASSUMED)
     up_margin: float = 0.20
     tail_weeks: int = 8
@@ -146,7 +153,7 @@ class Hedonic:
         self.glow *= c.glow_decay
         s_off = s_need + s_asp + friction
         active = {"trapped": (trapped, c.trapped_intensity),
-                  "denied": (any(L[n] < c.denied_below for n in NEEDS), c.denied_intensity),
+                  "denied": (any(L[n] < c.denied_below and self.sal[n] >= c.denied_min_salience for n in NEEDS), c.denied_intensity),
                   "diminished": (restricted, c.diminished_intensity)}
         s_non = 0.0
         for name, (on, inten) in active.items():

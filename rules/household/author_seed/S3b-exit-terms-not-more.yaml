@@ -1,0 +1,8 @@
+id: S3b-exit-terms-not-more
+attribute: partner
+deontic: must_not
+aim: leave
+conditions: [{expr: pooled, op: gt, value: 0}, {expr: take, op: gt, value: 50}]
+or_else: null
+gloss: On leaving, a partner takes at most half of the pooled assets (the exit terms agreed beforehand).
+source: 'docs/seeds/author-household-norms-2026-11-10.md, the author''s own words: "it triggers exit conditions that wer enegotiated before". ASSUMED stub: the negotiation phase (ADR 0008) is not built, so the negotiated exit terms are fixed to an even split.'
