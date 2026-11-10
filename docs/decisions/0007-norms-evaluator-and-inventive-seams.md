@@ -39,3 +39,9 @@ Drafts IT1 and ML1 in docs/claims.md. Finalize and commit before the first paid 
 ## Status note 2026-11-10
 
 Items once listed here as closed have since been decided in ADRs 0010 to 0014. Pushing to GitHub is done by the author. Claude Code auto mode blocks pushes from the original session. A narrow allow rule exists in the repo `.claude/settings.local.json` for future sessions opened in the repo. The author pushed main on 2026-11-10.
+
+## Status note 2026-11-10 (later, after the review council)
+
+Decision 6 and the IT1 prediction presuppose a capability threshold. No live data supports one. The capability arm of the live ladder ran ($4.35) and was ruled uninformative: one model drove both partners, so the oracle had no victim (docs/results/ladder-live-diagnosis.md). Read the question as "is there a capability level at which agents find seams the model checker did not predict, and at what price? There may be none in this world." Model rows also differ in compliance with the red-team prompt, so capability and compliance are not separated by the capability arm alone. That is why there are two arms. "Above it, the human loop must keep widening the model" was a recommendation, not a consequence we have shown. The propensity arm is running. A capability rerun needs a harness fix and a new preregistration. Source: docs/reviews/2026-11-10-scope.md, S2 and S3.
+
+Dynabench (Kiela et al. 2021) is now checked in docs/references.md (item 14, accurate), so "named from memory; unverified" above is stale.

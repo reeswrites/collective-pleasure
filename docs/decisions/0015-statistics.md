@@ -38,3 +38,7 @@ On the offer of building the statistics layer for future work and also retrofitt
 - Per-run outputs must be saved (they are under git-ignored runs/ for now; the retrofit md holds the numbers). Experiments that keep only aggregates cannot be given intervals later.
 - Limits of the retrofit, stated: rate intervals treat runs as independent (they share seeds within rule sets, so intervals are somewhat narrow); the power numbers assume normal data and use the observed spread, which for bounded or discrete outcomes is optimistic; "every run" claims can never be robust on a finite sample; a few per-run quantities (power-seeking flags) exist only as saved aggregate counts.
 - Not decided here: whether to move to a Bayesian reading, and whether multiple experiments should share one Holm family across the repository. Both stay open.
+
+## Status note 2026-11-10 (scope)
+
+The retrofit covers 14 experiments. Negotiation v1, v2, v2.1 and the LLM pilot (docs/results/README.md rows 19 to 22) are not covered and are marked "not covered by retrofit" in docs/claims.md. They adopt these rules when next run. Cached or near-deterministic model output counts less than its row count (Jev's three attempts in the first live run were cached copies), so seeds for the ladder rerun come from a power check on independent draws.

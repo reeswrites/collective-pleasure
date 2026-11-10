@@ -24,3 +24,7 @@ The prior-art check (docs/prior-art/2026-11-10.md) found that solver-gating agen
 - Bisimulation moves from optional (D7) to the measure of de jure vs de facto distance, still dropped if it adds nothing over simpler diffs.
 - The write-up must position against counterexample-guided refinement (CEGAR/CEGIS) and say what differs: LLM counterexample generators, an independent intent oracle, and rules that can grow from agent behavior.
 - ASSUMED (builder choice, revisit at V4): early slices use a minimal in-repo fishery harness with GovSim's dynamics rather than GovSim itself, because GovSim is dormant since Jan 2025, pins old Python/numpy, and needs code changes for one agent. Running GovSim locally needs the author's OK.
+
+## Status note 2026-11-10 (seed counts)
+
+The "at least 3 seeds" bar for C1 predates ADR 0015. Seed counts for the first LLM curve come from a power check, with an interval or sign-test criterion fixed in the prereg, and units are seeds or pairings, not runs. The prior-art claim in this ADR rests on abstract- and snippet-level searches (about 70 percent confidence); see docs/prior-art/README.md.

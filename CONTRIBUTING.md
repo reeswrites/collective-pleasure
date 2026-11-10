@@ -1,6 +1,6 @@
 # Contributing
 
-- **Preregister.** Commit predictions to `docs/claims.md` before runs.
+- **Preregister.** Commit predictions to a `docs/results/<name>-prereg.md` file before runs, and never edit them after. `docs/claims.md` is the status register, not where predictions live.
 - **A prediction is a quantity, not a sentence** (ADR 0015). Each preregistered prediction names: the quantity, the unit of resampling (seed, run, or pairing with its seeds clustered), the test, alpha (0.05 unless stated), the correction family (Holm across the predictions of one experiment), and the threshold or margin. Use `docs/templates/prereg.md`.
 - **Power check before choosing seeds.** Run a small pilot labeled EXPLORATORY (not a result, changes no threshold), take its effect and spread, and compute the seeds for 80% power with `mar.stats.seeds_for_power`. Record the pilot, the numbers and the chosen n in the prereg. LLM runs take their seeds from this check, never a default of 3. If the cap cannot pay for the n, say so and downgrade the claim to descriptive.
 - **Report effect sizes with intervals.** Every comparison reports the difference (or risk difference and ratio for rates) with a 95% CI, plus Cliff's delta or Cohen's d, from `mar.stats`. A p-value alone is not a result. Rates are exact (Clopper-Pearson).

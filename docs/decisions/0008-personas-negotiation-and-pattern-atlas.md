@@ -30,3 +30,7 @@ LLM agents are not people. Anything this produces is a tested starting point for
 ## Status note 2026-11-10
 
 For the negotiation protocol, see ADR 0013. For the author corrections, see `docs/seeds/author-household-norms-2026-11-10.md`.
+
+## Status note 2026-11-10 (negotiation results)
+
+Negotiation is built and run as ADR 0013 (scripted v1, v2 and v2.1, and a Haiku 5.5 pilot; docs/results/README.md rows 19 to 22). Predictions held 2 of 6, 0 of 8 and 3 of 5. The sign of the effect of real outside options flipped between v2 and v2.1 with the model of what a failed negotiation means, so the conclusions depend on assumed protocol choices. The proof filter caught one kind of trap in the menu, which the study's author defined. "Proof-checked for traps" here means checked to depth k = 3 within the compiled model.

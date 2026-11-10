@@ -35,3 +35,7 @@ Also cited only (not built): Aktipis, C. A. (2004). "Know when to walk away: con
 - Rung 1 and rung 3 each get a prereg, a game module under src/mar/games/, rules under rules/<name>/, and a results file, using the same shape as rung 2.
 - The existing compile, gate and patch_check are hard-wired to the fishery. Rung 2 carries a mirror compiler in src/mar/games/vpgg.py (ASSUMED adapter). When a second game needs the same, factor a variable-set parameter into compile.py rather than copying a second time (changing it is outside this ADR).
 - The household work (ADR 0007, 0008) proceeds on its own track; rungs do not block it.
+
+## Status note 2026-11-10 (how to read the rungs)
+
+"Rediscovery" overstates what the rungs show. The bargaining match is between two computations of one model (a table-driven player and closed forms), so it is an implementation check with no empirical content. The VPGG comparison is to a published equilibrium at one parameter point: shares and payoff match, the cycles did not appear under assumed update knobs, and the 0.05 amplitude floor was a guess. The rungs are different worlds from the household, so even a full pass would check that the pipeline reproduces known dynamics, not that the household model matches real households. Fidelity of the household model is untested. Source: docs/reviews/2026-11-10-scope.md, S4 and W7.
