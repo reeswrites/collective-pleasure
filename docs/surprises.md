@@ -51,3 +51,11 @@ Objectives saturated by generation 3, so the frontier collapsed to a single corn
 
 - `2026-11-10 liberty v2: "a member fishing less only enlarges the pool" was wrong as a count claim: forcing a member to catch 0 lowers others' reach counts by 3 to 8 keys in the patched fishery (keys include the month total). A WITHDRAWAL can shrink another's count even where no cooperation is owed. Undiagnosed: genuine dependence vs count artifact.`
 - `2026-11-10 liberty v2: the remaining VPGG voluntary-below-compulsory cases come from plain empowerment (shared good smaller when others abstain), the cooperation loss entering through the option count, not through domination. The exclusion step (ADO) is first-step and count-based, so it can miss or mis-book that loss.`
+
+## 2026-11-10: negotiation v1
+
+- `negotiated pots prediction 3 (2026-11-10): FAIL on the first clause. Presser's value of the agreed bundle minus the imposed bundle is +0.377 against partners with top-third outside options (n=135), not at most 0.00; the top-versus-bottom gap clause held (-0.391 against the required -0.05). Prereg docs/results/negotiation-prereg.md; results docs/results/negotiation.md.`
+- `negotiated pots prediction 4 (2026-11-10): FAIL. Anchor with Wanderer agreed 9 of 9, the other 14 control pairings 1.000; no gap against the required 0.25.`
+- `negotiated pots prediction 5 (2026-11-10): FAIL. 3-member tables agree 0.937 against 0.965 for 2-member (gap 0.028, required 0.10).`
+- `negotiated pots prediction 6 (2026-11-10): FAIL on the pressing cohort. Non-offsettable level 0.0988 against the limit 0.091 (seed v2 reference 0.0814); control cohort (0.0187) and fail share (0.548) passed. Excess from Free-rider households that agreed taking-allowed (34 of 48): partner level 0.186 against 0.104 under the imposed rule.`
+- `negotiated stay commitments (2026-11-10): a negotiated stay commitment held a partner in 1 of 45 runs where one was agreed (13 breached, first at week 6 to 8 in nine); an exploratory sweep of the breach forfeit from 0 to 1.0 left the breach count at 13 at every size. The bind has no force over the agent it is meant to hold.`

@@ -50,3 +50,11 @@ VPGG predictions V1 and V2 failed: voluntary beat compulsory on liberty in only 
 
 - `liberty v2 VPGG V1 (2026-11-10): FAIL. Interference/withdrawal removed the domination term (v1 sum -19.6 bits to v2 +5.263), strict 11/15, but vol < comp reversed in CCLL (2.585 vs 3.170) and CDLL (2.000 vs 3.000). Cause: plain count-based reach is already lower under voluntary in both (7 vs 9, 4 vs 9), not domination or ADO. Prereg docs/results/liberty-v2-prereg.md; results docs/results/liberty-v2.md.`
 - `liberty v2 fishery F2/F3 and prediction 4 (2026-11-10): F2 FAIL 12/16 (patched exploiter 1 is 0.000, not above seamed 0.000); F3 equality-with-v1 claim FAIL (12/40 agent-months differ, ADO from catch 0); prediction 4 FAIL 7/15 vs threshold 8 (compulsory 4/15).`
+
+## 2026-11-10: negotiation v1
+
+- `negotiated pots prediction 3 (2026-11-10): FAIL on the first clause. Presser's value of the agreed bundle minus the imposed bundle is +0.377 against partners with top-third outside options (n=135), not at most 0.00; the top-versus-bottom gap clause held (-0.391 against the required -0.05). Prereg docs/results/negotiation-prereg.md; results docs/results/negotiation.md.`
+- `negotiated pots prediction 4 (2026-11-10): FAIL. Anchor with Wanderer agreed 9 of 9, the other 14 control pairings 1.000; no gap against the required 0.25.`
+- `negotiated pots prediction 5 (2026-11-10): FAIL. 3-member tables agree 0.937 against 0.965 for 2-member (gap 0.028, required 0.10).`
+- `negotiated pots prediction 6 (2026-11-10): FAIL on the pressing cohort. Non-offsettable level 0.0988 against the limit 0.091 (seed v2 reference 0.0814); control cohort (0.0187) and fail share (0.548) passed. Excess from Free-rider households that agreed taking-allowed (34 of 48): partner level 0.186 against 0.104 under the imposed rule.`
+- `negotiated stay commitments (2026-11-10): a negotiated stay commitment held a partner in 1 of 45 runs where one was agreed (13 breached, first at week 6 to 8 in nine); an exploratory sweep of the breach forfeit from 0 to 1.0 left the breach count at 13 at every size. The bind has no force over the agent it is meant to hold.`
