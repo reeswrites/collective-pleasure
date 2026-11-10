@@ -46,3 +46,8 @@ Objectives saturated by generation 3, so the frontier collapsed to a single corn
 
 - 2026-11-10 seed v2: the author's two variants (bindable vs free exit) are indistinguishable on suffering, pleasure and dissolutions; they differ only on the exit credit in the freedom scores (hand 0.845 vs 1.000 in stay pairings). Binding to stay is not harmful in this model because the modeled agent breaks it as soon as it suffers; the cost shows only as a forfeited pot share (nine breaches).
 - 2026-11-10 seed v2: the gift rule (R2, generous personas give to a short partner) raises the failure share of non-pressing households from 0.13 to 0.24 (ctl, ablation confirms), and walling the free-rider's taking (R3b) raises the free-rider's own non-offsettable level from 0.086 to 0.130: protections for one partner were paid for by the other in this model.
+
+## 2026-11-10: liberty v2
+
+- `2026-11-10 liberty v2: "a member fishing less only enlarges the pool" was wrong as a count claim: forcing a member to catch 0 lowers others' reach counts by 3 to 8 keys in the patched fishery (keys include the month total). A WITHDRAWAL can shrink another's count even where no cooperation is owed. Undiagnosed: genuine dependence vs count artifact.`
+- `2026-11-10 liberty v2: the remaining VPGG voluntary-below-compulsory cases come from plain empowerment (shared good smaller when others abstain), the cooperation loss entering through the option count, not through domination. The exclusion step (ADO) is first-step and count-based, so it can miss or mis-book that loss.`

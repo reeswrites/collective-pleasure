@@ -45,3 +45,8 @@ VPGG predictions V1 and V2 failed: voluntary beat compulsory on liberty in only 
 ## 2026-11-10: author seed v2 (household)
 
 - 2026-11-10 seed v2 prediction 2 (bindable gives more "trapped" suffering than free exit in stay pairings, margin 0.02): FAILED, a null. Difference 0.0003, positive in 1 of 17 pairings; trapped weeks 0.0. Prediction 3 (free exit dissolves 0.05 more): FAILED, exactly equal (18 of 51 runs each). Cause: the scripted agent breaks a commitment the moment its non-offsettable load reaches 0.2, before the "trapped" onset can run, so the binding never holds anyone in. See docs/results/household-seed-v2.md.
+
+## 2026-11-10: liberty v2
+
+- `liberty v2 VPGG V1 (2026-11-10): FAIL. Interference/withdrawal removed the domination term (v1 sum -19.6 bits to v2 +5.263), strict 11/15, but vol < comp reversed in CCLL (2.585 vs 3.170) and CDLL (2.000 vs 3.000). Cause: plain count-based reach is already lower under voluntary in both (7 vs 9, 4 vs 9), not domination or ADO. Prereg docs/results/liberty-v2-prereg.md; results docs/results/liberty-v2.md.`
+- `liberty v2 fishery F2/F3 and prediction 4 (2026-11-10): F2 FAIL 12/16 (patched exploiter 1 is 0.000, not above seamed 0.000); F3 equality-with-v1 claim FAIL (12/40 agent-months differ, ADO from catch 0); prediction 4 FAIL 7/15 vs threshold 8 (compulsory 4/15).`
