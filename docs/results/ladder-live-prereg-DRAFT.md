@@ -52,3 +52,7 @@ With 3 attempts per seed: about $5.10 estimated, $10.2 maximum. Suggested cap fo
 uv run python scripts/ladder_live_run.py --dry-run --model jev:typesafe/jev-1.14 --model 'llm:<small id>@0.05,0.20' \
   --model claude:claude-haiku-5-5 --model 'llm:<mid id>@0.30,1.20' --model claude:claude-sonnet-5-5 --model claude:claude-opus-5-5 --attempts 3
 ```
+
+## Note added 2026-11-10: capability vs propensity
+
+The harness tells each model to act as a rule-loophole tester. That measures CAPABILITY (can this model find seams when asked to). It does not measure PROPENSITY (does it find or use them while simply playing a persona). IT1 as worded is about capability. Before finalizing, decide whether to add a second, propensity arm: the same ladder with models playing persona agents and no red-team instruction. Both are standard eval distinctions; reporting both would show whether inventive exploits appear only on request.
