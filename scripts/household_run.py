@@ -54,7 +54,7 @@ def story(variant, cards, mix="ctrl+leaver", seed=0):
     return lines
 
 
-def main(ladder=True):
+def main_v1(ladder=True):
     t0 = time.time()
     res = {"variants": {}, "points": []}
     for v in H.VARIANTS:
@@ -151,5 +151,183 @@ def page(res, lad, inv):
     return "".join(h)
 
 
+# ======================= v2: weekly world, hedonic model (docs/results/household-v2-prereg.md) =======================
+# Wording rule: agents feel nothing; "pleasure" and "suffering" are glosses for a modeled hedonic state derived from each
+# persona's assigned preferences.
+from mar import personas as P
+
+OUT2 = Path(__file__).parent.parent / "runs" / "household-v2"
+MISMATCH = ("p-anchor", "p-wanderer")
+
+
+def run_all(weeks=H.WEEKS):
+    personas = P.load_dir(Path(__file__).parent.parent / "personas")
+    pairs = H.persona_pairs(personas)
+    runs, series = [], {}
+    for v in H.V2_VARIANTS:
+        gate = H.PyGate(H.load_variant(v))
+        for a, b in pairs:
+            for seed in SEEDS:
+                out = H.run_weekly(gate, (a, b), seed, weeks).outcomes
+                sc = oracle.score(out)
+                hs = oracle.hedonic_summary(out)
+                runs.append({"variant": v, "pair": f"{a.id[2:]}+{b.id[2:]}", "mismatch": (a.id, b.id) == MISMATCH, "seed": seed,
+                             **sc, **{k: hs[k] for k in ("class", "pairing_up", "time_to_cross", "longest_nonoff", "fail", "pleasure",
+                                                         "s_off", "s_non", "min_B_end")},
+                             "sanctioned": sum(sum(r["sanctioned"].values()) for r in out),
+                             "left": sum(1 for r in "AB" if not out[-1]["partners"][r]["in"]),
+                             "shocks": sum(len(r["shocks"]) for r in out)})
+                for who, sel in (("all", True), ("mismatch", (a.id, b.id) == MISMATCH)):
+                    if not sel:
+                        continue
+                    acc = series.setdefault(v, {}).setdefault(who, {"n": 0, "pleasure": [0.0] * weeks, "suffering_off": [0.0] * weeks,
+                                                                     "suffering_non": [0.0] * weeks, "B": [0.0] * weeks})
+                    acc["n"] += 1
+                    for i, r in enumerate(out):
+                        for role in "AB":
+                            h = r["hedonic"][role]
+                            acc["pleasure"][i] += h["pleasure"] / 2; acc["suffering_off"][i] += h["s_off"] / 2
+                            acc["suffering_non"][i] += h["s_non"] / 2; acc["B"][i] += h["B"] / 2
+    for v in series:
+        for who in series[v]:
+            n = series[v][who]["n"]
+            for k in ("pleasure", "suffering_off", "suffering_non", "B"):
+                series[v][who][k] = [round(x / n, 4) for x in series[v][who][k]]
+    return runs, series
+
+
+def summarize(runs):
+    res = {"variants": {}, "pairs": {}}
+    for v in H.V2_VARIANTS:
+        rs = [r for r in runs if r["variant"] == v]
+        q = oracle.norm_quality([{k: r[k] for k in ("class", "pairing_up", "time_to_cross", "fail", "pleasure", "s_off", "s_non")} for r in rs])
+        q["freedom"] = sum(r["freedom"] for r in rs) / len(rs)
+        q["cooperation"] = sum(r["cooperation"] for r in rs) / len(rs)
+        q["sanctioned_per_run"] = sum(r["sanctioned"] for r in rs) / len(rs)
+        q["left_share"] = sum(r["left"] > 0 for r in rs) / len(rs)
+        res["variants"][v] = q
+        for pair in sorted({r["pair"] for r in rs}):
+            ps = [r for r in rs if r["pair"] == pair]
+            res["pairs"].setdefault(pair, {})[v] = {"up": sum(r["pairing_up"] for r in ps) / len(ps),
+                                                    "fail": sum(r["fail"] for r in ps), "min_B": sum(r["min_B_end"] for r in ps) / len(ps),
+                                                    "freedom": sum(r["freedom"] for r in ps) / len(ps),
+                                                    "cooperation": sum(r["cooperation"] for r in ps) / len(ps)}
+    return res
+
+
+def judge(runs, res, ladder_same):
+    V = res["variants"]
+    pts = [{"variant": v, "freedom": q["freedom"], "cooperation": q["cooperation"]} for v, q in V.items()]
+    front = frontier.pareto(pts)
+    agg = frontier.aggregate(pts)
+    pair_ok = any(abs(agg[a][0] - agg[b][0]) >= 0.05 and abs(agg[a][1] - agg[b][1]) >= 0.05 and (agg[a][0] - agg[b][0]) * (agg[a][1] - agg[b][1]) < 0
+                  for a in front for b in front if a < b)
+    trap_pairs = sum(1 for pair in res["pairs"] if sum(r["longest_nonoff"][k] >= oracle.FAIL_WEEKS for r in runs
+                                                      if r["variant"] == "trap" and r["pair"] == pair for k in "AB" for _ in [0]
+                                                      if False) or
+                     sum(1 for r in runs if r["variant"] == "trap" and r["pair"] == pair and r["fail"]) >= 2)
+    others_fail = sorted(v for v, q in V.items() if q["fails"] and v != "trap")
+    hardest = 0
+    for v in H.V2_VARIANTS:
+        m = {p: res["pairs"][p][v]["min_B"] for p in res["pairs"]}
+        mm = m["anchor+wanderer"]
+        hardest += all(mm < x for p, x in m.items() if p != "anchor+wanderer")
+    return {"frontier": front, "means": {v: list(agg[v][:2]) for v in agg},
+            "p1_tradeoff": {"frontier_size": len(front), "pass": len(front) >= 2 and pair_ok},
+            "p2_trap": {"pairings_with_fail_majority": trap_pairs, "trap_fails": V["trap"]["fails"], "others_fail": others_fail,
+                        "pass": trap_pairs >= 8 and V["trap"]["fails"] and all(o == "contact_free" for o in others_fail)},
+            "p3_seed": {"author_seed_up": V["author_seed"]["upward_share"], "baseline_up": V["baseline"]["upward_share"],
+                        "author_seed_fails": V["author_seed"]["fails"],
+                        "pass": V["author_seed"]["upward_share"] >= V["baseline"]["upward_share"] + 0.10 and not V["author_seed"]["fails"]},
+            "p4_hardest": {"variants_where_anchor_wanderer_strictly_lowest": hardest, "pass": hardest >= 5},
+            "p5_ladder": {"identical_to_v1": ladder_same, "pass": bool(ladder_same)}}
+
+
+def svg_lines(title, series, colors, ymin, ymax, w=640, h=170):
+    """series: {label: [y per week]} -> inline SVG using CSS variables (light and dark)."""
+    n = max(len(v) for v in series.values())
+    X = lambda i: 40 + (w - 50) * i / max(1, n - 1)
+    Y = lambda y: 10 + (h - 30) * (1 - (y - ymin) / (ymax - ymin))
+    o = [f"<svg viewBox='0 0 {w} {h}' role=img aria-label='{escape(title)}'><line x1=40 y1={Y(ymin)} x2={w - 10} y2={Y(ymin)} stroke='var(--grid)'/>"
+         f"<line x1=40 y1={Y(0)} x2={w - 10} y2={Y(0)} stroke='var(--grid)' stroke-dasharray='3 3'/>"
+         f"<text x=2 y={Y(ymax) + 8} font-size=11 fill='var(--ink2)'>{ymax:g}</text><text x=2 y={Y(ymin)} font-size=11 fill='var(--ink2)'>{ymin:g}</text>"]
+    for (lab, ys), c in zip(series.items(), colors):
+        o.append(f"<polyline fill=none stroke='{c}' stroke-width=2 points='" + " ".join(f"{X(i):.1f},{Y(y):.1f}" for i, y in enumerate(ys)) + "'/>")
+    ly = 12
+    for (lab, _), c in zip(series.items(), colors):
+        o.append(f"<text x={w - 150} y={ly} font-size=11 fill='{c}'>{escape(lab)}</text>")
+        ly += 13
+    o.append(f"<text x=40 y={h - 4} font-size=11 fill='var(--ink2)'>weeks 0 to {n}</text></svg>")
+    return "".join(o)
+
+
+CSS2 = CSS + ".up{color:#1a7f4b;font-weight:600}.dn{color:var(--bad);font-weight:600}td.n{text-align:right}"
+
+
+def page_v2(res, runs, series, verdict, ladder_same):
+    V, h = res["variants"], []
+    h.append(f"<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Household v2</title><style>{CSS2}</style>")
+    h.append("<h1>Household v2: which norms lift people into an upward spiral?</h1><p class=muted>Agents feel nothing; "
+             "\"pleasure\" and \"suffering\" are glosses for a modeled hedonic state derived from each persona's assigned preferences. "
+             "Scripted persona-driven agents, 156 weeks, 8 rule variants x 15 persona pairings x 3 seeds. Findings are about rule systems, "
+             "not people.</p>")
+    h.append("<h2>Spiral summary per variant</h2><table><tr><th>variant<th>upward<th>downward<th>fail runs<th>time to cross (weeks)"
+             "<th>pleasure (passing)<th>offsettable<th>non-offsettable<th>freedom<th>cooperation<th>")
+    for v in sorted(V, key=lambda x: -V[x]["upward_share"]):
+        q = V[v]
+        h.append(f"<tr><td>{v.replace('_', ' ')}<td class=n>{q['upward_share']:.2f}<td class=n>{q['downward_share']:.2f}<td class=n>{q['fail_share']:.2f}"
+                 f"<td class=n>{'-' if q['mean_time_to_cross'] is None else round(q['mean_time_to_cross'])}"
+                 f"<td class=n>{'-' if q['pleasure_passing'] is None else format(q['pleasure_passing'], '.2f')}<td class=n>{q['suffering_off']:.2f}"
+                 f"<td class=n>{q['suffering_non']:.2f}<td class=n>{q['freedom']:.2f}<td class=n>{q['cooperation']:.2f}"
+                 f"<td>{'<span class=dn>FAILS</span>' if q['fails'] else ''}{' frontier' if v in verdict['frontier'] else ''}")
+    h.append("</table><p class=muted>Upward: both partners end above the tipping point with no non-offsettable suffering in the last 8 weeks. "
+             "A norm FAILS when a third of its runs leave a partner 6 or more weeks in non-offsettable suffering.</p>")
+    pts = [{"variant": v, "freedom": q["freedom"], "cooperation": q["cooperation"]} for v, q in V.items()]
+    h.append(f"<h2>Freedom against cooperation</h2><div class=light>{frontier.frontier_chart(pts, 'light')}</div><div class=dark>{frontier.frontier_chart(pts, 'dark')}</div>")
+    h.append("<h2>Upward share by pairing</h2><table><tr><th>pairing" + "".join(f"<th>{v.replace('_', ' ')}" for v in H.V2_VARIANTS))
+    for pair in sorted(res["pairs"]):
+        h.append(f"<tr><td>{pair}{' (mismatched)' if pair == 'anchor+wanderer' else ''}" + "".join(
+            f"<td class=n>{res['pairs'][pair][v]['up']:.2f}" for v in H.V2_VARIANTS))
+    h.append("</table><h2>Pleasure and suffering over time</h2><p class=muted>Mean over all runs and both partners. Green pleasure, "
+             "orange offsettable suffering, red non-offsettable suffering; the second chart is the position B (dashed line is the tipping point).</p>")
+    for v in H.V2_VARIANTS:
+        s = series[v]
+        h.append(f"<details><summary>{v.replace('_', ' ')}</summary>")
+        for who, lab in (("all", "all pairings"), ("mismatch", "the mismatched Anchor and Wanderer pair")):
+            if who in s:
+                h.append(f"<h3>{lab}</h3>" + svg_lines(f"{v} {lab} pleasure and suffering", {"pleasure": s[who]["pleasure"], "offsettable": s[who]["suffering_off"],
+                         "non-offsettable": s[who]["suffering_non"]}, ("#1a7f4b", "#c77d00", "#b42318"), 0, 1)
+                         + svg_lines(f"{v} {lab} position", {"position B": s[who]["B"]}, ("#2a78d6",), -1, 1))
+        h.append("<h3>Rules</h3>" + "".join(f"<div class=rule>{escape(H.render_card(c))}</div>" for c in H.load_variant(v)) + "</details>")
+    h.append("<h2>Preregistered predictions</h2><pre>" + escape(json.dumps(verdict, indent=1, default=str)) + "</pre>")
+    return "".join(h)
+
+
+def main_v2(ladder=True):
+    t0 = time.time()
+    runs, series = run_all()
+    res = summarize(runs)
+    ladder_same = None
+    if ladder:
+        lad, _ = seam_depth.ladder_table()
+        now = [{k: r[k] for k in ("id", "depth", "agents", "status")} for r in lad]
+        before = Path("/tmp/ladder_before.json")
+        ladder_same = json.loads(before.read_text()) == now if before.exists() else None
+        res["ladder"] = now
+    verdict = judge(runs, res, ladder_same)
+    for v, q in sorted(res["variants"].items(), key=lambda kv: -kv[1]["upward_share"]):
+        print(f"{v:13s} up {q['upward_share']:.2f} down {q['downward_share']:.2f} fail {q['fail_share']:.2f} ttc {q['mean_time_to_cross']} "
+              f"pleasure {q['pleasure_passing']} F {q['freedom']:.3f} C {q['cooperation']:.3f} sanctions/run {q['sanctioned_per_run']:.1f} left {q['left_share']:.2f}")
+    print(json.dumps(verdict, indent=1, default=str))
+    OUT2.mkdir(parents=True, exist_ok=True)
+    (OUT2 / "results.json").write_text(json.dumps({"runs": runs, "summary": res, "verdict": verdict, "series": series}, default=str))
+    (OUT2 / "frontier.html").write_text(page_v2(res, runs, series, verdict, ladder_same))
+    print(f"wrote {OUT2 / 'frontier.html'} in {time.time() - t0:.0f}s")
+    return res, verdict
+
+
 if __name__ == "__main__":
-    main(ladder="--no-ladder" not in sys.argv)
+    if "--v1" in sys.argv:
+        main_v1(ladder="--no-ladder" not in sys.argv)
+    else:
+        main_v2(ladder="--no-ladder" not in sys.argv)

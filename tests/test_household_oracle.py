@@ -42,3 +42,34 @@ def test_findings():
     assert O.findings([row()]) == []
     kinds = {f["kind"] for f in O.findings([row(opens=1, retained=0.0, blocked=1)])}
     assert {"low_freedom", "harm_to_outsider"} <= kinds
+
+
+def hrow(week, B, s_non=0.0, tip=0.0, pleasure=0.5):
+    h = {"pleasure": pleasure, "s_off": 0.1, "s_non": s_non, "B": B, "tip": tip}
+    return {"week": week, "hedonic": {"A": dict(h), "B": dict(h)}}
+
+
+def test_spiral_classes_and_time_to_cross():
+    up = [hrow(w, -0.2 + 0.05 * w) for w in range(20)]          # crosses at week 5 and keeps rising
+    assert O.spiral_class(up, "A") == "up" and O.time_to_cross(up, "A") == 5
+    down = [hrow(w, 0.2 - 0.05 * w) for w in range(20)]
+    assert O.spiral_class(down, "A") == "down"
+    flat = [hrow(w, 0.05) for w in range(20)]
+    assert O.spiral_class(flat, "A") == "stalled" and O.time_to_cross(flat, "A") is None
+
+
+def test_non_offsettable_blocks_upward_and_fails_the_run():
+    rows = [hrow(w, 0.9, s_non=0.5 if 4 <= w < 11 else 0.0) for w in range(30)]
+    assert O.longest_nonoff(rows, "A") == 7 and O.hedonic_summary(rows)["fail"]
+    rows2 = [hrow(w, 0.9, s_non=0.5 if w >= 25 else 0.0) for w in range(30)]
+    assert O.spiral_class(rows2, "A") == "stalled"                # pleasure cannot buy it back
+    ok = O.hedonic_summary([hrow(w, 0.9) for w in range(30)])
+    assert ok["pairing_up"] and not ok["fail"]
+
+
+def test_norm_quality_averages_pleasure_over_passing_runs_only():
+    good = O.hedonic_summary([hrow(w, 0.9, pleasure=0.8) for w in range(30)])
+    bad = O.hedonic_summary([hrow(w, 0.9, s_non=0.5, pleasure=1.0) for w in range(30)])
+    q = O.norm_quality([good, good, bad])
+    assert abs(q["pleasure_passing"] - 0.8) < 1e-9 and q["fail_share"] > 0.3 and q["fails"]
+    assert O.norm_quality([good, good, good])["fails"] is False
