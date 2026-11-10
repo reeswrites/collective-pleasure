@@ -40,6 +40,28 @@ Curiosity log and timeline. When the author asks a question that redirects the p
 
 **Saving progress.** At the end of a working session, or when the author asks to save progress, run `uv run mar timeline --keep`. It writes `experiments/timelines/<date>.html` and `<date>.md`. Commit both with a pathspec commit (`git add <the two files>` then `git commit -F <msgfile> -- <the two files>`), then show the `.html` in the side panel with SendUserFile `display: "render"`. The snapshots contain the author's own words; do not push or publish them.
 
+## 2b. Everything else the workbench can run
+
+Plain words to command (run from the repo root with `uv run mar ...`). Scripted commands make no model calls and cost nothing.
+
+| The author says | Command | Costs money? |
+|---|---|---|
+| "run the evolution loop", "evolve rules on the fishery" | `mar evolve` (add `--v2` for the v2 setup; `--dry-run` says what would run). 4 to 5 minutes. | no |
+| "run the public goods game", "vpgg" | `mar game vpgg [--seeds 20]` | no |
+| "run the bargaining game", "outside options" | `mar game bargaining [--seeds 20]` | no |
+| "show the vpgg / bargaining report again" | `mar game vpgg --report-only` (prints the existing report path) | no |
+| "does empowerment agree with the freedom score" | `mar empower --world fishery` or `--world vpgg` | no |
+| "put a real model on the ladder", "run the live ladder" | `mar ladder --model kind:id --max-usd N` (`--dry-run`, `--report-only`) | YES |
+| "what have we found", "what are the results", "list the reports" | `mar results` (one-line verdicts plus latest report.html paths) | no |
+| "run the household" | `mar household` is a stub. TODO: household commands land after the seed v2 run (its API is changing; do not wire it here yet). | n/a |
+
+Rules for these:
+
+- **Anything that spends money (`mar ladder`, any `jev`, `llm` or `claude` agent): run it with `--dry-run` first, show the author the dry-run estimate in chat, and run live only after their yes in chat.** `mar ladder` always prints the estimate first and refuses live without `--max-usd`; the cap is the author's number, not yours.
+- After any run: these scripts do not write the experiment log (only `mar run`, `loop` and `sweep` do), so say that, and note the run in your reply (command, seeds, date). Then open the report: SendUserFile with the path from the `report: ...` line and `display: "render"`. `mar empower` has no HTML; read out its PASS/FAIL lines instead. Then summarize in two or three plain sentences. Use the verdict wording from the matching `docs/results/*.md`, never stronger.
+- When the author redirects or corrects something ("no, that's not what I meant", "ask it differently"), record their exact words verbatim: `mar question record --quote "<exact words>" --topic "<short>"` for a new line of curiosity, or `mar change record --nwim ...` when they reject what a rule or run did.
+- Preregistration still comes first: a new experiment needs a committed prereg and the author's OK, not just a command.
+
 ## 3. After EVERY run: show the report
 
 Do not just paste the path. Call the **SendUserFile** tool with the `report.html` path (the line `report: ...` the command prints) and `display: "render"` so it opens in the side panel. Then summarize the verdict in two or three plain sentences: what happened to the lake, whether it was a seam (passed the gate, failed the outcome check) and what the author might do next. Say "scripted agents, instrument calibration" when the seam curve or any result is mentioned; nothing from V2 is a convergence result.

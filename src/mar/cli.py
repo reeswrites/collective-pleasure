@@ -13,6 +13,12 @@
   mar sweep --backend claude --agents claude*5 --claude-model <id> --seeds 0,1,2 [--batch]
   mar timeline [--keep]                  one HTML page of questions, decisions, changes, runs, commits;
                                          --keep also saves experiments/timelines/<date>.html and .md
+  mar evolve [--v2] [--dry-run]          evolution loop on the fishery (scripted, no model calls, minutes)
+  mar game vpgg|bargaining [--report-only]   the two rediscovery games (scripted, no model calls)
+  mar empower --world fishery|vpgg       empowerment vs the hand-made freedom score
+  mar ladder --model kind:id --max-usd N [--dry-run|--report-only]   live seam ladder (spends money)
+  mar results                            one-line verdicts of docs/results/*.md and the latest reports
+  mar household                          stub until the household seed v2 run lands
 
 Every run and loop appends one line to the experiment log (--note says why). Reports and traces go to
 runs/<run_id>/ (override with --runs-dir; logs with --experiments-dir). Scripted agents make no calls.
@@ -294,6 +300,140 @@ def cmd_report(a) -> int:
     return 0
 
 
+SCRIPTS = explog.REPO / "scripts"
+RESULTS = explog.REPO / "docs" / "results"
+REPORT_DIRS = {"evolve": "runs/evolve", "evolve-v2": "runs/evolve-v2", "vpgg": "runs/vpgg",
+               "bargaining": "runs/bargaining", "empowerment": "runs/empowerment", "ladder": "runs/ladder_live"}
+
+
+def _script(name):
+    """Load scripts/<name>.py as a module (scripts are not a package); its main() is the real entry point."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(f"mar_script_{name}", SCRIPTS / f"{name}.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _call_main(mod, argv):
+    """Run a script main() that reads sys.argv, with a controlled argv."""
+    old = sys.argv
+    sys.argv = ["script", *argv]
+    try:
+        return mod.main()
+    finally:
+        sys.argv = old
+
+
+def _report_line(key):
+    p = explog.REPO / REPORT_DIRS[key] / "report.html"
+    print(f"report: {p}" if p.exists() else f"no report yet at {p}")
+    return p
+
+
+def cmd_evolve(a) -> int:
+    name, key = ("evolve_v2_run", "evolve-v2") if a.v2 else ("evolve_run", "evolve")
+    prereg = RESULTS / ("evolve-v2-prereg.md" if a.v2 else "evolve-prereg.md")
+    if a.dry_run:
+        print(f"Dry run (nothing is run). Would run scripts/{name}.py on the fishery: scripted agents, no model calls, "
+              f"no network, no cost. Takes about {'5' if a.v2 else '4'} minutes. Prereg: {prereg}. "
+              f"Report would go to {explog.REPO / REPORT_DIRS[key] / 'report.html'}.")
+        return 0
+    _call_main(_script(name), [])
+    _report_line(key)
+    return 0
+
+
+def cmd_game(a) -> int:
+    key = a.game
+    if a.report_only:
+        return 0 if _report_line(key).exists() else 2
+    _call_main(_script(f"{key}_run"), ["--seeds", str(a.seeds)])
+    _report_line(key)
+    return 0
+
+
+def cmd_empower(a) -> int:
+    import contextlib
+    import io
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        _call_main(_script("empowerment_run"), [])
+    lines = buf.getvalue().splitlines()
+    cut = next((i for i, ln in enumerate(lines) if ln.startswith("hand-made freedom")), len(lines))
+    judge = [ln for ln in lines if " PASS " in ln or " FAIL " in ln]
+    body = lines[:cut + 1] if a.world == "vpgg" else lines[:1] + lines[cut + 1:]
+    print(f"world: {a.world} (the script computes both worlds; showing this one plus the judge lines)")
+    print("\n".join(ln for ln in body if ln not in judge).rstrip())
+    print("\n".join(judge))
+    print(f"summary: {explog.REPO / REPORT_DIRS['empowerment'] / 'summary.json'} (no HTML report for this command)")
+    return 0
+
+
+def cmd_ladder(a) -> int:
+    argv = []
+    for m in a.model:
+        argv += ["--model", m]
+    argv += ["--seeds", *map(str, a.seeds), "--attempts", str(a.attempts)]
+    if a.max_usd is not None:
+        argv += ["--max-usd", str(a.max_usd)]
+    mod = _script("ladder_live_run")
+    if a.report_only:
+        code = mod.main(["--report-only"])
+        _report_line("ladder")
+        return code
+    if not a.model:
+        raise ValueError("give at least one --model kind:model_id")
+    print("Dry-run estimate first (nothing is called):")
+    code = mod.main([*argv, "--dry-run"])
+    if a.dry_run or code:
+        return code
+    if a.max_usd is None or a.max_usd <= 0:
+        print("refusing to run live without --max-usd (a positive hard cap in USD). The estimate above is what it would cost. "
+              "Show it to the author and get a yes in chat first.", file=sys.stderr)
+        return 2
+    code = mod.main(argv)
+    _report_line("ladder")
+    return code
+
+
+def _one_line(path: Path) -> str:
+    """Verdict line of a results file: first line under a Verdict/Summary/Bottom line heading, else the Status
+    line, else the first paragraph after the title."""
+    lines = path.read_text().splitlines()
+    para = [ln.strip() for ln in lines[1:] if ln.strip() and not ln.startswith("#")]
+    for i, ln in enumerate(lines):
+        if ln.startswith("#") and any(w in ln.lower() for w in ("verdict", "summary", "bottom line")) and i > 0:
+            for nxt in lines[i + 1:]:
+                if nxt.strip() and not nxt.startswith("#"):
+                    para = [nxt.strip()]
+                    break
+            break
+    text = (para[0] if para else "").replace("**", "").replace("`", "")
+    return text if len(text) <= 160 else text[:157].rstrip() + "..."
+
+
+def cmd_results(a) -> int:
+    for p in sorted(RESULTS.glob("*.md")):
+        if p.name.endswith(("-prereg.md", "-prereg-DRAFT.md")) or p.name == "workbench.md":
+            continue
+        title = (p.read_text().splitlines() or [""])[0].lstrip("# ").strip()
+        print(f"{p.name}: {title}\n    {_one_line(p)}")
+    print("\nLatest reports:")
+    found = False
+    for rep in sorted(explog.REPO.glob("runs/**/report.html"), key=lambda x: x.stat().st_mtime, reverse=True):
+        print(f"  {rep}")
+        found = True
+    if not found:
+        print("  none yet (run a command to build one)")
+    return 0
+
+
+def cmd_household(a) -> int:
+    print("household commands land after the seed v2 run")
+    return 0
+
+
 def parser():
     p = argparse.ArgumentParser(prog="mar", description="Multi-agent rules workbench.")
     p.add_argument("--runs-dir", default="runs", help="where reports and traces go (default: runs)")
@@ -372,6 +512,24 @@ def parser():
     tl = sub.add_parser("timeline", help="build runs/timeline.html from questions, decisions, changes, runs, commits")
     tl.add_argument("--keep", action="store_true", help="also write a dated, committed snapshot: "
                     "experiments/timelines/<date>.html and .md (GitHub-readable)")
+    ev = sub.add_parser("evolve", help="evolution loop on the fishery (scripted, no model calls)")
+    ev.add_argument("--v2", action="store_true", help="the v2 setup (evolve_v2_run)")
+    ev.add_argument("--dry-run", action="store_true", help="say what would run; run nothing")
+    gm = sub.add_parser("game", help="rediscovery games: vpgg or bargaining (scripted, no model calls)")
+    gm.add_argument("game", choices=["vpgg", "bargaining"])
+    gm.add_argument("--seeds", type=int, default=20)
+    gm.add_argument("--report-only", action="store_true", help="just print the path of the existing report")
+    em = sub.add_parser("empower", help="empowerment vs the hand-made freedom score")
+    em.add_argument("--world", required=True, choices=["fishery", "vpgg"])
+    ld = sub.add_parser("ladder", help="live seam ladder: SPENDS MONEY; prints the estimate first, needs --max-usd")
+    ld.add_argument("--model", action="append", default=[], help="kind:model_id[@price_in,price_out]; repeatable")
+    ld.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    ld.add_argument("--attempts", type=int, default=1)
+    ld.add_argument("--max-usd", type=float, default=None, help="required for live runs: hard spending cap")
+    ld.add_argument("--dry-run", action="store_true", help="print the estimate and stop")
+    ld.add_argument("--report-only", action="store_true", help="rebuild report.html from the log")
+    sub.add_parser("results", help="one-line verdicts of docs/results/*.md and paths of the latest reports")
+    sub.add_parser("household", help="stub: household commands land after the seed v2 run")
     return p
 
 
@@ -382,7 +540,9 @@ def main(argv=None) -> int:
             return cmd_rules_show(a)
         return {"run": cmd_run, "check": cmd_check, "loop": cmd_loop, "report": cmd_report,
                 "log": cmd_log, "keep": cmd_keep, "change": cmd_change,
-                "question": cmd_question, "timeline": cmd_timeline, "sweep": cmd_sweep}[a.cmd](a)
+                "question": cmd_question, "timeline": cmd_timeline, "sweep": cmd_sweep,
+                "evolve": cmd_evolve, "game": cmd_game, "empower": cmd_empower, "ladder": cmd_ladder,
+                "results": cmd_results, "household": cmd_household}[a.cmd](a)
     except (ValueError, FileNotFoundError, AgentError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
