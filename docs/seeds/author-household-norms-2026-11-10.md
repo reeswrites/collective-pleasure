@@ -10,6 +10,8 @@ Recorded verbatim before any household results existed. This is the author's own
 
 > everyheing hsould be shared always prolly iuneless we can later interpret actions nad see what possible rule tweaks could happen about conditionoality and leaving should be whenever and it triggers exit conditions that wer enegotiated before
 
-## Prompt 4 (effort)
+## Prompt 4 (effort), with an idea about negotiation
 
-(not yet answered)
+> no one owes anyone anything day to day except for what they have negotirated bascially i feel like negotitaiotn used to be such a cognitively taxing process or see what you want whats good for you what the other person can provide to you and want but if we can model this it could be interesting and have good tempaltes for peopel
+
+All five prompts answered (2026-11-10).
