@@ -7,6 +7,7 @@ experiments/kept/<run_id>/ trace.json and report.html copied by `mar keep`.
 Nothing here ever rewrites an earlier line: files are opened in append mode only.
 Full traces stay in runs/ (ignored). No LLM, no network.
 """
+import difflib
 import hashlib
 import json
 import shutil
@@ -104,3 +105,37 @@ def keep(exp_dir, runs_dir, run_id) -> Path:
     for f in files:
         shutil.copy2(f, dest / f.name)
     return dest
+# ---- change log ----------------------------------------------------------------------------
+
+def _text(arg) -> str:
+    return "" if arg in (None, "-") else Path(arg).read_text(encoding="utf-8")
+
+
+def record_change(exp_dir, kind, quote, reason, before, after, nwim=False) -> dict:
+    """before/after: file path, or '-' for none (a new file). Stores both texts and a unified diff."""
+    if kind not in ("rule", "oracle"):
+        raise ValueError("kind must be rule or oracle")
+    if not quote.strip():
+        raise ValueError("--quote is required: the author's exact words, verbatim")
+    if after in (None, "-"):
+        raise ValueError("--after must be a file")
+    b, a = _text(before), _text(after)
+    diff = "".join(difflib.unified_diff(b.splitlines(True), a.splitlines(True), "before", "after"))
+    row = {"timestamp": now_utc(), "kind": kind, "quote": quote, "reason": reason,
+           "files": {"before": None if before in (None, "-") else str(before), "after": str(after)},
+           "before_text": b, "after_text": a, "diff": diff, "git_commit": git_commit(),
+           "not_what_i_meant": bool(nwim)}
+    _append(Path(exp_dir) / CHANGES_NAME, row)
+    return row
+
+
+def changes_text(rows) -> str:
+    if not rows:
+        return "No changes recorded yet."
+    out = []
+    for i, r in enumerate(rows, 1):
+        flag = "  [NOT WHAT I MEANT]" if r["not_what_i_meant"] else ""
+        out.append(f"#{i}  {r['timestamp']}  {r['kind']}{flag}\n  quote:  \"{r['quote']}\"\n  reason: {r['reason']}\n"
+                   f"  file:   {r['files']['after']}\n  commit: {r['git_commit']}\n"
+                   + ("\n".join("    " + l for l in r["diff"].splitlines()) or "    (no change)"))
+    return "\n\n".join(out)

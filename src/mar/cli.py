@@ -7,6 +7,7 @@
   mar report <run_id>
   mar log [--last 10] [--run <id>]       experiment log (experiments/log.jsonl)
   mar keep <run_id>                      copy trace and report into experiments/kept/<run_id>/
+  mar change record|list                 change log (experiments/changes.jsonl)
 
 Every run and loop appends one line to the experiment log (--note says why). Reports and traces go to
 runs/<run_id>/ (override with --runs-dir; logs with --experiments-dir). No LLM, no network.
@@ -147,6 +148,16 @@ def cmd_keep(a) -> int:
     return 0
 
 
+def cmd_change(a) -> int:
+    path = Path(a.experiments_dir) / explog.CHANGES_NAME
+    if a.change_cmd == "list":
+        print(explog.changes_text(explog.read_rows(path)))
+        return 0
+    row = explog.record_change(a.experiments_dir, a.kind, a.quote, a.reason, a.before, a.after, a.nwim)
+    print(f"recorded {row['kind']} change in {path}" + (" (not what I meant)" if row["not_what_i_meant"] else ""))
+    return 0
+
+
 def cmd_report(a) -> int:
     rec = load_record(a.run_id, a.runs_dir)
     print(f"report: {build_report(rec, a.runs_dir)}")
@@ -187,6 +198,16 @@ def parser():
     lg.add_argument("--run", help="show every entry for one run id in full")
     k = sub.add_parser("keep", help="copy a run's trace.json and report.html into experiments/kept/<run_id>/")
     k.add_argument("run_id")
+    ch = sub.add_parser("change", help="record or list rule and oracle changes").add_subparsers(
+        dest="change_cmd", required=True)
+    rc = ch.add_parser("record", help="append one change: the author's exact words, why, before and after")
+    rc.add_argument("--kind", required=True, choices=["rule", "oracle"])
+    rc.add_argument("--quote", required=True, help="the author's exact words, verbatim")
+    rc.add_argument("--reason", required=True, help="one line: why this change")
+    rc.add_argument("--before", required=True, help="file with the old text, or - for none")
+    rc.add_argument("--after", required=True, help="file with the new text")
+    rc.add_argument("--nwim", action="store_true", help="the author is rejecting what a run or rule did")
+    ch.add_parser("list", help="print recorded changes")
     return p
 
 
@@ -196,7 +217,7 @@ def main(argv=None) -> int:
         if a.cmd == "rules":
             return cmd_rules_show(a)
         return {"run": cmd_run, "check": cmd_check, "loop": cmd_loop, "report": cmd_report,
-                "log": cmd_log, "keep": cmd_keep}[a.cmd](a)
+                "log": cmd_log, "keep": cmd_keep, "change": cmd_change}[a.cmd](a)
     except (ValueError, FileNotFoundError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
