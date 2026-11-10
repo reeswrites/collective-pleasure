@@ -49,7 +49,7 @@ In progress: the household world and the seam ladder.
 
 - Talking LLM agents also file typed reports, in the same fixed vocabulary as decision-model agents, alongside free talk. Say vs do can then be compared across tiers. The backend already asks for a "report" field; this is the standing rule.
 - One untouched final exam is kept for the write-up (see ADR 0007 decision 12 and claim FX1).
-- Pushing the branch to GitHub (private repo) was approved on 2026-11-10. The push from Claude Code was blocked by auto mode; the author runs it, or adds a permission rule.
+- Main and the branch are on GitHub (private repo), pushed by the author on 2026-11-10. Pushes from Claude Code are blocked by auto mode, so the author pushes.
 
 ## Still open
 
