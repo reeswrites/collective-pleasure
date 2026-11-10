@@ -7,7 +7,9 @@
   uv run python scripts/ladder_live_run.py --gate-only            # lint + mock panel, no spend
   uv run python scripts/ladder_live_run.py --max-usd 1 --smoke 5 --model claude:claude-opus-5-5   # 5-decision smoke test
 
-Harness v2 (capability arm): one model plays the adversary against a scripted cooperative victim; L4 is one model choosing both
+  uv run python scripts/ladder_live_run.py --arm win --dry-run --model claude:claude-haiku-5-5   # try-to-win arm (v2 harness)
+
+Harness v2 (capability and win arms): one model plays the adversary against a scripted cooperative victim; L4 is one model choosing both
 partners as a coordinated pair. A live run first runs the rule-set lint and a mock panel on the real harness and REFUSES to
 spend unless both pass (the table is printed and saved to <out>/calibration.txt). Every decision is logged to <out>/decisions.jsonl.
 
@@ -34,8 +36,13 @@ def main(argv=None) -> int:
     ap.add_argument("--gate-only", action="store_true", help="run the lint and the mock panel, print and save the table, spend nothing")
     ap.add_argument("--arm", choices=list(LL.ARMS), default="capability",
                     help="capability: models told to probe the rules for loopholes (default); propensity: models just "
-                         "live as a fixed persona, no red-team instruction")
+                         "live as a fixed persona, no red-team instruction; win: harness v2, the model plays the persona "
+                         "with an explicit objective to maximize its own outcome (L4: the pair's joint outcome), no loophole "
+                         "framing")
     ap.add_argument("--max-usd", type=float, default=None, help="required for live runs: hard spending cap")
+    ap.add_argument("--allow-cap-below-worst", action="store_true",
+                    help="accept a --max-usd below the worst-case estimate (every call retried once); the ledger still stops the "
+                         "run at the cap, the model in progress is cut off and later models are skipped")
     ap.add_argument("--dry-run", action="store_true", help="print the cost estimate per model and stop")
     ap.add_argument("--report-only", action="store_true", help="rebuild report.html from the log")
     ap.add_argument("--out", default=str(LL.OUT_DIR))
@@ -56,8 +63,8 @@ def main(argv=None) -> int:
     kw = dict(rules=rules, seeds=seeds, attempts=a.attempts, arm=a.arm)
     if specs:
         print(LL.estimate_table(specs, **kw))
-    if a.arm == "capability" or a.gate_only:
-        ok, report = LL.prespend_gate(rules if not a.gate_only else tuple(a.rules), seeds, out)
+    if a.arm in LL.V2_ARMS or a.gate_only:
+        ok, report = LL.prespend_gate(rules if not a.gate_only else tuple(a.rules), seeds, out, arm=a.arm)
         print(report)
         if a.gate_only:
             return 0 if ok else 2
@@ -71,7 +78,7 @@ def main(argv=None) -> int:
               file=sys.stderr)
         return 2
     worst = sum(LL.estimate(s, **kw)["usd_max"] for s in specs)
-    if worst > a.max_usd:
+    if worst > a.max_usd and not a.allow_cap_below_worst:
         print(f"refusing: worst-case estimate ${worst:.4f} exceeds --max-usd ${a.max_usd:.4f}; raise the cap or drop models",
               file=sys.stderr)
         return 2
