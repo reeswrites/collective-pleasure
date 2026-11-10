@@ -332,7 +332,7 @@ class World:
         if a in COST_HOURS and me["hours"] < COST_HOURS[a]:
             return False
         if a == "spend_shared":
-            return me["in"] and me["money"] >= SHARE_STEP and (self.pot or self.funded < self.need_month())
+            return me["in"] and me["money"] >= SHARE_STEP
         if a == "spend_self":
             return me["money"] >= SELF_STEP
         if a == "request":
