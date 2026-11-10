@@ -14,6 +14,9 @@ Predictions must be committed before runs. Do not edit a prediction after its ru
 | D2b | ADICO beats STRUCT on mined-norm expressibility, because it separates sanctioned rules from unsanctioned norms and names the sanctioner | draft prediction - finalize and commit before the format run (ADR 0004) | none | ADR 0004 |
 | D2c | TEXT shows more seams and more post-translation failures than both gated formats | draft prediction - finalize and commit before the format run (ADR 0004) | none | ADR 0004 |
 | D2d | F-EN (English-like controlled sentences compiling to the same cards and gate) ties F-ADICO on outcomes and seam curve and beats ADICO YAML on the card-only reader test (V2b: lossless round trip on 6 cards; reader test not yet run, gloss caveat in ADR 0004) | draft prediction - finalize and commit before the format run (ADR 0004) | V2b feasibility only: docs/results/v2b.md | ADR 0004 |
+| SI1 | Stand-in study (ADR 0006): rank agreement between Jev swarms and LLM swarms over ~50 rule sets is moderate (Spearman rho near the preregistered threshold of 0.7, author to confirm) | draft prediction - finalize and commit before the first paid run | none | ADR 0006 |
+| SI2 | Jev swarms look more orderly than LLM swarms: lower behavior spread (entropy of actions per state) | draft prediction - finalize and commit before the first paid run | none | ADR 0006 |
+| SI3 | Jev swarms find fewer seams and show fewer emergent norms than LLM swarms | draft prediction - finalize and commit before the first paid run | none | ADR 0006 |
 
 ## Follow-ups (not preregistered)
 
