@@ -1,0 +1,1 @@
+F2. When the catch minus the pool is more than 0, a fisher must not harvest. (Gloss: A fisher may not try to take more fish than are in the lake right now.) (Source: V2 fixture; physical bound from GovSim dynamics (Piatti et al. 2024, arXiv 2404.16698).)

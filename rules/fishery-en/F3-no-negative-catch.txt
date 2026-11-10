@@ -1,0 +1,1 @@
+F3. When the catch is less than 0, a fisher must not harvest. (Gloss: A harvest cannot be a negative number of fish.) (Source: V2 fixture (range sanity).)

@@ -1,0 +1,1 @@
+C1. A fisher must harvest only when the catch is at least 20. (Gloss: Every fisher must take at least 20 fish per harvest action.) (Source: V2 fixture (deliberately conflicting patch))

@@ -1,0 +1,1 @@
+F4. A fisher may harvest when the catch is at least 0. (Gloss: A fisher may harvest from the lake (a permission; it adds no constraint of its own).) (Source: V2 fixture; fishery premise of GovSim, Piatti et al. 2024, arXiv 2404.16698.)
