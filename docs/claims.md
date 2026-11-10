@@ -2,11 +2,22 @@
 
 Predictions must be committed before runs. Do not edit a prediction after its run starts; add a new row or an amendment note instead.
 
+## Active
+
 | ID | Claim | Status | Evidence | Sources |
 |---|---|---|---|---|
-| S1 | A single agent under fishery-quota rules violates them less, and deviates less from the formal rule system, when solver-gated than with free-text rules | untested - to preregister | none | RATIONALE.md section 7 |
-| E0 | A non-trivial share (>= 20%) of evolved candidate rule systems fail at least one invariant | untested - to preregister | none | RATIONALE.md section 7 |
-| E1 | Gated-evolved rule systems degrade less under incentive or parameter shift than ungated ones | untested - to preregister | none | RATIONALE.md section 7 |
-| E2 | Collapse rate: free text > regulated > regimented; regulated shows norm drift | untested - to preregister | none | RATIONALE.md section 7 |
-| E3 | The deviation measure predicts collapse or collusion earlier or better than violation counts | untested - to preregister | none | RATIONALE.md section 7 |
-| E4 | Abstraction-bisimilar rule systems have statistically indistinguishable outcomes (optional) | untested - to preregister | none | RATIONALE.md section 7 |
+| C1 | Under the refinement loop (ADR 0003), new seams per round decrease across rounds toward a plateau, on at least 3 seeds, without the bloat guard tripping | untested - preregister exact fit, rounds, seeds and thresholds before V4 | none | docs/pitch.md |
+| C1-bloat | Rule count grows sublinearly in rounds and agent action space stays above a preregistered floor | untested - preregister with C1 | none | ADR 0003 decision 7 |
+| N1 | No published work measures seams-per-round convergence of a spec refinement loop for LLM agents with an oracle independent of the spec | under check (V1) | docs/prior-art/2026-11-10.md | ADR 0003 |
+
+## Follow-ups (not preregistered)
+
+| ID | Claim | Notes |
+|---|---|---|
+| F1 | Crowding out: agents under a hard gate fail worse than sanctioned agents when the gate is removed or misses a case | from the 2026-11-10 interview; unseen in prior art |
+| F2 | AI-patched and human-patched specs converge to different plateaus | arm option, ADR 0003 decision 4 |
+| F3 | The de jure vs de facto distance predicts collapse earlier than violation counts | replaces E3 |
+
+## Superseded 2026-11-10 (ADR 0003)
+
+S1 (single agent, gated vs free-text; now replication-grade, see Agent-C and Winston et al.), E0, E1, E2, E3, E4. Original wording is in git history at commit 78de81b and in RATIONALE.md's history.

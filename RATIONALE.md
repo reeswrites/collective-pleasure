@@ -1,7 +1,7 @@
 # Rationale
 
-**Working title:** Multi-agent rules: proof-gated rule search for AI agent groups
-**Status:** draft, 2026-11-10. Nothing here is a result yet.
+**Working title:** Multi-agent rules: does spec refinement converge for AI agent groups?
+**Status:** draft, revised 2026-11-10 after the prior-art check and an interview with the author (ADR 0003). Nothing here is a result yet. One-page version: docs/pitch.md.
 
 ---
 
@@ -30,34 +30,29 @@ Single-agent rules are the base case (n = 1) of the same pipeline:
 
 Multi-agent rules use the same four steps and add what only appears with interaction: peer sanctions, collusion, emergent norms, and coordinated attacks that slip past per-agent monitors.
 
-So the first experiment is single-agent (S1: one agent under the fishery-quota rules, free-text vs solver-gated). It is cheaper, isolates the gate and the translation from interaction effects, and the multi-agent experiments then test what interaction adds.
+Under the convergence question (ADR 0003), one agent is only an instrument smoke test. Emergent norms and the backward half of the loop need interaction, so the first real experiment is a five-agent swarm.
 
 ## 2. Research question
 
-> When LLM agents, alone or in groups, act under a rule system (rules, norms and sanctions), does specifying and proof-checking that rule system formally lead to better or more robust outcomes than free-text rules or hand-built governance? And can we measure precisely where agent behavior departs from the formal rule system?
+> When rules for LLM agents are written formally, gated by a solver, and repeatedly tightened from the seams agents find (runs that pass the gate but violate intent), does the number of new seams per round slow, and where does it plateau?
+
+This turns the founding bet, "maybe not provable, but we can hill-climb toward good enough", into a measured curve. Proofs move Goodhart's law to the gap between spec and intent; the question is whether closing that gap is a converging process or whack-a-mole.
+
+Earlier framing (superseded): whether formal, proof-checked rule systems beat free-text rules. The prior-art check found that comparison already done for single agents (section 4).
 
 ## 3. Narrowest defensible claim
 
-A pipeline that:
+A refinement loop for LLM agents in which:
 
-1. searches over rule systems written in an executable grammar derived from ADICO, the statement format of Institutional Grammar (IG);
-2. gates candidates with solver-checked invariants: no deadlock, no rule conflicts, bounded sanctions, and a reachable exit or repair path;
-3. reports a quantitative deviation of LLM-agent traces from the resulting formal transition system.
+1. rules are written as ADICO-derived cards, compiled to a transition system, and enforced per action by a solver gate;
+2. an intent oracle independent of the spec (environment outcomes plus a frozen, versioned judge rubric) flags seams; the patcher never sees the oracle;
+3. an LLM patcher writes new cards from failing traces; the solver rejects patches that add conflicts, deadlock, or remove a repair path; the author audits a sample;
+4. de facto rules mined from traces are diffed against the written rules; emergent norms are proposed back as cards and adopted only with the author's yes;
+5. the reported result is seams per round across rounds and seeds, its plateau, and rule-count growth (bloat guard).
 
-It is evaluated against two baselines: ungated evolution (Kumar et al. 2026) and runtime governance graphs (Institutional AI, 2026). The settings are one or two Ostrom-style games: a common-pool resource and/or a Cournot market.
+It is evaluated first in a five-agent fishery commons (GovSim dynamics).
 
-This connects gaps that existing work names but leaves open:
-
-- *Institutional AI* (arXiv 2601.10599) says governance graphs should be checked for coverage, deterministic transitions and incentive compatibility, but gives no toolchain.
-- The LLM negotiation mechanism-design paper (arXiv 2608.14613) says ATL* model checking has not been connected to LLM conformance.
-
-**We do not claim:**
-
-- formal verification of normative systems (old; social laws, ATL synthesis);
-- norm synthesis (old; IRON, SENSE, LION);
-- LLM-driven evolution of constitutions (done 2026);
-- runtime enforcement for agents (done 2026);
-- LTL compliance scoring of agent traces (done; AgentLTL, Agent-C).
+**We do not claim:** solver-gating of agent actions (Agent-C, Winston et al.); gated vs prompt-only comparison; weighted compliance scores (AgentLTL); conflict-checking a rule set before use (VEPA); norm synthesis; LLM-evolved constitutions; counterexample-guided refinement as such (CEGAR, CEGIS). The claim is the loop with LLM agents as counterexample generators, an independent intent oracle, rules that can grow from agent behavior, and convergence as the measured outcome.
 
 ## 4. Prior art
 
@@ -73,8 +68,13 @@ This connects gaps that existing work names but leaves open:
 | Normative rules plus LLM, checked formally | Partial | SLEEC-LLM (York, 2025); the LLM explains counterexamples, it isn't a simulated agent |
 | Agent trace compliance | Done | Agent-C, AgentLTL, MANTRA |
 | Bisimulation *between* rule systems | Not found | (low-confidence absence) |
+| Solver gate per agent action, gated vs unenforced | Done 2025-26, single agent | Agent-C (2512.23738); Winston, Winston & Just (2603.20449) |
+| Conflict-checking a rule set before use, LLM-evolved rules | Done Oct 2026, single agent, stateless allow/deny | VEPA (2610.12813) |
+| Enforcement in a GovSim-derived fishery | Done Jul 2026, LM verifiers, no formal rules | Ye & Steinhardt (2607.09766) |
+| Agent-written executable laws in GovSim | Done Sep 2026, sandbox-tested, not formal | Rehm (2609.22600) |
+| Convergence of a refinement loop for LLM agents | Not found so far (V1 checking) | nearest formal analogue: CEGAR / CEGIS |
 
-Confidence that nobody has published the full pipeline: about 70%, from a single search pass. **Repeat the prior-art check before any write-up.**
+The 2026-11-10 re-check (docs/prior-art/2026-11-10.md) held about 70% for the original pipeline but showed its parts are mostly taken, which is why the question moved to convergence (ADR 0003). **Re-run the check before any write-up; this area produces about one relevant paper a month.**
 
 ## 5. Why nobody has combined these (and whether that is a warning)
 
@@ -162,16 +162,16 @@ LLM agents aren't independent samples of humans. They have read the textbook res
 
 ## 7. Experiments (draft, to preregister)
 
-| ID | Question | Prediction (draft) | Baseline |
-|---|---|---|---|
-| S1 | Single agent: does a solver gate beat free-text rules? | A single agent under the fishery-quota rules violates them less, and deviates less from the formal rule system, when solver-gated than with free-text rules | Free-text rules in the prompt |
-| E0 | Does the gate prune anything? | A non-trivial share of evolved candidate rule systems (≥ 20%) fail at least one invariant | — |
-| E1 | Does gating improve robustness? | Gated-evolved rule systems degrade less under incentive or parameter shift than ungated ones | Kumar / Niranjani-style ungated evolution |
-| E2 | Regimented vs regulated vs free text | Collapse rate: free text > regulated > regimented; regulated shows norm drift | GovSim's prompt-only rules (43/45 collapsed) |
-| E3 | Is the deviation measure informative? | It predicts collapse or collusion earlier, or better, than violation counts | Violation rate, AgentLTL-style monitors |
-| E4 (optional) | Do bisimilar rule systems behave alike? | Abstraction-bisimilar rule systems have statistically indistinguishable outcomes | Non-bisimilar matched pairs |
+Slices and their pass/fail checks are in docs/plan.md (V1 to V5).
 
-Use multiple seeds, report model versions, and fix the predictions before running.
+| ID | Question | Prediction (draft) |
+|---|---|---|
+| C1 | Does refinement converge? | New seams per round decrease toward a plateau on at least 3 seeds, without the bloat guard tripping |
+| F1 | Does mechanism crowd out normative competence? | Hard-gated agents fail worse than sanctioned agents when the gate is removed or misses a case |
+| F2 | Does who patches matter? | AI-patched and human-patched specs reach different plateaus |
+| F3 | Is the de jure vs de facto distance informative? | It predicts collapse earlier than violation counts |
+
+S1 and E0 to E4 are superseded (docs/claims.md). Use multiple seeds, report model versions, and fix predictions before running.
 
 ## 8. Safety and dual-use
 
@@ -181,9 +181,10 @@ Use multiple seeds, report model versions, and fix the predictions before runnin
 
 ## 9. Falsifiers and kill criteria
 
-- **E0:** the gate rejects almost nothing, so gating is decorative. Narrow the claim to the deviation measure.
-- **E1:** gated and ungated search are equally robust, so formal gating adds no value. Report the negative result.
-- **E3:** the deviation measure adds nothing over violation counts. Drop it.
+- **V1:** prior work already measures convergence of such a loop. Narrow to what survives, or stop.
+- **V2/V3:** the instruments fail (gate leaks, oracle misses a planted seam, miner can't recover known rules). Fix or stop before spending on swarms.
+- **C1:** the curve is flat or rising. Report it: that is evidence the hill-climb does not work here, and the plateau is "none".
+- **Bloat:** convergence only by rule explosion or crippled agents. Report as failure.
 - **D2:** ADICO makes no difference against simpler formats. Drop ADICO.
 - Any of these is a publishable negative result, not a failure to hide.
 
@@ -197,12 +198,7 @@ Use multiple seeds, report model versions, and fix the predictions before runnin
 
 ## 11. First milestones
 
-1. Repeat the prior-art check: classic norm synthesis, SLEEC, and the last month of arXiv.
-2. Minimal ADICO → transition-system export for one tiny rule system (the GovSim fishery quota), cross-checked against philosophy-engine's reference engine.
-3. Load it in mCRL2. Prove one invariant and find one counterexample.
-4. A runtime `check_action` gate wired into a forked GovSim with a small open model.
-5. Preregister S1, then run S1: one agent under the fishery-quota rules, free-text vs solver-gated (first experiment).
-6. Preregister E0 and E2, then run E2 (cheapest and most legible multi-agent experiment).
+See docs/plan.md: V1 adversarial novelty search; V2 loop on a scripted mock agent; V3 one real LLM agent as calibration; V4 first five-agent curve; V5 one-page write-up and review council.
 
 ## 12. Open questions
 

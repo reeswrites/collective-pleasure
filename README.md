@@ -2,14 +2,15 @@
 
 Multi-agent rules: proof-gated rule search for AI agent groups.
 
-This project studies formally specified rule systems (rules, norms, sanctions) that govern AI agents. The pipeline is: write rules in a human-readable ADICO-derived format, compile them to a labeled transition system, check invariants with a solver or model checker (no deadlock, no rule conflicts, bounded sanctions, a reachable repair path), gate each proposed agent action with the checked rules, and measure how far real LLM-agent behavior departs from the formal rule system. A single agent is the base case (n = 1); groups add peer sanctions, collusion, emergent norms and coordinated attacks. The first experiment is single-agent (fishery-quota rules, free-text vs solver-gated), followed by the multi-agent comparison.
+This project asks whether spec refinement converges for LLM agents. Rules are written as readable ADICO-derived cards, compiled to a transition system, and enforced per action by a solver. An intent oracle that is independent of the spec flags seams: runs that pass the gate but violate what was meant. An LLM patcher tightens the rules, the solver checks each patch, and rules the agents actually live by are mined from traces and diffed against the written ones. The result is a curve: new seams per round, and where it plateaus. One page: [docs/pitch.md](docs/pitch.md).
 
 **Status: pre-results; nothing here is a finding.**
 
 ## Read first
 
 - [RATIONALE.md](RATIONALE.md): why this project, prior art, design decisions, experiments, kill criteria
-- [docs/plan.md](docs/plan.md): milestones and next task
+- [docs/pitch.md](docs/pitch.md): the question on one page
+- [docs/plan.md](docs/plan.md): slices and their pass/fail checks
 - [docs/claims.md](docs/claims.md): claims register (predictions are committed before runs)
 
 ## Layout

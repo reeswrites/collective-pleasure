@@ -1,19 +1,28 @@
 # Plan
 
-Status: pre-results. Milestones are from RATIONALE.md section 11.
+Status: pre-results. Direction set 2026-11-10 (ADR 0003, docs/pitch.md). Every slice ends in a pass/fail check that takes minutes to read. A failed check narrows or stops the project; that is a result, recorded in docs/negative-results.md.
 
-## Milestones
+## Slices
 
-- [ ] 1. Repeat the prior-art check: classic norm synthesis, SLEEC, and the last month of arXiv.
-- [ ] 2. Minimal ADICO -> transition-system export for one tiny rule system (the GovSim fishery quota), cross-checked against philosophy-engine's reference engine (https://github.com/reeswrites/philosophy-engine).
-- [ ] 3. Load it in mCRL2. Prove one invariant and find one counterexample.
-- [ ] 4. A runtime `check_action` gate wired into a forked GovSim with a small open model.
-- [ ] 5. Preregister S1, then run S1 (first experiment): one agent under the fishery-quota rules, free-text vs solver-gated.
-- [ ] 6. Preregister E0 and E2, then run E2 (regimented vs regulated vs free text, multi-agent).
+| Slice | What | Budget | Validation (pass / fail) |
+|---|---|---|---|
+| V0 | Prior-art check, repeated | done | docs/prior-art/2026-11-10.md: full pipeline not pre-empted; gating, prompt-vs-gate and conflict-checking are prior art |
+| V1 | Adversarial novelty search on the convergence loop | hours | Pass: no work measures seams-per-round convergence of a refinement loop for LLM agents with an independent oracle. Fail: narrow the claim to what survives, or stop |
+| V2 | The loop on a scripted mock agent: tiny fishery, ADICO cards to Z3 gate, planted seam (per-catch cap, no per-month cap), outcome oracle, scripted patch, solver patch checks | half a day | Pass: oracle flags the planted seam; patch closes it; solver rejects a deliberately conflicting patch; mined de facto rules equal the written ones under the gate |
+| V3 | Instrument calibration with one real LLM agent (cheap open model), same harness | a day | Pass: all four V2 checks hold with a real model; measured $ and minutes per round. No claims about convergence |
+| V4 | First curve: five-agent swarm, ~10 rounds, 3 seeds, LLM patcher, outcome oracle (judge rubric optional). Preregister C1 before the first run | two to three days | Result either way: slope, plateau with uncertainty, rule count per round. Bloat guard checked |
+| V5 | One-page write-up with the curve; fresh-agent review council | a day or two | Council finds no claim beyond the evidence; card-only reader can follow every rule |
 
-Single-agent is the base case of the same pipeline (n = 1); multi-agent adds peer sanctions, collusion, emergent norms and coordinated attacks (RATIONALE.md section 1a).
+## Decisions waiting on the author
 
-## Next task
+- At V4: keep the in-repo harness or port to GovSim (running GovSim locally needs the author's OK; ADR 0003 ASSUMED note).
+- Before V4: model choice for agents and patcher, and the spend ceiling.
+- After V4: whether to add the frozen LLM-judge curve, human-vs-AI patching arms, or the crowding-out follow-up.
 
-1. **Milestone 1:** repeat the prior-art check before any write-up. Record dated findings and search terms.
-2. **Milestone 2:** minimal ADICO -> LTS export for a GovSim-fishery-quota rule system, cross-checked against philosophy-engine's reference engine. Every rule gets a plain-English gloss and a source. Bounded verdicts state k.
+## Superseded
+
+The earlier milestones (ADICO to LTS export cross-checked against philosophy-engine; mCRL2 invariant; check_action gate in GovSim; S1; E0 and E2) are folded into V2 to V4 where needed or kept as follow-ups. mCRL2 is deferred until a slice needs bisimulation; V2 to V4 use Z3 and a direct state-machine diff.
+
+## Log
+
+- 2026-11-10: repo scaffolded; prior-art check repeated; interview set the convergence question (ADR 0003); V1 launched.
