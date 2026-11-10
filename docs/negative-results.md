@@ -41,3 +41,7 @@ The seam-curve fall is mostly exhaustion of a finite set of seam keys (agent mix
 ## 2026-11-10: liberty score v1
 
 VPGG predictions V1 and V2 failed: voluntary beat compulsory on liberty in only 4 of 15 compositions, lost in 10, tied in 1 (summed difference -19.6 bits, negative at every weight tried). Cause: the domination count treated other members' ability to abstain as domination, so compulsory rules scored zero domination. Fishery F3 also failed (liberty widened the seat-order gap). The author ruled that others leaving or withdrawing cooperation is not a loss of freedom ("it was only possible thru agreement in the first place"); liberty v2 implements that. Evidence: docs/results/liberty.md.
+
+## 2026-11-10: author seed v2 (household)
+
+- 2026-11-10 seed v2 prediction 2 (bindable gives more "trapped" suffering than free exit in stay pairings, margin 0.02): FAILED, a null. Difference 0.0003, positive in 1 of 17 pairings; trapped weeks 0.0. Prediction 3 (free exit dissolves 0.05 more): FAILED, exactly equal (18 of 51 runs each). Cause: the scripted agent breaks a commitment the moment its non-offsettable load reaches 0.2, before the "trapped" onset can run, so the binding never holds anyone in. See docs/results/household-seed-v2.md.

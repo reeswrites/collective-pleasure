@@ -41,3 +41,8 @@ Objectives saturated by generation 3, so the frontier collapsed to a single corn
 - Redundancy was mostly repaired, not rejected: 255 of 381 flagged mutants were patch cards that made an older card implied by the rest, and pruning kept them as smaller rule sets.
 - Varied training made the selection target move: the varied arm's 4-D hypervolume fell at generations 7 and 8 when harsher conditions were drawn, so the final elite depends on the last draws.
 - A seed spec the loop had pushed away (`tight`, cap 4, infeasible under the yield floor) was more robust on exam 2 than the evolved elites: the floor plus the efficiency objective select against caution.
+
+## 2026-11-10: author seed v2 (household)
+
+- 2026-11-10 seed v2: the author's two variants (bindable vs free exit) are indistinguishable on suffering, pleasure and dissolutions; they differ only on the exit credit in the freedom scores (hand 0.845 vs 1.000 in stay pairings). Binding to stay is not harmful in this model because the modeled agent breaks it as soon as it suffers; the cost shows only as a forfeited pot share (nine breaches).
+- 2026-11-10 seed v2: the gift rule (R2, generous personas give to a short partner) raises the failure share of non-pressing households from 0.13 to 0.24 (ctl, ablation confirms), and walling the free-rider's taking (R3b) raises the free-rider's own non-offsettable level from 0.086 to 0.130: protections for one partner were paid for by the other in this model.
