@@ -1,13 +1,16 @@
 # multi-agent-rules
 
+Evolving alignment rules you can talk to.
+
 Multi-agent rules: proof-gated rule search for AI agent groups.
 
-This project is an AI-native workbench, used through chat, for evolving alignment norms by tweaking interpretable rules. The author talks loosely about how agents should behave; the system turns that into precise rules (ADICO cards, also English-like sentences), proves what it can, runs swarm experiments, and reports back in plain English and charts. Proof checks filter candidate rules, an LLM patcher mutates them, and a seam curve judges the evolution. There are two loops: rules against the test (do new seams per round slow, and where do they plateau?), and the test against the author's intent (do "not what I meant" moments per round fall?). One page: [docs/pitch.md](docs/pitch.md); decision: [ADR 0005](docs/decisions/0005-two-loops-and-workbench.md).
+This project is an AI-native workbench, used through chat, for evolving alignment norms by tweaking interpretable rules. The author talks loosely about how agents should behave; the system turns that into precise rules (ADICO cards, also English-like sentences), proves what it can, runs swarm experiments, and reports back in plain English and charts. Proof checks filter candidate rules, an LLM patcher mutates them, and a seam curve judges the evolution. There are two loops: rules against the test (do new seams per round slow, and where do they plateau?), and the test against the author's intent (do "not what I meant" moments per round fall?). The research is norms for agent networks (freedom and cooperation); the product is an evaluator that evolves with them. One page: [docs/pitch.md](docs/pitch.md); goal: [docs/goal.md](docs/goal.md); decisions: [ADR 0005](docs/decisions/0005-two-loops-and-workbench.md), [ADR 0007](docs/decisions/0007-norms-evaluator-and-inventive-seams.md).
 
 **Status: pre-results; nothing here is a finding.**
 
 ## Read first
 
+- [docs/goal.md](docs/goal.md): where we are and what we are aiming for
 - [RATIONALE.md](RATIONALE.md): why this project, prior art, design decisions, experiments, kill criteria
 - [docs/pitch.md](docs/pitch.md): the question on one page
 - [docs/plan.md](docs/plan.md): slices and their pass/fail checks

@@ -50,6 +50,16 @@ Proven (bounded, k stated): the rules have no conflicts, no deadlock, bounded sa
 
 Formal-methods people know counterexample-guided refinement (CEGAR, CEGIS) but do not run LLM agents. LLM-agent people run fixed specs. RvB (2601.19726) and Kumar et al. (2602.00755) show per-round curves for simpler loops. The seam count against an oracle the patcher never sees, and the second loop that tests the oracle against a person's intent, were not found (docs/prior-art/2026-11-10-v1-convergence.md).
 
+## For researchers: the norms
+
+Readable rules for AI agent networks, evolved under pressure.
+
+The aim is norms that let agents cooperate freely. Freedom means anyone can leave and keeps real options. Cooperation means shared needs are met without outsiders paying. Evolution maps the frontier between the two scores, and the author reads the winners in plain English. The central measure is the capability level, and price, at which agents find inventive seams: exploits the model checker did not predict (ADR 0007, claims IT1 and ML1).
+
+## For builders: the evaluator
+
+The evaluator is the more interesting product. It evolves with the norms. Agent exploits widen the formal model, the author's "that's not what I meant" moments refine the test, and a ladder of adversaries from cheap decision models to strong LLMs keeps the pressure honest. The timeline records how and why it changed. Used through chat (see docs/goal.md).
+
 ## Next
 
 See docs/plan.md. Later: the format experiment (ADR 0004), and Computational Liberation's institutions as a second domain (a moonshot).

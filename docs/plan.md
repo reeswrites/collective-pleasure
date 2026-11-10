@@ -13,6 +13,7 @@ Status: pre-results. Direction set 2026-11-10 (ADR 0003, ADR 0005, docs/pitch.md
 | V3 | Instrument calibration with one real LLM agent (cheap open model), same harness | a day | Pass: all four V2 checks hold with a real model; measured $ and minutes per round. No claims about convergence |
 | SI | Stand-in study (ADR 0006, proposed): can a cheap decision model (Jev) stand in for an LLM? Same fishery, same rules and seeds, Jev vs LLM arms, ~50 candidate rule sets. Needs a live key and spend limit. Backends, typed reports and the Say vs do panel are built and mocked-tested | a day or two once keyed | Pass: Spearman rho >= the preregistered threshold (0.7 draft, author to confirm) on rule-set ranking; then Jev is the screening tier for evolution. Fail: report the negative result and what breaks agreement. Predictions SI1 to SI3 finalized before the first paid run |
 | W | Workbench: Claude Code skill plus small `mar` CLI, self-contained HTML report per run (ADR 0005). Built-in-progress, see docs/results/workbench.md | in progress | Pass: the author can run a loop and read rules, stories and curves in plain English without reading code |
+| MVP | 5-minute demo (ADR 0007): wire the household world into chat and run it with scripted agents, report in plain English | in progress | Pass: the author sees a household run, its rules and a story in five minutes, with no API key |
 | V4 | First curve: five-agent swarm, ~10 rounds, 3 seeds, LLM patcher, outcome oracle (judge rubric optional). Run through the workbench. Preregister C1 and C2 before the first run. Record every "not what I meant" moment with a timestamp and the oracle change it caused | two to three days | Result either way: slope, plateau with uncertainty, rule count per round (loop a); "not what I meant" moments per round, one curve per oracle version (loop b). Bloat guard checked |
 | V5 | One-page write-up with the curve; fresh-agent review council | a day or two | Council finds no claim beyond the evidence; card-only reader can follow every rule |
 
@@ -24,6 +25,8 @@ Status: pre-results. Direction set 2026-11-10 (ADR 0003, ADR 0005, docs/pitch.md
 - Deferred: whose conversation is formalized first. The author's own is formalized by using the workbench; the agents' say vs do gap is a later target.
 - After V4: whether to add the frozen LLM-judge curve, human-vs-AI patching arms, or the crowding-out follow-up.
 - Before SI: the author creates an OpenRouter key, sets a spend limit, and puts it in `.env` (never in chat). For claude agents: an `ANTHROPIC_API_KEY` or `ant auth login`, plus a model choice. Also confirm the rho threshold.
+- Before the first real runs: the author creates API access; then place models on the seam ladder and measure cost (ADR 0007).
+- Open: should LLM agents also file typed reports (recommended: yes)? Keep one untouched final exam (recommended: yes)? Pushing the branch to GitHub needs the author's yes.
 
 ## Later
 
@@ -42,3 +45,4 @@ The earlier milestones (ADICO to LTS export cross-checked against philosophy-eng
 - 2026-11-10: ADR 0005 accepted. Two loops (rules vs test, test vs intent), the chat workbench, claim C2. Workbench added as built-in-progress; V4 runs through it.
 - 2026-11-10: Experiment log (experiments/log.jsonl), change log (experiments/changes.jsonl) and chat archive (docs/conversations/) added to the workbench; every run and every rule or oracle change is now recorded with the author's verbatim words.
 - 2026-11-10: ADR 0006 proposed (decision-model stand-in study). Agent backends (scripted, Jev, OpenRouter LLM, Claude), typed reports, Say vs do panel, dry-run pricing and a Message Batch sweep built, offline-tested only; no live call made.
+- 2026-11-10: ADR 0007 accepted. Research is norms (freedom and cooperation, household world), product is an evolving evaluator, central measure is inventive seams across a seam ladder and a model ladder. docs/goal.md added; claims IT1 and ML1 drafted. Household world and seam ladder in progress.

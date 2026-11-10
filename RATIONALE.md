@@ -1,6 +1,6 @@
 # Rationale
 
-**Working title:** Multi-agent rules: evolving alignment norms, and checking the test against intent
+**Working title:** Multi-agent rules: evolving norms for agent networks, and an evaluator that evolves with them
 **Status:** draft, revised 2026-11-10 after the prior-art check, an interview with the author (ADR 0003) and a conversation that set the two-loop framing (ADR 0005). Nothing here is a result yet. One-page version: docs/pitch.md.
 
 ---
@@ -48,6 +48,10 @@ Multi-agent rules use the same four steps and add what only appears with interac
 Under the convergence question (ADR 0003), one agent is only an instrument smoke test. Emergent norms and the backward half of the loop need interaction, so the first real experiment is a five-agent swarm.
 
 ## 2. Research question
+
+> Which norms let a network of AI agents cooperate freely (anyone can leave, shared needs are met, outsiders do not pay), and at what agent capability and price do agents start finding seams a formal model did not predict? The product is the evaluator that evolves with the norms (ADR 0007, docs/goal.md).
+
+The convergence form of the question, still the measured core:
 
 > When rules for LLM agents are written formally, gated by a solver, and repeatedly tightened from the seams agents find (runs that pass the gate but violate intent), does the number of new seams per round slow, and where does it plateau?
 
@@ -185,6 +189,8 @@ Slices and their pass/fail checks are in docs/plan.md (V1 to V5).
 |---|---|---|
 | C1 | Does refinement converge? | New seams per round decrease toward a plateau on at least 3 seeds, without the bloat guard tripping |
 | C2 | Does the test converge on intent (loop b)? | "Not what I meant" moments per round decrease toward a plateau, per oracle version; preregister how to tell this from author fatigue before V4 |
+| IT1 | Where do inventive seams start (ADR 0007)? | Zero below some agent capability, present above it; the threshold and price are the result |
+| ML1 | Do rules transfer up the model ladder? | Rules evolved against a cheaper model transfer one rung up but not two |
 | F1 | Does mechanism crowd out normative competence? | Hard-gated agents fail worse than sanctioned agents when the gate is removed or misses a case |
 | F2 | Does who patches matter? | AI-patched and human-patched specs reach different plateaus |
 | F3 | Is the de jure vs de facto distance informative? | It predicts collapse earlier than violation counts |
