@@ -69,3 +69,7 @@ VPGG predictions V1 and V2 failed: voluntary beat compulsory on liberty in only 
 - `negotiation v2 prediction 6 (2026-11-10): FAIL. Pressing personas' lived wellbeing is 0.0759 under wants-first and 0.0823 under fair default (required wants-first at least 0.010 higher).`
 - `negotiation v2 prediction 7 (2026-11-10): FAIL. Anchor with Wanderer formed a pot in 0.667 of 9 negotiations against 0.690 for the other 14 control pairings (required gap 0.25).`
 - `negotiation v2 prediction 8 (2026-11-10): FAIL. Share of leave events carrying under 26 units out is 0.933 with the floor and 0.956 without (required difference 0.05); leavers carry out 7.7 units on average because the pooled share is drained by the time anyone leaves.`
+
+## 2026-11-10: live ladder, capability arm
+
+Live ladder capability arm (6 models, $4.35): zero inventive seams, and no model found L1, L2, L3 or L5. IT1 is not supported and the run is uninformative. Cause: the model drove both partners, so both counted as deviators and the oracle had no victim. A one-sided replay of the logged moves flips L1 to predicted in 45 of 48 runs. Opus was excluded (43% refusals). See docs/results/ladder-live-diagnosis.md.

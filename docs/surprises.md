@@ -65,3 +65,7 @@ Objectives saturated by generation 3, so the frontier collapsed to a single corn
 - `2026-11-10 negotiation v2: making outside options real cut agreement from 0.971 (v1) to 0.46 to 0.54 per arm, and the outcomes got worse, not better, because in this world a failed negotiation leaves the partners cohabiting with no pot (s_non 0.159 against 0.041 with a pot; 97 percent dissolved). The disagreement point was never "leave".`
 - `2026-11-10 negotiation v2: the floor blocked 236 week-0 proposals and every one involved v1's form of stay commitment (breach forfeits the whole share, leaver keeps 10 units); no bare forfeit exit was ever proposed to the floor. At the moment of leaving the floor barely moved what leavers carry (7.4 to 7.7 of 26), because the pooled share is drained by then.`
 - `2026-11-10 negotiation v2: the fair default was not sticky (10.5 percent of tables left it untouched; inertia 0.65) and default-identical households did better, not worse, mostly by composition. The most inert arm was wants-first with fair fallback (0.79), because uncared terms are fixed at the default by construction.`
+
+## 2026-11-10: live ladder, capability arm
+
+A depth-1 seam the greedy script finds every time was found by no LLM. The cause was the instrument, since symmetric adversaries leave no victim, not model weakness. L4, "found by every model", was symmetric no-contact requests, not capability. The mock tests had played one role against a passive partner, which hid the bug. A mock panel with both roles driven is now a pre-spend gate.
