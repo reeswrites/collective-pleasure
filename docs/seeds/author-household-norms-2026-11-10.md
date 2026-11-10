@@ -37,3 +37,11 @@ Read back: an agent had added "taking the other's share of the pot is not use fo
 > i think you have to negotiate shared pots with multiple agents or creating rules for it
 
 So pot terms are not imposed by the seed. They are negotiated by everyone who shares the pot (possibly more than two members), as rule cards that are proof-checked before anyone lives under them.
+
+## What "the pot belongs to both" means (2026-11-10)
+
+After the faithfulness review found the pot was coded as two separate shares, Claude offered three readings: (1) one pot both can draw from, by whatever terms they negotiated, and with no specific terms either may use it for anything; (2) one pot for shared needs only unless negotiated otherwise; (3) separate shares that only count as pooled. The author answered, verbatim:
+
+> 1
+
+So the pot is a single shared resource. Limits on its use come only from negotiated terms. The "shared needs only" default and any imposed no-taking rule are removed. Note: options (1) to (3) were worded by Claude; the author's choice is the one-character answer above.
