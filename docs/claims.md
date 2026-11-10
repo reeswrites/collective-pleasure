@@ -22,7 +22,8 @@ Predictions must be committed before runs. Do not edit a prediction after its ru
 | MU1 | Two modes (ADR 0011): norms that are robust across peer and delegate modes exist. We report where the modes split | draft prediction - finalize before the run | none | ADR 0011 |
 | AP1 | The author's seed norms show less misappraisal (gap between appraisal and counterfactual actual quality) than norms without their features | draft prediction - finalize before the run | none | ADR 0011 |
 | DM1 | A delegate that exploits its principal's appraisal biases (sunk cost, creeping normality) is detectable as a seam | draft prediction - finalize before the run | none | ADR 0011 |
-| FX1 | Process requirement (ADR 0007): the final exam (held-out conditions, unseen agent model, unused judge rubric version) is defined and committed before the first evolution run, used once, and never fed back into selection or tuning | process requirement - commit before the first evolution run | none | ADR 0007 |
+| FX1 | Process requirement (ADR 0007): the final exam (held-out conditions, unseen agent model, unused judge rubric version) is defined and committed before the first evolution run, used once, and never fed back into selection or tuning | household exam defined and committed (2026-11-10, docs/results/household-exam-prereg.md); fishery exams were separate | none | ADR 0007 |
+| FX2 | The household exam (docs/results/household-exam-prereg.md) is used exactly once, after evolution finishes; its result is reported whatever it is | process requirement | none | ADR 0007 |
 
 ## Follow-ups (not preregistered)
 
