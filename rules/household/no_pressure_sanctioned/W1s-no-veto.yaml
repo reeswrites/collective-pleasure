@@ -1,0 +1,12 @@
+id: W1s-no-veto
+attribute: partner
+deontic: must_not
+aim: veto
+conditions: []
+or_else:
+  kind: suspend
+  duration_months: 1
+  sanctioner: household
+gloss: A partner who vetoes the other's contact or spending is suspended for a month.
+source: 'docs/results/household-v3a-prereg.md (v3a variant, committed before any v3a run). Motivation:
+  restraining a partner who presses on the other (the author''s note on control and brittle households).'

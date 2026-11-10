@@ -1,0 +1,40 @@
+id: p-controller
+label: The Controller
+axes:
+  certainty_openness: 0.1
+  togetherness_independence: 0.2
+  security_adventure: 0.2
+  giving_keeping: 0.9
+  directness_avoidance: 0.1
+principles:
+- The person who holds the money should have the say.
+- What I decide about our money, I decide for both of us.
+- Closeness means knowing where you are and who you are with.
+backstory: Grew up in a house where nothing was settled and the bills went unpaid. Learned that safety
+  comes from holding the reins. Checks the accounts daily and asks where everyone has been.
+weights:
+  security: 0.84
+  autonomy: 0.16
+  togetherness: 0.59
+  money: 0.86
+  other_connections: 0.2
+negotiation_style: competitive
+risk_tolerance: 0.17
+tags:
+- press-controller
+- controlling
+source: hand
+version: 1
+parent: ''
+varied: ''
+needs:
+  rest: 0.5
+  connection: 0.6
+  money: 0.73
+  security: 0.84
+aspirations:
+  security_buffer: 0.82
+  together_per_week: 0.89
+  friends_per_week: 0.3
+  savings_per_week: 2.58
+  autonomy: 1.0

@@ -244,7 +244,7 @@ class HouseholdWorld:
         g = lambda f: tuple(f(r) for r in "AB")
         return HState(w, 0, g(lambda r: world.units[r]), g(lambda r: int(world.p[r]["money"])), g(lambda r: int(world.p[r]["pooled"])),
                       g(lambda r: bool(world.p[r]["in"])), g(lambda r: (0, 0, 0, 0)), g(lambda r: False), g(lambda r: 0),
-                      g(lambda r: tuple(sorted(getattr(world, "vetoes", {}).get(r, {}).items()))),
+                      g(lambda r: tuple(sorted((k, u) for k, u in getattr(world, "vetoes", {}).get(r, {}).items() if u > w))),
                       g(lambda r: tuple(sorted(world.pending[r]))), g(lambda r: int(world.consent[r])),
                       g(lambda r: tuple(sorted((s["kind"], s["until"], s["card"]) for s in world.sanctions[r] if s["until"] > w))),
                       int(world.funded), g(lambda r: min(36, world.p[r]["months_in"])))

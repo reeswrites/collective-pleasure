@@ -1,0 +1,10 @@
+id: S6-no-veto
+attribute: partner
+deontic: must_not
+aim: veto
+conditions: []
+or_else: null
+gloss: 'No partner may veto the other''s contact or spending: a request is never a command.'
+source: 'docs/seeds/author-household-norms-2026-11-10.md, the author''s own words: "request is never about
+  contorl". The v2 encoding (S4, a permission to refuse) binds nothing; S6 reads the same sentence as
+  a prohibition on vetoes. ASSUMED reading, committed in docs/results/household-v3a-prereg.md.'

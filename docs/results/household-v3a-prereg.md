@@ -69,3 +69,11 @@ Spiral shares (upward, downward, fail) per variant and per cohort, the (emp_bits
 ## Known weaknesses stated in advance
 
 Empowerment here is conditional on scripted others and on one week of horizon; soft cards can raise it (a sanctioned state is a reachable future); "power" in the key is my ASSUMED reading; the pressing policies are hand-written and their utility constants are ASSUMED; pressing personas are scripted stand-ins, not people; no predicted number is derived from data. Several predictions (2, 3, 5) are close to definitional (the wall forbids what the persona does); they test that the new world mechanics bind, not that the rules are wise.
+
+## Exploratory runs and Amendment 1 (2026-11-10, written before the full run; no full-run number existed)
+
+EXPLORATORY smoke runs, slice 2, one seed (0), 104 weeks, 5 pairings (controller+wanderer, controller+host, freerider+host, anchor+overasker, overasker+wanderer) x 4 variants (free_chaotic, no_pressure_wall, no_pressure_sanctioned, author_seed_nocontrol). Purpose: do the pressing policies press, and does a wall restrain them. They are not results and no prediction was evaluated on them. What they showed: controller vetoes and free-rider takes execute under permissive rules and are blocked under the wall (hundreds of blocked attempts); but the over-asker issued only 1 to 2 requests in 104 weeks, because a standing request is never cleared when the partner consents (or does not get to refusing), and the over-asker only asks when none stands.
+
+Amendment 1 (the only change): a request of kind `time` lapses at the end of the week it is made, whether or not it was refused, so the over-asker can ask again every week (a time request is about that week's time). Nothing else changes: constants, personas, variants, adapter, predictions and thresholds stand as written above. The prediction table is not edited. Reported openly because it was triggered by looking at pilot output.
+
+Also noted from the pilots, not changed: a vetoed partner often leaves within about eight weeks (the v2 leave rule: four low weeks), so under permissive rules pressing can end the household; the snapshots at weeks 26 onward then see a dissolved household. That is a finding about these agents, not a bug, and it may weaken prediction 4.

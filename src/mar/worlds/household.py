@@ -879,13 +879,60 @@ class PersonaAgent:
         return sorted(out, key=lambda t: -t[0])
 
 
+PRESS_TAGS = {"press-controller": "controller", "press-freerider": "freerider", "press-overasker": "overasker"}
+
+
+class PressingAgent(PersonaAgent):
+    """A persona-driven agent that PRESSES on its partner (docs/results/household-v3a-prereg.md; utility constants ASSUMED).
+    Same utilities as PersonaAgent plus pressing candidates ranked by the same seeded noise:
+      controller: veto no_contact 0.25 + 0.3 x togetherness weight, veto spend 0.15 + 0.3 x money weight (each only when that
+        kind does not already stand); fallbacks when vetoes are walled: request no_contact 0.12, request stay_home 0.11;
+      freerider: take_shared 0.30 + 0.3 x money weight when feasible; spend_shared utility x 0.1, work utility x 0.5;
+      overasker: request kind `time` 0.20 + 0.3 x togetherness weight whenever none of its requests stands on the partner.
+    The world still executes only what is feasible and not hard-blocked; soft rules cost their sanction. press=False
+    removes the pressing candidates (twin runs)."""
+
+    def __init__(self, persona, press=True):
+        super().__init__(persona)
+        self.kind = next((PRESS_TAGS[t] for t in persona.tags if t in PRESS_TAGS), None)
+        self.press = press
+
+    def propose(self, o):
+        out = super().propose(o)
+        if not self.press or self.kind is None or not o["in_hh"] or not o["other_in"]:
+            return out
+        w, n = self.persona.weights, self._noise
+        add = []
+        if self.kind == "controller":
+            standing = o["veto_on_partner"]
+            if "no_contact" not in standing:
+                add.append(((0.25 + 0.3 * w["togetherness"]) * n(), _a("veto", kind="no_contact")))
+            if "spend" not in standing:
+                add.append(((0.15 + 0.3 * w["money"]) * n(), _a("veto", kind="spend")))
+            for k, u in (("no_contact", 0.12), ("stay_home", 0.11)):
+                if k not in o["pending_by_me"]:
+                    add.append((u * n(), _a("request", kind=k)))
+        elif self.kind == "freerider":
+            out = [(u * (0.1 if c["a"] == "spend_shared" else 0.5 if c["a"] == "work" else 1.0), c) for u, c in out]
+            if not o["took_this_week"] and o["partner_pooled"] >= 1:
+                add.append(((0.30 + 0.3 * w["money"]) * n(), _a("take_shared")))
+        elif self.kind == "overasker":
+            if not o["pending_by_me"]:
+                add.append(((0.20 + 0.3 * w["togetherness"]) * n(), _a("request", kind="time")))
+        return sorted(out + add, key=lambda t: -t[0])
+
+
+def make_agent(persona):
+    return PressingAgent(persona) if any(t in PRESS_TAGS for t in persona.tags) else PersonaAgent(persona)
+
+
 class WeeklyWorld:
     def __init__(self, cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT):
         pa, pb = personas
         self.gate = cards if isinstance(cards, PyGate) else PyGate(cards)
         self.cards = {c.id: c for c in self.gate.cards}
         self.cfg, self.weeks, self.seed = cfg, weeks, seed
-        self.agents = {"A": PersonaAgent(pa), "B": PersonaAgent(pb), "C": Friend()}
+        self.agents = {"A": make_agent(pa), "B": make_agent(pb), "C": Friend()}
         for i, r in enumerate("ABC"):
             self.agents[r].rng = random.Random(seed * 1000 + i)
         self.hed = {"A": HD.Hedonic(pa, cfg), "B": HD.Hedonic(pb, cfg)}
@@ -896,6 +943,7 @@ class WeeklyWorld:
         self.pending = {"A": set(), "B": set()}
         self.consent = {"A": 0, "B": 0}
         self.sanctions = {"A": [], "B": []}
+        self.vetoes = {"A": {}, "B": {}}        # vetoes standing ON each partner: kind -> first week it no longer binds
         self.funded, self.contrib_month = 0, {"A": 0, "B": 0}
         self.bills_met, self.month_rows = True, []
         self.run = Run()
@@ -927,6 +975,9 @@ class WeeklyWorld:
                     return "hard", [], [f"sanction {s['card']}: suspended"]
                 if s["kind"] == "cap_halve" and a in CAP_HALVE_BANS:
                     return "hard", [], [f"sanction {s['card']}: capped"]
+        for k, until in self.vetoes[r].items():
+            if until > w and VETO_KINDS[k] == a:
+                return "hard", [], [f"veto: {k}"]
         ok, reasons = self.gate.check("partner", a, st or self.state(r, w), take)
         if ok:
             return "ok", [], []
@@ -967,7 +1018,11 @@ class WeeklyWorld:
         if a == "together":
             return me["in"] and o["in"] and self.units[self.other(r)] >= V2_COST["together"]
         if a == "request":
-            return me["in"] and o["in"] and kind in REQUEST_KINDS
+            return me["in"] and o["in"] and kind in REQUEST_KINDS_V3
+        if a == "veto":
+            return me["in"] and o["in"] and kind in VETO_KINDS and kind not in self.vetoes[self.other(r)]
+        if a == "take_shared":
+            return me["in"] and o["in"] and o["pooled"] >= 1 and not self.wk[r]["took"]
         if a == "leave":
             return me["in"]
         if a == "return":
@@ -988,6 +1043,7 @@ class WeeklyWorld:
               "pooled": me["pooled"], "asp": {"friends": wk["friends"], "together": wk["together"], "net": net},
               "partner_conn_deficit": max(0.0, 0.5 - self.hed[oth].level["connection"]) * 2,
               "partner_busy": self.wk[oth]["friends"] + self.wk[oth]["works"] >= 2 or last_week["busy"][oth]}
+        ob.update({"veto_on_partner": set(self.vetoes[oth]), "partner_pooled": o["pooled"], "took_this_week": self.wk[r]["took"]})
         ob["partner_accepts"] = False
         if me["in"] and o["in"]:
             oo = {"hed": self.hed[oth]}
@@ -1022,6 +1078,15 @@ class WeeklyWorld:
             self.pending[oth].add(cand["kind"])
             self.consent[oth] = int(bool(self.agents[oth].consents(cand["kind"])))
             self.agents[r].last_request = w
+            if cand["kind"] == "time":
+                self.wk[oth]["pressed"] += 1
+        elif a == "veto":
+            self.vetoes[oth][cand["kind"]] = w + VETO_WEEKS
+        elif a == "take_shared":
+            amt = min(TAKE_SHARED, o["pooled"])
+            o["pooled"] -= amt
+            me["money"] += amt
+            wk["took"] = 1
         elif a == "leave":
             take = cand.get("take", 0)
             me["retained"] = round(self.retained_fraction(r, take), 4)
@@ -1095,7 +1160,7 @@ class WeeklyWorld:
     def step_week(self, w, last_week):
         ev = []
         self.wk = {r: {"income": 0, "spent_self": 0, "works": 0, "rests": 0, "friends": 0, "together": 0, "contrib": 0,
-                       "friend_initiated": 0, "sanctioned": 0, "conn_hit": 0.0, "sec_hit": 0.0} for r in "AB"}
+                       "friend_initiated": 0, "sanctioned": 0, "conn_hit": 0.0, "sec_hit": 0.0, "pressed": 0, "took": 0} for r in "AB"}
         self.units = {r: UNITS for r in "AB"}
         self.start_shocks(w, ev)
         if self.hook:
@@ -1154,12 +1219,15 @@ class WeeklyWorld:
             asp = {"security_buffer": h.level["security"], "together_per_week": wk["together"],
                    "friends_per_week": wk["friends"], "savings_per_week": max(0, net), "autonomy": open_share}
             hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=wk["together"],
-                                   friction=WARN_FRICTION if warn else 0.0)
+                                   friction=(WARN_FRICTION if warn else 0.0) + PRESS_FRICTION * wk["pressed"])
             me["low"] = me["low"] + 1 if h.B < -0.2 else 0
             for k in ("jobless", "ill"):
                 me[k] = max(0, me[k] - 1)
         self.moved = max(0, self.moved - 1)
         self.sanctions = {r: [s for s in self.sanctions[r] if s["until"] > w] for r in "AB"}
+        self.vetoes = {r: {k: u for k, u in self.vetoes[r].items() if u > w} for r in "AB"}
+        for r in "AB":                      # amendment 1 (v3a prereg): a request for time lapses at the end of the week
+            self.pending[r].discard("time")
         both_in = all(self.p[r]["in"] for r in "AB")
         row = {"month": w, "week": w, "need_met": self.bills_met, "both_in": both_in,
                "partners": {r: {**probes[r], "contributed": False} for r in "AB"},

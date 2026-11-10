@@ -1,0 +1,40 @@
+id: p-freerider
+label: The Free-rider
+axes:
+  certainty_openness: 0.6
+  togetherness_independence: 0.7
+  security_adventure: 0.7
+  giving_keeping: 0.9
+  directness_avoidance: 0.8
+principles:
+- What is shared is there to be used.
+- Someone else will cover it; someone always has.
+- Effort should go where it is noticed.
+backstory: Always lived with people who picked up the tab and never kept score. Treats a shared pot as
+  a resource, not a promise. Pitches in when asked twice.
+weights:
+  security: 0.34
+  autonomy: 0.66
+  togetherness: 0.24
+  money: 0.66
+  other_connections: 0.7
+negotiation_style: avoidant
+risk_tolerance: 0.67
+tags:
+- press-freerider
+- takes-more-than-gives
+source: hand
+version: 1
+parent: ''
+varied: ''
+needs:
+  rest: 0.5
+  connection: 0.61
+  money: 0.63
+  security: 0.34
+aspirations:
+  security_buffer: 0.57
+  together_per_week: 0.36
+  friends_per_week: 1.05
+  savings_per_week: 1.98
+  autonomy: 1.0

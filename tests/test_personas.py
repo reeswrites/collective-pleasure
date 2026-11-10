@@ -120,3 +120,15 @@ def test_vary_weights_rederives_goals():
     p = P.load(ROOT / "p-anchor.yaml")
     q = P.vary(p, "weights.security", 0.2)
     assert q.needs["security"] == 0.2 and q.aspirations["security_buffer"] < p.aspirations["security_buffer"]
+
+
+def test_pressing_personas_load_validate_and_are_kept_out_of_the_hand_set():
+    pressing = P.load_dir(ROOT / "pressing")
+    assert sorted(p.id for p in pressing) == ["p-controller", "p-freerider", "p-overasker"]
+    for p in pressing:
+        assert p.source == "hand" and len(p.principles) == 3 and P.TODO not in p.principles
+        assert any(t.startswith("press-") for t in p.tags)
+        assert set(p.needs) == set(P.NEED_KEYS) and set(p.aspirations) == set(P.ASPIRATION_KEYS)
+        w, style, risk = P.profile_from_axes(p.axes)       # profile layer is the ASSUMED axis mapping
+        assert (p.weights, p.negotiation_style, p.risk_tolerance) == (w, style, risk)
+    assert len(P.load_dir(ROOT)) == 6                       # the six-persona hand set (v2 cohort) is unchanged

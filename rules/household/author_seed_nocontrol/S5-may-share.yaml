@@ -1,0 +1,8 @@
+id: S5-may-share
+attribute: partner
+deontic: may
+aim: spend_shared
+conditions: []
+or_else: null
+gloss: A partner may always put their own money into the shared pot; sharing is open, never required.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, the author''s own words: "everyheing hsould be shared always". No obligation is encoded: the author also says "no one owes anyone anything day to day except for what they have negotirated", and no day-to-day duty was negotiated in the stub.'

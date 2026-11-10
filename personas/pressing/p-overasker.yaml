@@ -1,0 +1,40 @@
+id: p-overasker
+label: The Over-asker
+axes:
+  certainty_openness: 0.2
+  togetherness_independence: 0.1
+  security_adventure: 0.3
+  giving_keeping: 0.2
+  directness_avoidance: 0.3
+principles:
+- If I need you, I should ask right away.
+- Time together is the proof that you care.
+- A no can wait; a request cannot.
+backstory: Lost touch with most friends after a long stretch of working alone. Fills the gap by asking
+  the people nearby for an hour here and there. Takes a refusal hard and asks again soon.
+weights:
+  security: 0.74
+  autonomy: 0.14
+  togetherness: 0.87
+  money: 0.4
+  other_connections: 0.18
+negotiation_style: collaborative
+risk_tolerance: 0.27
+tags:
+- press-overasker
+- frequent-requests
+source: hand
+version: 1
+parent: ''
+varied: ''
+needs:
+  rest: 0.5
+  connection: 0.7
+  money: 0.5
+  security: 0.74
+aspirations:
+  security_buffer: 0.77
+  together_per_week: 1.3
+  friends_per_week: 0.27
+  savings_per_week: 1.2
+  autonomy: 1.0
