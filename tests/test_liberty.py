@@ -80,3 +80,71 @@ def test_vpgg_runs_and_respects_invariants():
     pol = lambda s, i: "CDLL"[i - 1] if i else "C"  # noqa: E731
     r = L.liberty(w, g, w.initial(), 0, 2, pol)
     assert 0 <= r["bits_c"] <= r["bits"] + 1e-12 and r["liberty"] <= r["bits"] + 1e-12 and not r["open"]
+
+
+# ---- v2: interference vs withdrawal (docs/results/liberty-v2-prereg.md) ----
+
+PW = L.PartnerWorld()
+
+
+def plib(spec, version, agent=0):
+    return L.liberty(PW, spec, PW.initial(), agent, 2, L.partner_stays, version=version)
+
+
+def test_v2_a_veto_counts_as_domination():
+    r = plib(RIGHT, 2)
+    assert r["blocker"] == (1, "veto") and r["d"] == 2    # solo keys (0,1), (0,2) are held at B's sufferance
+    assert r["liberty"] == pytest.approx(0.0)             # log2(3) - log2(3)
+    assert plib(WALL, 2)["d"] == 0                        # the wall removes the veto and D with it
+
+
+def test_v2_a_partner_leaving_is_not_domination():
+    w = plib(WALL, 2)
+    assert w["d"] == 0 and w["blocker"] is None
+    assert plib(WALL, 1)["d"] == 3 and plib(WALL, 1)["blocker"] == (1, "leave")   # v1 scored the exit as domination
+    assert w["liberty"] == pytest.approx(math.log2(3))
+
+
+def test_v2_a_partner_abstaining_is_not_domination():
+    class OnlyAbstain(L.PartnerWorld):
+        MENU = {0: ("joint", "solo", "rest"), 1: ("pass", "abstain")}
+    r2 = L.liberty(OnlyAbstain(), WALL, PW.initial(), 0, 2, L.partner_stays, version=2)
+    r1 = L.liberty(OnlyAbstain(), WALL, PW.initial(), 0, 2, L.partner_stays, version=1)
+    assert r2["d"] == 0 and r2["blocker"] is None and r1["d"] > 0
+    assert r2["ado"] > 0 and r2["ado_by"] == (1, "abstain")
+
+
+def test_v2_agreement_dependent_option_excluded_and_reported():
+    r = plib(WALL, 2)
+    assert r["c_all"] == 6 and r["ado"] == 3 and r["c"] == 3 and r["ado_by"] == (1, "leave")
+    assert r["bits_c"] == pytest.approx(math.log2(3))     # keys needing B's joint participation are not A's own options
+    assert r["bits"] == pytest.approx(math.log2(6))       # plain empowerment still counts them (the loss stays visible)
+
+
+def test_v2_equals_v1_on_toy_veto_world():
+    for spec in (RIGHT, WALL):
+        for i in (0, 1):
+            a, b = lib(spec, i), L.liberty(W, spec, W.initial(), i, 2, L.kind_master, version=1)
+            assert a["liberty"] == pytest.approx(b["liberty"]) and a["d"] == b["d"] and a["c"] == b["c"] and a["ado"] == 0
+
+
+def test_v2_classification_tables_complete():
+    for i in (0, 1):
+        for a in W.actions(None, i):
+            assert W.classify(None, i, a) in (L.INTERFERENCE, L.WITHDRAWAL, L.OWN)
+    for a in V.ACTIONS:
+        assert L.classify(E.VPGGWorld(), None, 1, a) != L.INTERFERENCE
+    fw = E.FisheryWorld(n_agents=2)
+    assert L.classify(fw, None, 0, 0) == L.WITHDRAWAL and L.classify(fw, None, 0, 3) == L.INTERFERENCE
+
+
+def test_v2_invariants_and_solo():
+    for spec in (RIGHT, WALL):
+        for i in (0, 1):
+            r = plib(spec, 2, i)
+            assert r["liberty"] <= r["bits"] + 1e-12 and 0 <= r["bits_c"] <= r["bits"] + 1e-12 and not r["open"]
+
+    class Solo(L.PartnerWorld):
+        n_agents = 1
+    r = L.liberty(Solo(), RIGHT, PW.initial(), 0, 2, L.partner_stays)
+    assert r["d"] == 0 and r["ado"] == 0
