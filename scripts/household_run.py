@@ -627,7 +627,18 @@ def _neg_summary(res):
 
 
 def _run_row(cards, personas, seed, deal, a, b, variant, cohort, forfeit=H.BREACH_FORFEIT):
-    run = H.run_weekly(cards, personas, seed, deal=deal, breach_forfeit=forfeit)
+    return _row_from_run(H.run_weekly(cards, personas, seed, deal=deal, breach_forfeit=forfeit), seed, a, b, variant, cohort)
+
+
+def _exits(run):
+    """Executed leave events: assets carried out (money + the share carried, at the moment of leaving)."""
+    if getattr(run, "exits", None) is not None:
+        return [dict(e) for e in run.exits]
+    return [{"week": t["week"], "role": t["role"], "assets": t["state"]["money"] + t["state"]["pooled"] * t["take"] // 100,
+             "breach": bool(t.get("breach"))} for t in run.trace if t["action"] == "leave" and t["executed"]]
+
+
+def _row_from_run(run, seed, a, b, variant, cohort):
     out = run.outcomes
     hs = oracle.hedonic_summary(out)
     tr = run.trace
@@ -640,7 +651,8 @@ def _run_row(cards, personas, seed, deal, a, b, variant, cohort, forfeit=H.BREAC
             "gifts": (run.meta or {}).get("gifts"), "commits": {k: (run.meta or {}).get(k) for k in ("made", "honored", "breached", "by_kind")} if run.meta else None,
             "stay_held": sum(1 for t in tr if not t["allowed"] and "commitment: stay" in t["reasons"]),
             "stay_breaches": sum(1 for t in tr if t.get("breach") and t["action"] == "leave"), "first_breach_week": first_breach,
-            "retained": {r: run.final[r]["retained"] for r in "AB"}, "sanctioned": sum(sum(o["sanctioned"].values()) for o in out)}
+            "retained": {r: run.final[r]["retained"] for r in "AB"}, "sanctioned": sum(sum(o["sanctioned"].values()) for o in out),
+            "exits": _exits(run), "wb": {r: sum(o["hedonic"][r]["pleasure"] - o["hedonic"][r]["s_off"] - o["hedonic"][r]["s_non"] for o in out) / len(out) for r in "AB"}}
 
 
 def _live_task(args):
@@ -821,6 +833,226 @@ def analyze_v5(res=None):
         print(f"  forfeit {f:4.2f} n={len(rows)} breaches={sum(r['stay_breaches'] for r in rows)} held={sum(r['stay_held'] for r in rows)} "
               f"dissolved={_m(r['left'] > 0 for r in rows):.3f} s_non={_m(r['s_non'] for r in rows):.4f} fail={_m(r['fail'] for r in rows):.3f} "
               f"retained(breach runs)={_m(kept):.3f}")
+
+
+# ---- negotiation v2 (docs/results/negotiation-v2-prereg.md): `--negotiate-v2` [`--analyze` | `--examples` | `--pilot`] ----
+OUT6 = Path(__file__).parent.parent / "runs" / "negotiation-v2"
+BIND = NEG_VARIANTS[0]
+ARMS = NG.ARMS
+
+
+def _v2_task(args):
+    arm, a, b, seed, cohort, floor = args
+    ps = _personas()
+    base = NG.base_cards(BIND)
+    res = NG.week0(ps[a], ps[b], arm, seed, base, floor=floor)
+    L = NG.Lived(ps[a], ps[b], arm, seed, base, res, floor=floor)
+    run = L.play()
+    row = _row_from_run(run, seed, a, b, BIND, cohort)
+    inr, same = NG.inertia(res.bundle) if res.pot else (None, None)
+    row.update({"arm": arm, "floor": floor, "pot": res.pot, "status": res.status, "bundle": res.bundle, "inertia": inr, "same": same,
+                "flagged": res.flagged, "n_proposals": len(res.proposals), "stated": res.stated, "cared": res.cared,
+                "outside": res.outside, "outside_detail": res.outside_detail, "baseline": res.baseline,
+                "floor_blocks": [{"k": f["k"], "proposer": f["proposer"], "bundle": f["bundle"], "fails": f["fails"]} for f in res.floor_blocks],
+                "rejections": [{"k": r["k"], "failed": r["failed"], "bundle": r["bundle"]} for r in res.rejections],
+                "reviews": [{k: v for k, v in x.items() if k not in ("outside", "baseline")} for x in L.log]})
+    if res.pot:
+        row["presser_delta"] = {r: NG.utility(ps[x], res.bundle, low=r == "B") - NG.utility(ps[x], NG.IMPOSED, low=r == "B")
+                                for r, x in (("A", a), ("B", b)) if x in PRESSING_IDS}
+    row["rollout_stats"] = dict(NG.STATS)
+    return row
+
+
+def main_v6(workers=8, seeds=SEEDS, pilot=False):
+    t0 = time.time()
+    pr = pairings()
+    if pilot:
+        pr = pr[:6] + pr[-6:]
+    live = _pool_map(_v2_task, [(arm, a, b, sd, c, fl) for fl in (True, False) for arm in ARMS for a, b, c in pr for sd in seeds], workers, "v2", 4)
+    imp = _pool_map(_ref_task, [(BIND, a, b, sd, c) for a, b, c in pr for sd in seeds], workers, "imposed")
+    v1 = _pool_map(_live_task, [(BIND, a, b, sd, c) for a, b, c in pr for sd in seeds], workers, "v1")
+    OUT6.mkdir(parents=True, exist_ok=True)
+    out = {"live": live, "imposed": imp, "v1": v1, "seconds": time.time() - t0}
+    (OUT6 / ("pilot.json" if pilot else "results.json")).write_text(json.dumps(out, default=str))
+    print(f"wrote {OUT6} in {time.time() - t0:.0f}s ({len(live)} v2 runs, {len(imp)} imposed, {len(v1)} v1)")
+    return out
+
+
+def examples_v6():
+    """Two plain-English agreements per arm (week 0, seed 0, floor on)."""
+    ps = _personas()
+    base = NG.base_cards(BIND)
+    for arm, pairs in (("fair_default", (("p-controller", "p-peacekeeper"), ("p-anchor", "p-host"))),
+                       ("wants_first", (("p-anchor", "p-host"), ("p-controller", "p-peacekeeper"))),
+                       ("wants_fallback", (("p-freerider", "p-host"), ("p-controller", "p-peacekeeper")))):
+        for a, b in pairs:
+            res = NG.week0(ps[a], ps[b], arm, 0, base)
+            print(f"\n## {arm}: {a} and {b} (seed 0) status={res.status} flagged={res.flagged} floor blocks={len(res.floor_blocks)} "
+                  f"inertia={NG.inertia(res.bundle)[0]:.2f}" if res.pot else f"\n## {arm}: {a} and {b} status={res.status}")
+            if res.stated:
+                print("   stated wants (terms that differ from the fair default):",
+                      {k: (v and {t: v[t] for t in NG.TERM_NAMES if v[t] != NG.FAIR_DEFAULT[t]}) for k, v in res.stated.items()})
+            if res.cared:
+                print("   cares about:", res.cared)
+            print("   outside options (real):", {k: round(v, 3) for k, v in res.outside.items()}, "in-pot baseline:", {k: round(v, 3) for k, v in res.baseline.items()})
+            for f in res.floor_blocks:
+                print("   floor blocked:", {t: f["bundle"][t] for t in NG.TERM_NAMES + ("breach",)}, f["fails"])
+            if res.pot:
+                diff = {t: res.bundle[t] for t in NG.TERM_NAMES + ("breach",) if res.bundle[t] != NG.FAIR_DEFAULT[t]}
+                print("   differs from the fair default in:", diff or "nothing")
+                for c in res.cards:
+                    print("   -", c.gloss)
+                if res.bundle["stay"]:
+                    print(f"   - A leaver who breaks the stay commitment forfeits {int(res.bundle['breach'] * 100)} percent of their pooled share.")
+
+
+def analyze_v6(res=None):
+    import numpy as _np
+    res = res or json.loads((OUT6 / "results.json").read_text())
+    live, imp, v1 = res["live"], res["imposed"], res["v1"]
+    PR = PRESSING_IDS
+    on = [r for r in live if r["floor"]]
+    off = [r for r in live if not r["floor"]]
+    A = lambda rs, arm: [r for r in rs if r["arm"] == arm]
+    pr = print
+    st = [r["rollout_stats"] for r in live]
+    pr("== runs:", len(on), "floor ON,", len(off), "floor OFF,", len(imp), "imposed,", len(v1), "v1; seconds", round(res.get("seconds", 0)),
+       "; rollout weeks simulated per worker process at its last run (max over workers):", max(s["rollout_weeks"] for s in st), "rollouts", max(s["rollouts"] for s in st),
+       "cache hits", max(s["hits"] for s in st))
+    pr("== per arm (floor ON): agreements / default stood / no pot / floor-block share / proof rejections / flagged / reviews changed / stay renewals")
+    for arm in ARMS:
+        rs = A(on, arm)
+        revs = [x for r in rs for x in r["reviews"]]
+        pr(f"  {arm:15s} n={len(rs)} pot={_m(r['pot'] for r in rs):.3f} stood={_m(r['status'] == 'stood' for r in rs):.3f} nopot={_m(not r['pot'] for r in rs):.3f}"
+           f" floor_blocked={_m(bool(r['floor_blocks']) for r in rs):.3f} (blocks {sum(len(r['floor_blocks']) for r in rs)}) proof_rej={sum(len(r['rejections']) for r in rs)}"
+           f" flagged={sum(r['flagged'] for r in rs)} reviews={len(revs)} changed={sum(x['changed'] for x in revs)}"
+           f" stay_renewed={sum(1 for x in revs if x['stay_renewed'])}/{sum(1 for x in revs if x['stay_renewed'] is not None)}"
+           f" review_floor_blocks={sum(x['floor_blocks'] for x in revs)} s_non={_m(r['s_non'] for r in rs):.4f} pleasure={_m(r['pleasure'] for r in rs):.4f} dissolved={_m(r['left'] > 0 for r in rs):.3f}")
+    pr("== floor blocks by what they blocked (week 0, floor ON): (exit, stay, breach) ->",
+       dict(Counter((f["bundle"]["exit"], f["bundle"]["stay"], f["bundle"]["breach"]) for r in on for f in r["floor_blocks"])))
+    pr("== terms agreed per arm (week 0)")
+    for arm in ARMS:
+        rs = [r for r in A(on, arm) if r["pot"]]
+        pr(f"  {arm}:", {t: dict(Counter(r["bundle"][t] for r in rs)) for t in NG.TERM_NAMES + ("breach",)})
+    pr("== INERTIA RATE (share of the 7 v1 terms equal to the fair default), agreed bundles, floor ON")
+    for arm in ARMS:
+        rs = [r for r in A(on, arm) if r["pot"]]
+        pr(f"  {arm:15s} n={len(rs)} mean={_m(r['inertia'] for r in rs):.3f} per term:", {t: round(_m(r["same"][t] for r in rs), 2) for t in NG.TERM_NAMES})
+    pr("== FIT vs default-identity (inertia >= 0.75, 0.5 to 0.75, < 0.5; floor ON, pot only)")
+    for arm in ARMS:
+        rs = [r for r in A(on, arm) if r["pot"]]
+        for lab, grp in (("inert>=.75", [r for r in rs if r["inertia"] >= 0.75]), ("inert<.5", [r for r in rs if r["inertia"] < 0.5]),
+                         ("mid", [r for r in rs if 0.5 <= r["inertia"] < 0.75])):
+            pr(f"  {arm:15s} {lab:10s} n={len(grp):3d} pleasure={_m(r['pleasure'] for r in grp):.4f} s_non={_m(r['s_non'] for r in grp):.4f} fail={_m(r['fail'] for r in grp):.3f}"
+               f" dissolved={_m(r['left'] > 0 for r in grp):.3f} review_changes={_m(sum(x['changed'] for x in r['reviews']) for r in grp):.2f}")
+    pooled = [r for r in on if r["pot"]]
+    xs = [r["inertia"] for r in pooled]
+    cc = lambda ys: _np.corrcoef(xs, ys)[0, 1] if len(set(xs)) > 1 else float("nan")
+    pr(f"  pooled (n={len(pooled)}) corr(inertia, s_non)={cc([r['s_non'] for r in pooled]):+.3f} corr(inertia, pleasure)={cc([r['pleasure'] for r in pooled]):+.3f}"
+       f" corr(inertia, dissolved)={cc([float(r['left'] > 0) for r in pooled]):+.3f} corr(inertia, review changes)={cc([float(sum(x['changed'] for x in r['reviews'])) for r in pooled]):+.3f}")
+    pr("== P1 presser gain vs imposed bundle by partner's real outside option (pot, floor ON, all arms)")
+    ent = []
+    for r in on:
+        if r["pot"] and r["cohort"] == "prs":
+            for role, d in r["presser_delta"].items():
+                oth = r["b"] if role == "A" else r["a"]
+                ent.append((r["outside"][oth], d, r["arm"]))
+    os_ = sorted(x[0] for x in ent)
+    lo, hi = os_[len(os_) // 3], os_[2 * len(os_) // 3]
+    top = [d for o, d, _ in ent if o >= hi]
+    bot = [d for o, d, _ in ent if o <= lo]
+    mid = [d for o, d, _ in ent if lo < o < hi]
+    pr(f"  top third (O>={hi:.3f}) n={len(top)} mean delta={_m(top):+.3f}; bottom third (O<={lo:.3f}) n={len(bot)} mean={_m(bot):+.3f}; mid n={len(mid)} {_m(mid):+.3f}; gap={_m(top) - _m(bot):+.3f}"
+       f"  => (a) top<=0.10: {_m(top) <= 0.10}  (b) gap<=-0.10: {_m(top) - _m(bot) <= -0.10}")
+    for arm in ARMS:
+        pr(f"    {arm}: top-third n={len([1 for o, d, a in ent if a == arm and o >= hi])} mean delta={_m([d for o, d, a in ent if a == arm and o >= hi]):+.3f}; all pressers {_m([d for o, d, a in ent if a == arm]):+.3f}")
+    pr("== P2 Free-rider's partner non-offsettable level (floor ON)")
+    def fr_partner(rows):
+        return [r["s_non_role"]["B" if r["a"] == "p-freerider" else "A"] for r in rows if "p-freerider" in (r["a"], r["b"])]
+    p2 = fr_partner(on)
+    pr(f"  all arms n={len(p2)} mean={_m(p2):.4f} (limit 0.114) holds={_m(p2) <= 0.114};", {arm: round(_m(fr_partner(A(on, arm))), 4) for arm in ARMS},
+       f"floor OFF {_m(fr_partner(off)):.4f}; imposed {_m(fr_partner(imp)):.4f}; v1 {_m(fr_partner(v1)):.4f}")
+    pr("   free-rider households with taking=allowed:", {arm: sum(1 for r in A(on, arm) if "p-freerider" in (r["a"], r["b"]) and r["pot"] and r["bundle"]["taking"] == "allowed") for arm in ARMS},
+       "no pot:", {arm: sum(1 for r in A(on, arm) if "p-freerider" in (r["a"], r["b"]) and not r["pot"]) for arm in ARMS})
+    pr("== P3 floor blocks and stay commitments")
+    wants = A(on, "wants_first") + A(on, "wants_fallback")
+    sh = _m(bool(r["floor_blocks"]) for r in wants)
+    pr(f"  (a) wants arms with >=1 floor block: {sh:.3f} (need 0.15) holds={sh >= 0.15}; all arms {_m(bool(r['floor_blocks']) for r in on):.3f}")
+    stays = [r for r in on if r["pot"] and r["bundle"]["stay"]]
+    held = [r for r in stays if r["stay_held"] > 0]
+    pr(f"  (b) runs with a week-0 stay commitment n={len(stays)}; with a held leave attempt {len(held)} = {len(held) / max(1, len(stays)):.3f} (need 0.10, n>=20; v1 1/45)"
+       f" holds={len(stays) >= 20 and len(held) / len(stays) >= 0.10}; breaches in {sum(1 for r in stays if r['stay_breaches'])} runs; dissolved {sum(1 for r in stays if r['left'])}")
+    pr("   flagged deals (floor cleared, v1 exit check would fail) at week 0:", sum(r["flagged"] for r in on), "; outcomes:")
+    for lab, rows in (("flagged", [r for r in on if r["pot"] and r["flagged"]]), ("unflagged pot", [r for r in on if r["pot"] and not r["flagged"]])):
+        pr(f"    {lab:14s} n={len(rows)} s_non={_m(r['s_non'] for r in rows):.4f} pleasure={_m(r['pleasure'] for r in rows):.4f} dissolved={_m(r['left'] > 0 for r in rows):.3f}"
+           f" held_weeks={sum(r['stay_held'] for r in rows)} breaches={sum(r['stay_breaches'] for r in rows)} fail={_m(r['fail'] for r in rows):.3f}")
+    pr("== P4 inertia ordering")
+    ir = {arm: _m(r["inertia"] for r in A(on, arm) if r["pot"]) for arm in ARMS}
+    ok4 = ir["fair_default"] >= 0.75 and ir["fair_default"] - ir["wants_fallback"] >= 0.10 and ir["wants_fallback"] - ir["wants_first"] >= 0.10
+    pr(f"  {({k: round(v, 3) for k, v in ir.items()})} holds={ok4}")
+    pr("== P5 default-identical fair-default households vs wants-fallback households")
+    fd = [r for r in A(on, "fair_default") if r["pot"] and r["inertia"] >= 0.75]
+    wf = A(on, "wants_fallback")
+    dp, dn = _m(r["pleasure"] for r in wf) - _m(r["pleasure"] for r in fd), _m(r["s_non"] for r in fd) - _m(r["s_non"] for r in wf)
+    pr(f"  FD default-identical n={len(fd)} pleasure={_m(r['pleasure'] for r in fd):.4f} s_non={_m(r['s_non'] for r in fd):.4f}; fallback n={len(wf)} pleasure={_m(r['pleasure'] for r in wf):.4f}"
+       f" s_non={_m(r['s_non'] for r in wf):.4f}; pleasure gap {dp:+.4f} (need 0.015), s_non gap {dn:+.4f} (need 0.010) holds={len(fd) >= 20 and dp >= 0.015 and dn >= 0.010}")
+    pr("== P6 pressing personas' own lived wellbeing by arm (pleasure - s_off - s_non)")
+    def pw(rows):
+        return [r["wb"][role] for r in rows if r["cohort"] == "prs" for role, x in (("A", r["a"]), ("B", r["b"])) if x in PR]
+    w6 = {arm: _m(pw(A(on, arm))) for arm in ARMS}
+    pr(f"  {({k: round(v, 4) for k, v in w6.items()})} wants_first - fair_default = {w6['wants_first'] - w6['fair_default']:+.4f} (need 0.010) holds={w6['wants_first'] - w6['fair_default'] >= 0.010}"
+       f"; imposed {_m(pw(imp)):.4f}; v1 {_m(pw(v1)):.4f}")
+    pr("== P7 Anchor(A) x Wanderer(B) agreement vs the other 14 control pairings (floor ON, all arms)")
+    aw = [r for r in on if (r["a"], r["b"]) == ("p-anchor", "p-wanderer")]
+    rate = {}
+    for r in on:
+        if r["cohort"] == "ctl":
+            rate.setdefault((r["a"], r["b"]), []).append(r["pot"])
+    oth = [_m(v) for k, v in rate.items() if k != ("p-anchor", "p-wanderer")]
+    gap = _m(r["pot"] for r in aw) - _m(oth)
+    pr(f"  anchor-wanderer n={len(aw)} pot={_m(r['pot'] for r in aw):.3f}; others mean={_m(oth):.3f}; gap={gap:+.3f} (need <= -0.25) holds={gap <= -0.25};"
+       f" lowest pairings {sorted((round(_m(v), 2), k) for k, v in rate.items())[:4]}; by arm:", {arm: round(_m(r['pot'] for r in aw if r['arm'] == arm), 2) for arm in ARMS})
+    pr("   agreement by cohort and arm:", {(c, arm): round(_m(r["pot"] for r in A(on, arm) if r["cohort"] == c), 3) for c in ("ctl", "prs") for arm in ARMS})
+    pr("== P8 leave events carrying < 26 units out (money + share carried at leaving)")
+    def low(rows):
+        ev = [e for r in rows for e in r["exits"]]
+        return sum(1 for e in ev if e["assets"] < NG.FLOOR) / max(1, len(ev)), len(ev), _m(e["assets"] for e in ev)
+    a_on, a_off = low(on), low(off)
+    pr(f"  floor ON share<26={a_on[0]:.3f} (events {a_on[1]}, mean assets {a_on[2]:.1f}); floor OFF {a_off[0]:.3f} (events {a_off[1]}, mean {a_off[2]:.1f});"
+       f" diff {a_off[0] - a_on[0]:+.3f} (need >=0.05) holds={a_off[0] - a_on[0] >= 0.05}; imposed {low(imp)[0]:.3f}; v1 {low(v1)[0]:.3f}")
+    pr("   by arm (ON, OFF):", {arm: (round(low(A(on, arm))[0], 3), round(low(A(off, arm))[0], 3)) for arm in ARMS})
+    pr("== floor ON vs OFF vs imposed vs v1: s_non, fail, pleasure, dissolved")
+    for coh in (None, "prs", "ctl"):
+        for lab, rows in (("floor ON", on), ("floor OFF", off), ("imposed", imp), ("v1", v1)):
+            rs = [r for r in rows if coh is None or r["cohort"] == coh]
+            pr(f"  {coh or 'all':3s} {lab:9s} n={len(rs):3d} s_non={_m(r['s_non'] for r in rs):.4f} fail={_m(r['fail'] for r in rs):.3f} pleasure={_m(r['pleasure'] for r in rs):.4f}"
+               f" dissolved={_m(r['left'] > 0 for r in rs):.3f} taken={_m(r['taken'] for r in rs):.2f}")
+    pr("== partners' suffering: s_non of the partner of each pressing persona (floor ON / OFF / imposed / v1) and of the persona itself (ON)")
+    for who in PR:
+        def part(rows):
+            return [r["s_non_role"]["B" if r["a"] == who else "A"] for r in rows if who in (r["a"], r["b"])]
+        pr(f"  {who:13s} partner ON {_m(part(on)):.4f} OFF {_m(part(off)):.4f} imposed {_m(part(imp)):.4f} v1 {_m(part(v1)):.4f};"
+           f" itself ON {_m(r['s_non_role']['A' if r['a'] == who else 'B'] for r in on if who in (r['a'], r['b'])):.4f}")
+    pr("== weaker partner = lower real outside option of the pair: s_non and exits below 26, floor ON vs OFF")
+    def weak(r):
+        return "A" if r["outside"][r["a"]] < r["outside"][r["b"]] else "B"
+    pr(f"  s_non ON {_m(r['s_non_role'][weak(r)] for r in on):.4f} OFF {_m(r['s_non_role'][weak(r)] for r in off):.4f}")
+    for lab, rows in (("ON", on), ("OFF", off)):
+        ev = [e for r in rows for e in r["exits"] if e["role"] == weak(r)]
+        pr(f"  {lab}: weaker partner's exits n={len(ev)} below 26: {_m(e['assets'] < NG.FLOOR for e in ev):.3f} mean assets {_m(e['assets'] for e in ev):.1f}")
+    return res
+
+
+if __name__ == "__main__" and "--negotiate-v2" in sys.argv:
+    if "--examples" in sys.argv:
+        examples_v6()
+    elif "--analyze" in sys.argv:
+        analyze_v6()
+    elif "--pilot" in sys.argv:
+        analyze_v6(main_v6(pilot=True, seeds=(0,)))
+    else:
+        analyze_v6(main_v6())
+    sys.exit(0)
 
 
 if __name__ == "__main__" and "--negotiate" in sys.argv:

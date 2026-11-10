@@ -7,6 +7,7 @@ ADICO cards, and the proof checks run BEFORE anyone lives under them. No LLM, no
 Everything numeric here is the prereg's, fixed before any run. The evaluation of living under a bundle is a closed-form PROXY of
 the persona's weights (ASSUMED, not validated against rollouts). Wording rule: agents feel nothing; "value" is a modeled gloss.
 """
+import copy
 import random
 import re
 from dataclasses import dataclass, field
@@ -15,6 +16,7 @@ from itertools import product
 import numpy as np
 
 from .cards import make_card
+from . import hedonic as HD
 from .worlds import household as H
 
 # ---- the terms menu -------------------------------------------------------------------------------------------------
@@ -362,3 +364,433 @@ def describe(res):
         if c.gloss not in seen:
             seen.append(c.gloss)
     return lines + [f"- {g}" for g in seen]
+
+
+# =====================================================================================================================
+# Negotiation v2 (docs/results/negotiation-v2-prereg.md): exit floor, simulated outside options, 13-week reviews, three
+# start arms, inertia. Everything above is v1 and is unchanged. Constants are the prereg's. Wording rule: agents feel
+# nothing; "value" is a modeled gloss.
+# =====================================================================================================================
+ARMS = ("fair_default", "wants_first", "wants_fallback")
+BREACH = (1.0, 0.5, 0.0)                                    # share of the pooled share a stay breach forfeits (only with a stay)
+FAIR_DEFAULT = {"contribution": "fixed", "use": "needs_only", "taking": "forbidden", "change": "unanimous",
+                "exit": "equal_split", "stay": 0, "requests": "none", "breach": 1.0}
+FLOOR_WEEKS = 13
+FLOOR_LIVING = HD.DEFAULT.living_cost                      # the hedonic model's one consumption-as-need: 2.0 per week
+FLOOR = FLOOR_WEEKS * FLOOR_LIVING                         # 26 money units (ASSUMED, constant)
+EXIT_TAKE = {"equal_split": 50, "proportional": 100, "forfeit": 0}
+START_HOLDINGS = (10, 45)                                   # (private money, pooled share) of each partner at week 0
+OUT_WEEKS = 26
+FORWARD_WEEKS = 26
+REVIEW_EVERY = 13
+DEADLINE_REVIEW = 6
+TERM_SCALE = 0.2
+SALIENCE_TAU = 0.30
+V1_TERMS = TERM_NAMES                                       # the seven v1 terms (inertia is measured over these)
+STATS = {"rollouts": 0, "hits": 0, "rollout_weeks": 0}
+
+
+def default_key():
+    return key(FAIR_DEFAULT)
+
+
+def bundles_v2(allow_stay=True, allow_requests=True):
+    """v1's menu with the breach-cost term (1.0 / 0.5 / 0.0) added where a stay is agreed; otherwise breach is inert (1.0)."""
+    out = []
+    for b in bundles(allow_stay, allow_requests):
+        for f in (BREACH if b["stay"] else (1.0,)):
+            out.append(dict(b, breach=f))
+    return out
+
+
+def breach_values(p):
+    w = p.weights
+    x = 0.30 * w["security"] + 0.20 * w["togetherness"] - 0.40 * w["autonomy"] - 0.10 * w["other_connections"]
+    return {f: (f - 0.5) * x for f in BREACH}
+
+
+def term_sum(p, low, b):
+    tv = term_values(p, low)
+    return sum(tv[t][b[t]] for t in TERM_NAMES) + (breach_values(p)[b["breach"]] if b["stay"] else 0.0)
+
+
+_DCACHE = {}
+
+
+def deltas(p, low, blist, ref, ukey):
+    """TERM_SCALE x (term_sum(b) - term_sum(ref)) for every bundle (array)."""
+    ck = (p.id, low, ukey, key(ref), ref.get("breach"))
+    if ck not in _DCACHE:
+        r = term_sum(p, low, ref)
+        _DCACHE[ck] = TERM_SCALE * np.array([term_sum(p, low, b) - r for b in blist])
+    return _DCACHE[ck]
+
+
+def salient(p, low=False):
+    """Terms the persona cares about: spread of raw term values at least SALIENCE_TAU (before any run, from the weights)."""
+    out = {t for t, d in _raw(p, low).items() if max(d.values()) - min(d.values()) >= SALIENCE_TAU}
+    return out
+
+
+def inertia(bundle):
+    """Share of the 7 v1 terms identical to the fair default, and the per-term identity."""
+    same = {t: bundle[t] == FAIR_DEFAULT[t] for t in V1_TERMS}
+    return sum(same.values()) / len(V1_TERMS), same
+
+
+# ---- the exit floor ---------------------------------------------------------------------------------------------------
+
+def retained(b, money, pooled, path="exit"):
+    """Own resources a member leaves with under the bundle: own money + the share the term lets them carry."""
+    take = EXIT_TAKE[b["exit"]]
+    if path == "breach":
+        take = min(take, int(round(100 * (1 - b["breach"]))))
+    return money + pooled * take // 100
+
+
+def floor_check(b, holdings, floor=FLOOR, current=None):
+    """-> {"ok", "fails": [{role, path, retained, needed}]}. holdings: {role: (money, pooled)}. Needed = min(floor, the most generous
+    exit would carry), so a review cannot dead-lock once holdings have fallen below the floor. At a review (current = the terms now
+    in force) a change may not leave a member below the floor or further below it than the current terms already do (amendment 1)."""
+    fails = []
+    for role, (money, pooled) in holdings.items():
+        base_needed = min(floor, money + pooled)
+        for path in ["exit"] + (["breach"] if b["stay"] else []):
+            needed = base_needed
+            if current is not None:
+                needed = min(needed, retained(current, money, pooled, path if current["stay"] else "exit"))
+            r = retained(b, money, pooled, path)
+            if r < needed:
+                fails.append({"role": role, "path": path, "retained": r, "needed": needed})
+    return {"ok": not fails, "fails": fails}
+
+
+_V1READ = None
+
+
+def v1_flag(b, base):
+    """Would v1's exit-within-k check have failed this deal? Its own cards (a forfeit-like exit) or a stay commitment read as a rule
+    that blocks leaving within k months (the v1 reading of a bind; ASSUMED). Floor-clearing deals that fail are FLAGGED, not blocked."""
+    cards = compile_bundle(b, ["a", "b"])
+    if not proof_check(base + cards)["ok"]:
+        return True
+    if b["stay"]:
+        read = _card("V1-stay-reading", "must_not", "leave", [("months_in", "lt", 12)], "A stay commitment blocks leaving for its term.", "v1 reading")
+        return any(f["check"] == "e_exit_within_k" for f in proof_check(base + cards + [read])["fails"])
+    return False
+
+
+# ---- simulated outside options and in-pot baselines -----------------------------------------------------------------------
+
+def wellbeing(outcomes, role):
+    """Persona evaluation of a stretch of weeks: mean of pleasure - offsettable suffering - non-offsettable suffering."""
+    xs = [o["hedonic"][role] for o in outcomes]
+    return sum(h["pleasure"] - h["s_off"] - h["s_non"] for h in xs) / len(xs)
+
+
+_RC = {}
+_SOLO_CARDS = []
+
+
+def _solo_cards():
+    if not _SOLO_CARDS:
+        _SOLO_CARDS.extend(H.load_variant("author_seed_v2_bindable"))
+    return _SOLO_CARDS
+
+
+def alone_value(p, role, holdings, seed, mode, hed=None, weeks=OUT_WEEKS):
+    """Persona evaluation of a short rollout of living alone (mode "alone") or with Friend C (mode "friend") with the given holdings.
+    Cached by (persona, role, holdings, seed, mode, hedonic-state signature); deterministic given the key."""
+    sig = None if hed is None else (round(hed.B, 1), round(hed.N, 1))
+    ck = (p.id, role, int(holdings), seed, mode, weeks, sig)
+    if ck in _RC:
+        STATS["hits"] += 1
+        return _RC[ck]
+    w = H.WeeklyWorld(_solo_cards(), (p, p), seed, weeks, deal={"pot": False, "commits": []})
+    for x in "AB":
+        w.p[x]["in"], w.p[x]["money"], w.p[x]["pooled"] = False, int(holdings), 0
+    w.solo = mode
+    if hed is not None:
+        w.hed[role] = copy.deepcopy(hed)
+    run = w.play()
+    STATS["rollouts"] += 1
+    STATS["rollout_weeks"] += weeks
+    _RC[ck] = wellbeing(run.outcomes, role)
+    return _RC[ck]
+
+
+def outside_value(p, role, holdings, seed, hed=None):
+    """The member's real outside option: the better of living alone and living with Friend C, by its own evaluation.
+    -> (value, {"alone": x, "friend": y})."""
+    d = {m: alone_value(p, role, holdings, seed, m, hed) for m in ("alone", "friend")}
+    return max(d.values()), d
+
+
+_PC = {}
+
+
+def pot_baseline(pa, pb, seed, base, weeks=OUT_WEEKS):
+    """Persona evaluation of living together under the fair default for 26 weeks: {"A": x, "B": y}. Cached by (pair, seed)."""
+    ck = (pa.id, pb.id, seed, weeks, tuple(sorted(c.id for c in base)))
+    if ck not in _PC:
+        cards = list(base) + compile_bundle(FAIR_DEFAULT, [pa.id, pb.id])
+        run = H.run_weekly(cards, (pa, pb), seed, weeks, deal=deal_from_bundle(FAIR_DEFAULT), breach_forfeit=FAIR_DEFAULT["breach"])
+        STATS["rollouts"] += 1
+        STATS["rollout_weeks"] += weeks
+        _PC[ck] = {r: wellbeing(run.outcomes, r) for r in "AB"}
+    return _PC[ck]
+
+
+def deal_from_bundle(b):
+    """The weekly world's deal for a 2-member bundle (like world_deal, from a bundle rather than a Negotiation)."""
+    commits, oth = [], {"A": "B", "B": "A"}
+    for who in "AB":
+        if b["stay"]:
+            commits.append({"kind": "stay", "by": who, "to": oth[who], "type": None, "from": 0, "until": b["stay"], "breached": 0})
+        if b["requests"] == "mutual":
+            commits.append({"kind": "requests", "by": who, "to": oth[who], "type": "stay_home", "from": 0, "until": STAY_WEEKS, "breached": 0})
+    return {"pot": True, "commits": commits}
+
+
+def forward_values(world, w, last, weeks=FORWARD_WEEKS):
+    """Persona evaluation of the next 26 weeks of the live household under its current terms (a copy of the world plays them)."""
+    hook, world.hook = world.hook, None
+    c = copy.deepcopy(world)
+    world.hook = hook
+    n0, lt = len(c.run.outcomes), last
+    for x in range(w, w + weeks):
+        lt = {"busy": c.step_week(x, lt)}
+    STATS["rollouts"] += 1
+    STATS["rollout_weeks"] += weeks
+    return {r: wellbeing(c.run.outcomes[n0:], r) for r in "AB"}
+
+
+# ---- the v2 protocol -------------------------------------------------------------------------------------------------------
+
+@dataclass
+class Result2:
+    members: list
+    arm: str
+    seed: int
+    week: int
+    status: str                   # "agreed" | "stood" (terms unchanged: the default at week 0, current terms at a review) | "deadline" | "no_bundle" | "no_pot"
+    bundle: dict | None
+    changed: bool = False
+    proposals: list = field(default_factory=list)
+    floor_blocks: list = field(default_factory=list)   # all-accepted proposals the floor blocked
+    rejections: list = field(default_factory=list)     # proof-filter rejections
+    cards: list | None = None
+    stated: dict = field(default_factory=dict)         # member -> the ideal bundle (wants arms) stated before any proposal
+    cared: dict = field(default_factory=dict)
+    outside: dict = field(default_factory=dict)
+    outside_detail: dict = field(default_factory=dict)
+    baseline: dict = field(default_factory=dict)
+    flagged: bool = False
+    renewed: bool | None = None
+
+    @property
+    def pot(self):
+        return self.bundle is not None and self.status in ("agreed", "stood")
+
+    @property
+    def agreed(self):
+        return self.pot
+
+
+def _ids_key(b):
+    return key(b) + (b["breach"],)
+
+
+def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, holdings=None, floor=True, review=False, week=0,
+                 deadline=None, roles=("A", "B")):
+    """One negotiation round of v2. personas: 2 Persona; W: {persona id: in-pot value}; O: {persona id: outside option}.
+    ref: the bundle U is measured against (default; at a review the current terms). status_quo: the bundle that stands if
+    nothing is agreed (the fair default at week 0 in FAIR_DEFAULT; the current terms at a review); None means no agreement = no pot."""
+    ids = [p.id for p in personas]
+    n = len(personas)
+    deadline = deadline or (DEADLINE_REVIEW if review else DEADLINE)
+    menu = menu_of(base)
+    blist = bundles_v2(menu["stay"], menu["requests"])
+    ukey = (menu["stay"], menu["requests"])
+    ref = ref or FAIR_DEFAULT
+    holdings = holdings or {r: START_HOLDINGS for r in roles}
+    keys = [_ids_key(b) for b in blist]
+    kindex = {k: i for i, k in enumerate(keys)}
+    U = {p.id: W[p.id] + deltas(p, roles[i] != "A", blist, ref, ukey) for i, p in enumerate(personas)}
+    sq = kindex[_ids_key(status_quo)] if status_quo is not None else None
+    bar = {pid: max(O[pid], float(U[pid][sq])) if sq is not None else O[pid] for pid in ids}
+    res = Result2(ids, arm, seed, week, "deadline", None, outside=dict(O), baseline=dict(W))
+    mask = np.ones(len(blist), dtype=bool)
+    stated_arm = (not review) and arm in ("wants_first", "wants_fallback")
+    if stated_arm:
+        for i, p in enumerate(personas):               # stated wants, before any proposal: the member's own ideal over the whole menu
+            ok = U[p.id] > O[p.id]
+            res.stated[p.id] = dict(blist[int(np.argmax(np.where(ok, np.round(U[p.id], 9), -np.inf)))]) if ok.any() else None
+    if not review and arm == "wants_fallback":
+        res.cared = {p.id: sorted(salient(p, i > 0), key=TERM_NAMES.index) for i, p in enumerate(personas)}
+        allowed = {t: {FAIR_DEFAULT[t]} for t in TERM_NAMES}
+        for p in personas:
+            if res.stated.get(p.id):
+                for t in res.cared[p.id]:
+                    allowed[t].add(res.stated[p.id][t])
+        stay_open = any("stay" in res.cared[p.id] for p in personas)
+        mask = np.array([all(b[t] in allowed[t] for t in TERM_NAMES) and (stay_open or not b["stay"]) and (b["breach"] == 1.0 or b["stay"])
+                         for b in blist])
+        # terms nobody cares about are fixed at the default (their allowed set is just the default)
+    order = list(range(n))
+    random.Random(f"{seed}|{week}|{','.join(ids)}").shuffle(order)
+    alive = np.ones(len(blist), dtype=bool)
+    passes = 0
+    for k in range(deadline):
+        c = k / (deadline - 1)
+        i = order[k % n]
+        me = personas[i]
+        lam = 0.0 if (stated_arm and k < n) else LAMBDA0[me.negotiation_style] + (LAMBDA_END - LAMBDA0[me.negotiation_style]) * c
+        score = U[me.id].copy()
+        for j, q in enumerate(personas):
+            if j != i:
+                score = score + lam * np.minimum(0.0, U[q.id] - bar[q.id])
+        ok = alive & mask & (U[me.id] > bar[me.id])
+        if not ok.any():
+            if sq is None:
+                res.status = "no_bundle"
+                break
+            res.proposals.append({"k": k, "proposer": me.id, "bundle": None, "accepted_by": [], "rejected_by": [], "outcome": "pass"})
+            passes += 1
+            if passes >= n:
+                break
+            continue
+        passes = 0
+        idx = int(np.argmax(np.where(ok, np.round(score, 9), -np.inf)))
+        b = blist[idx]
+        acc, rej = [me.id], []
+        for j, q in enumerate(personas):
+            if j != i:
+                theta = THETA0[q.negotiation_style] * (1 - c)
+                (acc if U[q.id][idx] > bar[q.id] + theta else rej).append(q.id)
+        prop = {"k": k, "proposer": me.id, "bundle": dict(b), "accepted_by": acc, "rejected_by": rej, "outcome": "refused" if rej else "all accept"}
+        res.proposals.append(prop)
+        if rej:
+            continue
+        if floor:
+            fc = floor_check(b, holdings, current=status_quo if review else None)
+            if not fc["ok"]:
+                prop["outcome"] = "blocked by the floor"
+                res.floor_blocks.append({"k": k, "proposer": me.id, "bundle": dict(b), "fails": fc["fails"]})
+                for f in fc["fails"]:
+                    ban = {("exit", b["exit"])} | ({("stay", b["stay"]), ("breach", b["breach"])} if f["path"] == "breach" else set())
+                    alive &= ~np.array([all(x[t] == v for t, v in ban) for x in blist])
+                alive[idx] = False
+                continue
+        cards = compile_bundle(b, ids)
+        pc = proof_check(base + cards)
+        if pc["ok"]:
+            prop["outcome"] = "agreed"
+            res.status, res.bundle, res.cards, res.changed = "agreed", dict(b), cards, True
+            res.flagged = v1_flag(b, base)
+            return res
+        prop["outcome"] = "rejected by the proof checks"
+        res.rejections.append({"k": k, "proposer": me.id, "bundle": dict(b), "checks": [failure_text(f, base + cards) for f in pc["fails"]],
+                               "failed": [f["check"] for f in pc["fails"]]})
+        for f in pc["fails"]:
+            ban = _ban_from(f, b)
+            alive &= ~np.array([all(x[t] == v for t, v in ban) for x in blist])
+        alive[idx] = False
+    if sq is not None and status_quo is not None:
+        sqb = blist[sq]
+        if review or all(float(U[pid][sq]) > O[pid] for pid in ids):
+            res.status, res.bundle = "stood", dict(sqb)
+            res.cards = compile_bundle(sqb, ids)
+            res.flagged = v1_flag(sqb, base)
+        else:
+            res.status = "no_pot"           # the default stood but it is worse than someone's outside option
+    return res
+
+
+# ---- a lived v2 household: week-0 negotiation, then reviews every 13 weeks -------------------------------------------------------
+
+def week0(pa, pb, arm, seed, base, floor=True):
+    """The week-0 negotiation of a pair. -> Result2. Outside options and the in-pot baseline come from rollouts (cached)."""
+    W = pot_baseline(pa, pb, seed, base)
+    O, det = {}, {}
+    for r, p in zip("AB", (pa, pb)):
+        v, d = outside_value(p, r, START_HOLDINGS[0] + START_HOLDINGS[1], seed)
+        O[p.id], det[p.id] = v, d
+    res = negotiate_v2([pa, pb], arm, seed, base=base, W={pa.id: W["A"], pb.id: W["B"]}, O=O, floor=floor,
+                       status_quo=FAIR_DEFAULT if arm == "fair_default" else None)
+    res.outside_detail = det
+    return res
+
+
+def _apply_terms(world, base, bundle, w, ids, renew):
+    """A review's outcome goes into the live world: new cards, the breach cost, and the commitments (stay only if renewed)."""
+    cards = list(base) + compile_bundle(bundle, ids)
+    world.gate = H.PyGate(cards)
+    world.cards = {c.id: c for c in cards}
+    world.breach_forfeit = bundle["breach"]
+    for c in world.commits:
+        if c["kind"] == "stay":
+            c["until"] = w + bundle["stay"] if (bundle["stay"] and renew) else min(c["until"], w)
+        elif c["kind"] == "requests":
+            c["until"] = w + STAY_WEEKS if bundle["requests"] == "mutual" else min(c["until"], w)
+    have = {c["kind"] for c in world.commits if c["until"] > w}
+    oth = {"A": "B", "B": "A"}
+    for who in "AB":
+        if bundle["stay"] and renew and "stay" not in have:
+            world.commits.append({"kind": "stay", "by": who, "to": oth[who], "type": None, "from": w, "until": w + bundle["stay"], "breached": 0})
+        if bundle["requests"] == "mutual" and "requests" not in have:
+            world.commits.append({"kind": "requests", "by": who, "to": oth[who], "type": "stay_home", "from": w, "until": w + STAY_WEEKS, "breached": 0})
+
+
+class Lived:
+    """A household living under a negotiated bundle, with a review every REVIEW_EVERY weeks while both partners are in."""
+
+    def __init__(self, pa, pb, arm, seed, base, res, floor=True, reviews=True, weeks=H.WEEKS):
+        self.pa, self.pb, self.arm, self.seed, self.base, self.floor, self.reviews = pa, pb, arm, seed, base, floor, reviews
+        self.res, self.log = res, []
+        self.bundle = dict(res.bundle) if res.pot else None
+        cards = list(base) + (res.cards if res.pot else [])
+        deal = deal_from_bundle(res.bundle) if res.pot else {"pot": False, "commits": []}
+        self.world = H.WeeklyWorld(cards, (pa, pb), seed, weeks, deal=deal, breach_forfeit=res.bundle["breach"] if res.pot else 1.0)
+        self.world.floor_amount = FLOOR if floor else None     # amendment 1: the floor also holds at the moment of leaving
+
+    def review(self, w, last):
+        world, ps = self.world, (self.pa, self.pb)
+        hold = {r: (world.p[r]["money"], world.p[r]["pooled"]) for r in "AB"}
+        fwd = forward_values(world, w, last)
+        cur = self.bundle
+        O, det = {}, {}
+        for r, p in zip("AB", ps):
+            money, pooled = hold[r]
+            v, d = outside_value(p, r, money + pooled * EXIT_TAKE[cur["exit"]] // 100, self.seed, world.hed[r])
+            O[p.id], det[p.id] = v, d
+        res = negotiate_v2(list(ps), self.arm, self.seed, base=self.base, W={self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, O=O,
+                           ref=cur, status_quo=cur, holdings=hold, floor=self.floor, review=True, week=w)
+        new = res.bundle if res.changed else cur
+        renew = False
+        if cur["stay"] or new["stay"]:
+            if res.changed:
+                renew = bool(new["stay"])
+            else:     # every member votes on renewing the expiring stay by its own centered stay value
+                renew = all(term_values(p, r == "B")["stay"][STAY_WEEKS] > 0 for r, p in zip("AB", ps))
+        before = dict(cur)
+        if res.changed or cur["stay"] or cur["requests"] == "mutual":
+            _apply_terms(world, self.base, new, w, [self.pa.id, self.pb.id], renew)
+        if res.changed:
+            self.bundle = dict(new)
+        self.log.append({"week": w, "changed": res.changed, "from": before, "to": dict(new), "stay_renewed": renew if (cur["stay"] or new["stay"]) else None,
+                         "floor_blocks": len(res.floor_blocks), "rejections": len(res.rejections), "status": res.status,
+                         "outside": res.outside, "baseline": res.baseline, "flagged": res.flagged})
+
+    def play(self):
+        world = self.world
+        last = {"busy": {"A": False, "B": False}}
+        for w in range(world.weeks):
+            if self.reviews and self.bundle is not None and w and w % REVIEW_EVERY == 0 and all(world.p[r]["in"] for r in "AB"):
+                self.review(w, last)
+            last = {"busy": world.step_week(w, last)}
+        world.run.final = {r: dict(world.p[r]) for r in "AB"}
+        if world.mech:
+            world.run.meta = world.commit_report()
+        world.run.exits = list(world.exit_log)
+        return world.run

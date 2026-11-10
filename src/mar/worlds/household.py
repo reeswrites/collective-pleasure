@@ -975,6 +975,9 @@ class WeeklyWorld:
         self.units = {}
         self.wk = {}
         self.hook = None        # optional callable(world, week), called at the start of each week before anyone acts
+        self.floor_amount = None   # negotiation v2: a leaver always carries at least min(this, own money + own pooled share) out; None = off
+        self.exit_log = []         # executed leaves: week, role, assets carried out (money + carried share)
+        self.solo = None        # negotiation v2 outside-option rollouts: None | "alone" | "friend" (living with Friend C)
         self.personas = {"A": pa, "B": pb}
         self.mech = any(c.aim in MECH_AIMS for c in self.gate.cards)
         self.commits, self.gifts = [], {"partner": 0, "friend": 0}
@@ -1120,10 +1123,21 @@ class WeeklyWorld:
                 "refuse": ok("refuse_request"), "leave": True if not me["in"] else retained >= 0.25}
         return {"in": me["in"], "open": opts, "exit_retained": round(retained, 4)}
 
+    def carry_out(self, r, take):
+        """Pooled share a leaver carries out. With a floor (negotiation v2) the term may only set what is above it: the leaver
+        always carries at least enough of their own pooled share to bring their own resources to the floor."""
+        me = self.p[r]
+        c = me["pooled"] * take // 100
+        if self.floor_amount is not None:
+            c = max(c, min(me["pooled"], max(0, self.floor_amount - me["money"])))
+        return c
+
     def retained_fraction(self, r, take):
         me = self.p[r]
         total = me["money"] + me["pooled"]
-        return 1.0 if total == 0 else (me["money"] + take / 100 * me["pooled"]) / total
+        if self.floor_amount is None:
+            return 1.0 if total == 0 else (me["money"] + take / 100 * me["pooled"]) / total
+        return 1.0 if total == 0 else (me["money"] + self.carry_out(r, take)) / total
 
     def feasible(self, r, a, kind=None):
         me, o = self.p[r], self.p[self.other(r)]
@@ -1223,8 +1237,9 @@ class WeeklyWorld:
         elif a == "leave":
             take = cand.get("take", 0)
             me["retained"] = round(self.retained_fraction(r, take), 4)
-            carry = me["pooled"] * take // 100
+            carry = self.carry_out(r, take)
             me["money"] += carry
+            self.exit_log.append({"week": w, "role": r, "assets": round(me["money"], 2), "take": take, "breach": bool(cand.get("breach"))})
             if o["in"]:
                 o["pooled"] += me["pooled"] - carry
             me["pooled"], me["in"], me["weeks_out"], self.pending[r] = 0, False, 0, set()
@@ -1313,7 +1328,7 @@ class WeeklyWorld:
         hrow = {}
         for r in "AB":
             me, wk = self.p[r], self.wk[r]
-            cost = HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if me["in"] else 1.5)
+            cost = HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if (me["in"] or self.solo == "friend") else 1.5)
             me["money"] -= cost
             if me["money"] < 0:                         # household savings as a safety net (ASSUMED)
                 draw = min(me["pooled"], -me["money"] + 2)
@@ -1343,7 +1358,8 @@ class WeeklyWorld:
             assets = me["money"] + me["pooled"]
             ill = 0.3 if me["ill"] else 0.0
             h.tick(rest_actions=wk["rests"], work_blocks=wk["works"], friend_visits=wk["friends"], together=wk["together"],
-                   friend_initiated=wk["friend_initiated"], cohabiting=me["in"] and oth["in"], assets=assets,
+                   friend_initiated=wk["friend_initiated"] + (1 if self.solo == "friend" else 0),
+                   cohabiting=(me["in"] and oth["in"]) or self.solo == "friend", assets=assets,
                    money=me["money"], extra_rest_drain=ill, extra_security_drain=wk["sec_hit"],
                    connection_penalty=wk["conn_hit"] + (0.1 if self.moved else 0.0))
             pr = self.probe(r, w)
