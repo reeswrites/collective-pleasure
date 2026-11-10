@@ -17,3 +17,9 @@ Unexpected observations, each dated and with its evidence. Purpose: keep results
 ## 2026-11-10: "seam" check is trivially true per action
 
 Executed actions are by construction allowed, so "every executed action passed the gate" holds for any gated run. A seam is therefore any oracle failure of a gated run. In the V2 exploiter fixture, 278 of 288 proposals were blocked (all by F2, asking for more than the pool held), and the collapse came from the 10 allowed catches. The workbench verdict text now says this instead of implying no action was blocked. Evidence: workbench agent report, commit 6b362c2.
+
+## 2026-11-10 (household v2)
+
+- **Sanctions are enforced and never fire.** With soft (sanctioned) cards, the persona agents never broke one in 360 runs (sanctions per run 0.0 in every variant): the estimated sanction cost always outweighed the gain, and requests (24 over 15 pairings in the trap, seed 0) are rare, so control rules are rarely tried. Enforcement is covered by unit tests only (tests/test_household_weekly.py). Evidence: docs/results/household-v2.md.
+- **The trap fails by construction of the definitions.** Being trapped (no exit retaining 25 percent) is a non-offsettable condition, and the trap's forfeit card removes the exit for everyone from week 0, so the trap fails in all 15 pairings. This shows the definition works; it is not independent evidence about the trap.
+- **Freedom saturates.** Every variant without a restriction card has freedom 1.000, so the freedom axis separates only the trap family.

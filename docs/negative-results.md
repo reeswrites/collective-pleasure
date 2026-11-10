@@ -13,3 +13,9 @@ Experiments or checks that failed to show the predicted effect, reported as find
 ## 2026-11-10 (VPGG rediscovery)
 
 - **Oscillation clause of prediction 3 failed.** In the voluntary public goods game (Hauert et al. 2002; N=5, r=3, sigma=1, 20 seeds) cooperator share held at 0.263 (paper's equilibrium 0.27) and payoff at 0.984 (about sigma), but its standard deviation over time was 0.013 to 0.020 against a preregistered floor of 0.05 in at least 18 seeds. By the committed verdict rule the pipeline did NOT rediscover the full result. Cause unknown: the amplitude floor was a guess, or the assumed update knobs (5-round payoff averaging, revision rate 0.1) damp the cycle, or the model does not cycle. Not retuned; see docs/results/vpgg.md.
+
+## 2026-11-10 (household v2)
+
+- **No freedom/cooperation trade-off appeared.** Goals, weekly clocks and enforced sanctions did not create one: the frontier is baseline and needs_duty (freedom 1.000, cooperation 0.908), which dominate every other variant; the trap family is lower on both. Prediction 1 failed. See docs/results/household-v2.md.
+- **author_seed equals baseline on upward share (0.844 each).** Prediction 3 failed. The six cards are permissions plus an even-split exit, which the persona agents rarely meet as a constraint.
+- **The Anchor and Wanderer pair is not the hardest** (strictly lowest in 0 of 8 variants). Prediction 4 failed; the pair is upward in every non-trap variant.
