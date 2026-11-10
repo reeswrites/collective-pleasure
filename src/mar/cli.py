@@ -5,13 +5,17 @@
   mar check --spec rules/fishery [--k 3]
   mar loop --spec rules/fishery --rounds 2
   mar report <run_id>
+  mar log [--last 10] [--run <id>]       experiment log (experiments/log.jsonl)
+  mar keep <run_id>                      copy trace and report into experiments/kept/<run_id>/
 
-Reports and traces go to runs/<run_id>/ (override with --runs-dir). No LLM, no network.
+Every run and loop appends one line to the experiment log (--note says why). Reports and traces go to
+runs/<run_id>/ (override with --runs-dir; logs with --experiments-dir). No LLM, no network.
 """
 import argparse
 import sys
 from pathlib import Path
 
+from . import log as explog
 from . import oracle
 from .cards import load_cards
 from .patch_check import K_DEFAULT, check_patch, check_spec
@@ -53,9 +57,16 @@ def check_lines(cards, k):
 def cmd_run(a) -> int:
     rec = execute(a.spec, parse_agents(a.agents), a.months, a.seed)
     path = build_report(rec, a.runs_dir)
+    _log(a, rec, path)
     print(f"report: {path}")
     print(verdict(rec)[1])
+    print(f"logged: {Path(a.experiments_dir) / explog.LOG_NAME}")
     return 0
+
+
+def _log(a, rec, report_path):
+    explog.log_run(a.experiments_dir, rec, verdict(rec)[1], report_path, Path(report_path).parent / "trace.json",
+                   a.spec, note=a.note)
 
 
 def cmd_rules_show(a) -> int:
@@ -108,11 +119,31 @@ def cmd_loop(a) -> int:
     rec.kind, rec.history, rec.checks = "loop", history, checks
     rec.rounds = [{"round": h["round"], "seams": h["seams"]} for h in history]
     path = build_report(rec, a.runs_dir)
+    _log(a, rec, path)
     print(f"report: {path}")
     print("Seams per round: " + ", ".join(f"round {h['round']}: {h['seams']}" for h in history))
     for h in history:
         print(f"  round {h['round']}: {h['note']}")
     print(verdict(rec)[1])
+    print(f"logged: {Path(a.experiments_dir) / explog.LOG_NAME}")
+    return 0
+
+
+def cmd_log(a) -> int:
+    rows = explog.read_rows(Path(a.experiments_dir) / explog.LOG_NAME)
+    if a.run:
+        hits = [r for r in rows if r["run_id"] == a.run]
+        if not hits:
+            raise ValueError(f"no log entry for run {a.run!r}")
+        print("\n\n".join(explog.log_detail(r) for r in hits))
+    else:
+        print(explog.log_table(rows[-a.last:] if a.last > 0 else rows))
+    return 0
+
+
+def cmd_keep(a) -> int:
+    dest = explog.keep(a.experiments_dir, a.runs_dir, a.run_id)
+    print(f"kept: {dest} (trace.json, report.html). Commit it to cite this run.")
     return 0
 
 
@@ -126,6 +157,8 @@ def cmd_report(a) -> int:
 def parser():
     p = argparse.ArgumentParser(prog="mar", description="Multi-agent rules workbench.")
     p.add_argument("--runs-dir", default="runs", help="where reports and traces go (default: runs)")
+    p.add_argument("--experiments-dir", default=str(explog.REPO / "experiments"),
+                   help="where the committed logs go (default: <repo>/experiments)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     def common(sp, agents=True):
@@ -135,6 +168,7 @@ def parser():
                             "name*n repeats (default exploiter*4)")
             sp.add_argument("--months", type=int, default=6)
             sp.add_argument("--seed", type=int, default=0)
+            sp.add_argument("--note", default=None, help="one-line plain summary of why this run was made")
 
     common(sub.add_parser("run", help="run the fishery under a spec; write a report"))
     rules = sub.add_parser("rules", help="read rules").add_subparsers(dest="rules_cmd", required=True)
@@ -148,6 +182,11 @@ def parser():
     lp.add_argument("--k", type=int, default=K_DEFAULT)
     r = sub.add_parser("report", help="rebuild the report of an earlier run from its trace.json")
     r.add_argument("run_id")
+    lg = sub.add_parser("log", help="show the experiment log")
+    lg.add_argument("--last", type=int, default=10, help="how many recent entries (default 10; 0 for all)")
+    lg.add_argument("--run", help="show every entry for one run id in full")
+    k = sub.add_parser("keep", help="copy a run's trace.json and report.html into experiments/kept/<run_id>/")
+    k.add_argument("run_id")
     return p
 
 
@@ -156,7 +195,8 @@ def main(argv=None) -> int:
     try:
         if a.cmd == "rules":
             return cmd_rules_show(a)
-        return {"run": cmd_run, "check": cmd_check, "loop": cmd_loop, "report": cmd_report}[a.cmd](a)
+        return {"run": cmd_run, "check": cmd_check, "loop": cmd_loop, "report": cmd_report,
+                "log": cmd_log, "keep": cmd_keep}[a.cmd](a)
     except (ValueError, FileNotFoundError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

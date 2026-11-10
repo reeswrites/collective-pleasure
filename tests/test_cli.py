@@ -7,7 +7,7 @@ RULES = str(Path(__file__).parent.parent / "rules" / "fishery")
 
 
 def run(capsys, tmp_path, *args):
-    code = main(["--runs-dir", str(tmp_path), *args])
+    code = main(["--runs-dir", str(tmp_path), "--experiments-dir", str(tmp_path / "exp"), *args])
     return code, capsys.readouterr().out
 
 
