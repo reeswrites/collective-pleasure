@@ -1,15 +1,25 @@
 """The gate: allow or reject one proposed action against the compiled cards."""
+import threading
+
 import z3
 from .compile import compile_cards, POOL, MONTH_TOTAL, CATCH
+
+
+_LOCK = threading.RLock()  # z3 default context is not thread-safe; mar sweep --batch runs threads
 
 
 class Gate:
     def __init__(self, cards):
         self.cards = list(cards)
-        self._violations = compile_cards(self.cards)
+        with _LOCK:
+            self._violations = compile_cards(self.cards)
 
     def check_action(self, state: dict, action: dict):
         """-> (allowed, reasons). reasons = ids of the cards the action violates."""
+        with _LOCK:
+            return self._check(state, action)
+
+    def _check(self, state, action):
         sub = [(POOL, z3.IntVal(state["pool"])),
                (MONTH_TOTAL, z3.IntVal(state.get("month_total", 0))),
                (CATCH, z3.IntVal(action["catch"]))]

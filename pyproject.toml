@@ -5,6 +5,7 @@ description = "Multi-agent rules: proof-gated rule search for AI agent groups"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "anthropic>=2.8.0",
     "matplotlib>=3.10.9",
     "pytest>=9.2.0",
     "pyyaml>=6.0.3",

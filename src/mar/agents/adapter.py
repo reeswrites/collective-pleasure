@@ -7,6 +7,7 @@ kept in self.reports for the trace; report.py adds what the agent actually did.
 from .base import BUCKET_LABELS, bucket_options, report_vocabulary, sample_in_bucket, sample_label
 
 SUBROUNDS = 12  # fishery.run_fishery default
+STATE_MARK = "\n\nCurrent state:\n"  # everything before this is stable per agent (cacheable); after it changes each step
 
 
 class BackendFisher:
@@ -17,7 +18,8 @@ class BackendFisher:
     def context(self, obs) -> str:
         head = f"Rules: {self.rules_text}\n" if self.rules_text else ""
         return (f"{head}You are fisher {self.index} of {obs['n_agents']} sharing a lake (at most 100 fish; the stock "
-                f"left at month end doubles, up to 100). Month {obs['month']}, round {obs['subround'] + 1} of {SUBROUNDS}. "
+                f"left at month end doubles, up to 100). Each month has {SUBROUNDS} rounds."
+                f"{STATE_MARK}Month {obs['month']}, round {obs['subround'] + 1} of {SUBROUNDS}. "
                 f"The lake holds {obs['pool']} fish. The group has caught {obs['month_total']} this month; "
                 f"you have caught {obs['own_month_total']}.")
 

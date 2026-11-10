@@ -10,6 +10,7 @@
   mar keep <run_id>                      copy trace and report into experiments/kept/<run_id>/
   mar change record|list                 change log (experiments/changes.jsonl)
   mar question record|list               curiosity log (experiments/questions.jsonl)
+  mar sweep --backend claude --agents claude*5 --claude-model <id> --seeds 0,1,2 [--batch]
   mar timeline                           one HTML page of questions, decisions, changes, runs, commits
 
 Every run and loop appends one line to the experiment log (--note says why). Reports and traces go to
@@ -64,7 +65,8 @@ def check_lines(cards, k):
 
 def make_factory(a) -> AgentFactory:
     return AgentFactory(temperature=a.temperature, jev_provider=a.jev_provider, jev_model=a.jev_model,
-                        llm_model=a.model, llm_temperature=a.llm_temperature, llm_price_in=a.llm_price_in,
+                        llm_model=a.model, claude_model=a.claude_model or a.model, cache_share=a.cache_hit_share,
+                        claude_out_tokens=a.claude_out_tokens, llm_temperature=a.llm_temperature, llm_price_in=a.llm_price_in,
                         llm_price_out=a.llm_price_out, cache_dir=Path(a.runs_dir) / "cache" / "jev",
                         max_usd=a.max_usd)
 
@@ -76,8 +78,9 @@ def dry_run(a, names, rounds=1) -> int:
         return 0
     print(f"Dry run (nothing is called or logged). Upper bounds, no cache hits, {rounds} run(s) of {a.months} months:")
     for kind, e in est.items():
+        batch = f"; with --batch ${e['usd_batch']:.4f}" if "usd_batch" in e else ""
         print(f"  {kind}: up to {e['calls']} calls, about {e['input_tokens']} input tokens, "
-              f"upper-bound cost ${e['usd']:.4f} ({e['note']})")
+              f"cost ${e['usd']:.4f}{batch} ({e['note']})")
     print(f"Total upper bound: ${sum(e['usd'] for e in est.values()):.4f}")
     return 0
 
@@ -177,6 +180,62 @@ def cmd_loop(a) -> int:
     return 0
 
 
+def cmd_sweep(a) -> int:
+    """Seeds of one setup. With --batch, all runs advance in lockstep and each step is one Message Batch."""
+    import anthropic
+
+    from .agents.batch import BatchCoordinator, run_lockstep
+    names = parse_agents(a.agents)
+    seeds = [int(x) for x in a.seeds.split(",") if x.strip()]
+    if a.backend != "claude" or "claude" not in names:
+        raise ValueError("mar sweep supports --backend claude and needs claude agents in --agents")
+    if a.dry_run:
+        return dry_run(a, names, len(seeds))
+    base = make_factory(a)
+    if a.batch:
+        from .agents.claude import require_model
+        require_model(base.claude_model)
+        coord = BatchCoordinator(anthropic.Anthropic(), len(seeds), poll_s=a.poll_seconds)
+
+        def job(seed):
+            def go():
+                f = make_factory(a)
+                f.batch = True
+                f.transport_for = lambda idx: _transport(coord, seed, idx)
+                return execute(a.spec, names, a.months, seed, factory=f)
+            return go
+        results = run_lockstep(coord, [job(s) for s in seeds])
+    else:
+        results = []
+        for s in seeds:
+            try:
+                results.append((execute(a.spec, names, a.months, s, factory=make_factory(a)), None))
+            except AgentError as e:
+                results.append((None, e))
+    for s, (rec, err) in zip(seeds, results):
+        if err is not None:
+            print(f"seed {s}: failed: {err}", file=sys.stderr)
+            continue
+        path = build_report(rec, a.runs_dir)
+        _log(a, rec, path)
+        print(f"seed {s}: report: {path}")
+        _print_usage(rec)
+    failed = [e for _, e in results if e is not None]
+    if failed:
+        raise failed[0]
+    print(f"logged: {Path(a.experiments_dir) / explog.LOG_NAME}")
+    return 0
+
+
+def _transport(coord, seed, idx):
+    n = [0]
+
+    def send(params):
+        n[0] += 1
+        return coord.request(f"r{seed}-a{idx}-c{n[0]}", params)
+    return send
+
+
 def cmd_log(a) -> int:
     rows = explog.read_rows(Path(a.experiments_dir) / explog.LOG_NAME)
     if a.run:
@@ -237,13 +296,14 @@ def parser():
                    help="where the committed logs go (default: <repo>/experiments)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    def common(sp, agents=True):
+    def common(sp, agents=True, seed=True):
         sp.add_argument("--spec", required=True, help="directory of YAML rule cards, e.g. rules/fishery")
         if agents:
-            sp.add_argument("--agents", default="exploiter*4", help="comma list of exploiter|compliant|explorer|jev|llm, "
-                            "name*n repeats, e.g. jev*3,llm*2 (default exploiter*4)")
+            sp.add_argument("--agents", default="exploiter*4", help="comma list of exploiter|compliant|explorer|jev|llm|claude, "
+                            "name*n repeats, e.g. jev*3,llm*2 or claude*5 (default exploiter*4)")
             sp.add_argument("--months", type=int, default=6)
-            sp.add_argument("--seed", type=int, default=0)
+            if seed:
+                sp.add_argument("--seed", type=int, default=0)
             sp.add_argument("--note", default=None, help="one-line plain summary of why this run was made")
             sp.add_argument("--dry-run", action="store_true", help="print the call count and an upper-bound cost; run nothing")
             sp.add_argument("--temperature", type=float, default=1.0,
@@ -255,6 +315,12 @@ def parser():
             sp.add_argument("--llm-temperature", type=float, default=0.7, help="sampling temperature sent to the llm")
             sp.add_argument("--llm-price-in", type=float, default=0.0, help="USD per 1M input tokens, for the llm estimate")
             sp.add_argument("--llm-price-out", type=float, default=0.0, help="USD per 1M output tokens, for the llm estimate")
+            sp.add_argument("--claude-model", default=None, help="model id for claude agents (else --model); required, "
+                            "no default. claude-haiku-5-5 $0.10/$0.50, claude-sonnet-5-5 $2/$10, claude-opus-5-5 "
+                            "$4/$20 per 1M tokens in/out")
+            sp.add_argument("--cache-hit-share", type=float, default=0.0,
+                            help="ASSUMED share of claude input tokens served from the prompt cache, for --dry-run")
+            sp.add_argument("--claude-out-tokens", type=int, default=150, help="assumed output tokens per claude call, for --dry-run")
             sp.add_argument("--max-usd", type=float, default=None, help="stop a backend once its spend passes this")
 
     common(sub.add_parser("run", help="run the fishery under a spec; write a report"))
@@ -267,6 +333,13 @@ def parser():
     common(lp)
     lp.add_argument("--rounds", type=int, default=2)
     lp.add_argument("--k", type=int, default=K_DEFAULT)
+    sw = sub.add_parser("sweep", help="run one setup over several seeds; with --batch, as Message Batches")
+    common(sw, seed=False)
+    sw.add_argument("--seeds", default="0,1,2", help="comma list of seeds (default 0,1,2)")
+    sw.add_argument("--backend", default="claude", help="only claude is supported")
+    sw.add_argument("--batch", action="store_true", help="submit each step of all runs as one Message Batch: 50%% cost, "
+                    "can take hours, not for interactive use (live loop is ASSUMED, mocked-tested only)")
+    sw.add_argument("--poll-seconds", type=float, default=30.0)
     r = sub.add_parser("report", help="rebuild the report of an earlier run from its trace.json")
     r.add_argument("run_id")
     lg = sub.add_parser("log", help="show the experiment log")
@@ -302,7 +375,7 @@ def main(argv=None) -> int:
             return cmd_rules_show(a)
         return {"run": cmd_run, "check": cmd_check, "loop": cmd_loop, "report": cmd_report,
                 "log": cmd_log, "keep": cmd_keep, "change": cmd_change,
-                "question": cmd_question, "timeline": cmd_timeline}[a.cmd](a)
+                "question": cmd_question, "timeline": cmd_timeline, "sweep": cmd_sweep}[a.cmd](a)
     except (ValueError, FileNotFoundError, AgentError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

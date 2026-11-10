@@ -20,6 +20,31 @@ uv run mar check --spec rules/fishery
 
 Each run command prints `report: runs/<run_id>/report.html` and a one-line verdict. `mar report <run_id>` rebuilds a report from its trace. `runs/` should be gitignored (not done here: `.gitignore` was not in this slice's scope).
 
+## Model-driven agents and running cheaply
+
+Scripted agents make no calls. `jev`, `llm` and `claude` agents do. Nothing here has been run live: all of it is tested offline with mocked transports.
+
+| Kind | Backend | Needs |
+|---|---|---|
+| `jev` | decisions endpoint (OpenRouter or AI/ML API), pinned `typesafe/jev-1.14`, temperature `--temperature` | `OPENROUTER_API_KEY` or `AIMLAPI_API_KEY` in `.env` |
+| `llm` | OpenRouter chat completions | `OPENROUTER_API_KEY`, and `--model` or `MAR_LLM_MODEL` |
+| `claude` | official `anthropic` SDK | `ANTHROPIC_API_KEY` or an `ant auth login` profile, and `--model` (no default) |
+
+`--agents jev*3,llm*2` and similar mixes work. Each run's log row records model build, calls, tokens, usd (and for claude cache tokens and refusals) per backend. `--dry-run` prints the call count and an upper-bound cost first. `--max-usd` stops a backend once its spend passes a limit. Jev answers are cached under `runs/cache/jev/`, so re-running a seed or changing T costs nothing.
+
+Claude model options (author-supplied prices, USD per 1M tokens in/out; verify before a big run): `claude-haiku-5-5` $0.10/$0.50, `claude-sonnet-5-5` $2/$10, `claude-opus-5-5` $4/$20. Exact ids, no date suffix. Claude requests send no temperature, top_p, top_k or thinking budget, use `output_config.effort = low`, and keep the rules and role in one cached system block so the prefix is identical across calls. ASSUMED cache multipliers: reads 0.1x, writes 1.25x input price. Prompt caching only helps once the prefix passes the model's minimum cacheable length; these prompts are short, so expect few hits until the rules text grows. The `--cache-hit-share` flag only changes the dry-run estimate.
+
+`mar sweep --backend claude --agents claude*5 --claude-model <id> --seeds 0,1,2 --batch` runs seeds in lockstep and sends each step of all runs as one Message Batch at 50% cost. A batch can take hours. Use it for overnight sweeps, never for an interactive demo. ASSUMED/TODO: the live batch loop is only tested against a mock; expect to adjust it on first contact.
+
+If `--model` is used for both `llm` and `claude` agents in one run it applies to both. Pass `--claude-model` to separate them.
+
+### Running cheaply
+
+- The author's Claude plan API credits apply to API calls. Verify this on the support page the author's earlier chat cited (support.claude.com/en/articles/17154008) before relying on it; it has not been read here.
+- Interactive Claude Code is for the conversation and orchestration only.
+- Swarm agents must NOT run as Claude Code subagents. Each call carries heavy per-call overhead, drains plan limits, and is not ordinary individual use. Run them through `mar` against the API.
+- Cheapest first: scripted (free), Jev (about $0.042 per 1M input tokens), claude-haiku-5-5, then larger models. Always `--dry-run` first.
+
 ## Logs
 
 What is stored where:

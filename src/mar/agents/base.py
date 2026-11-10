@@ -106,11 +106,15 @@ class Ledger:
     """Records every backend call: exact model build, tokens, usd, cached or not."""
 
     def __init__(self, backend: str, limit_usd: float | None = None):
-        self.backend, self.limit_usd, self.calls = backend, limit_usd, []
+        self.backend, self.limit_usd, self.calls, self.refusal_categories = backend, limit_usd, [], []
 
-    def record(self, model_build, input_tokens, output_tokens, usd, cached=False):
+    def note_refusal(self, category):
+        self.refusal_categories.append(category or "unknown")
+
+    def record(self, model_build, input_tokens, output_tokens, usd, cached=False, cache_read=0, cache_write=0):
         self.calls.append({"model_build": model_build, "input_tokens": int(input_tokens or 0),
-                           "output_tokens": int(output_tokens or 0), "usd": float(usd or 0.0), "cached": bool(cached)})
+                           "output_tokens": int(output_tokens or 0), "usd": float(usd or 0.0), "cached": bool(cached),
+                           "cache_read_tokens": int(cache_read or 0), "cache_write_tokens": int(cache_write or 0)})
         if self.limit_usd is not None and self.total_usd() > self.limit_usd:
             raise BudgetExceeded(f"{self.backend}: spend ${self.total_usd():.4f} passed the limit "
                                  f"${self.limit_usd:.4f}; stopping.")
@@ -124,6 +128,10 @@ class Ledger:
                 "calls": len(live), "cache_hits": len(self.calls) - len(live),
                 "input_tokens": sum(c["input_tokens"] for c in live),
                 "output_tokens": sum(c["output_tokens"] for c in live),
+                "cache_read_tokens": sum(c["cache_read_tokens"] for c in live),
+                "cache_write_tokens": sum(c["cache_write_tokens"] for c in live),
+                "refusals": len(self.refusal_categories),
+                "refusal_categories": sorted(set(self.refusal_categories)),
                 "usd": round(self.total_usd(), 6)}
 
 

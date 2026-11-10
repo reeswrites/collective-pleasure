@@ -5,10 +5,11 @@ from pathlib import Path
 
 from .adapter import SUBROUNDS, BackendFisher
 from .base import Ledger, bucket_options, report_vocabulary
+from .claude import BATCH_MULT, CACHE_READ_MULT, PRICES, ClaudeAgent, require_model
 from .jev import JEV_MODEL, USD_PER_M_INPUT, JevAgent
 from .llm import SYSTEM, LLMAgent
 
-BACKEND_KINDS = ("jev", "llm")
+BACKEND_KINDS = ("jev", "llm", "claude")
 CHARS_PER_TOKEN = 3  # ASSUMED conservative (real text is nearer 4) so the estimate is an upper bound
 TAG_OVERHEAD = 60
 
@@ -16,11 +17,15 @@ TAG_OVERHEAD = 60
 class AgentFactory:
     def __init__(self, temperature=1.0, jev_provider="openrouter", jev_model=JEV_MODEL, llm_model=None,
                  llm_temperature=0.7, llm_price_in=0.0, llm_price_out=0.0, llm_max_tokens=200,
-                 cache_dir=None, max_usd=None):
+                 cache_dir=None, max_usd=None, claude_model=None, claude_client=None, transport_for=None,
+                 batch=False, cache_share=0.0, claude_out_tokens=150):
         self.T, self.provider, self.jev_model, self.llm_model = temperature, jev_provider, jev_model, llm_model
         self.llm_T, self.price_in, self.price_out, self.max_tokens = (llm_temperature, llm_price_in, llm_price_out,
                                                                       llm_max_tokens)
         self.cache_dir, self.max_usd = cache_dir, max_usd
+        self.claude_model, self.claude_client, self.transport_for, self.batch = (claude_model, claude_client,
+                                                                                  transport_for, batch)
+        self.cache_share, self.claude_out_tokens = cache_share, claude_out_tokens
         self.ledgers = {}
 
     def _ledger(self, kind) -> Ledger:
@@ -33,6 +38,9 @@ class AgentFactory:
         elif kind == "llm":
             be = LLMAgent(self.llm_model, self.llm_T, self._ledger("llm"), self.price_in, self.price_out,
                           self.max_tokens)
+        elif kind == "claude":
+            be = ClaudeAgent(self.claude_model, self._ledger("claude"), client=self.claude_client,
+                             transport=self.transport_for(index) if self.transport_for else None, batch=self.batch)
         else:
             raise ValueError(f"not a backend kind: {kind!r}")
         return BackendFisher(be, kind, index, rules_text)
@@ -55,7 +63,19 @@ class AgentFactory:
                 continue
             ctx = BackendFisher(None, kind, n, rules_text).context(obs)
             calls = n * months * (SUBROUNDS + 1) * rounds
-            if kind == "jev":
+            if kind == "claude":
+                m = require_model(self.claude_model)
+                pin, pout = PRICES.get(m, (0.0, 0.0))
+                per = math.ceil((len(SYSTEM) + len(ctx) + len(json.dumps(bucket_options())) + TAG_OVERHEAD)
+                                / CHARS_PER_TOKEN)
+                share = min(max(self.cache_share, 0.0), 1.0)
+                in_mult = 1 - share * (1 - CACHE_READ_MULT)
+                usd = calls * (per * pin * in_mult + self.claude_out_tokens * pout) / 1e6
+                note = (f"{m}: {per} input tokens (cache hit share {share:g}) + {self.claude_out_tokens} assumed "
+                        f"output tokens per call" + ("" if m in PRICES else "; model has no known price, usd shown as 0"))
+                out[kind] = {"calls": calls, "input_tokens": calls * per, "usd": usd, "usd_batch": usd * BATCH_MULT,
+                             "note": note}
+            elif kind == "jev":
                 q = json.dumps({"state": ctx, "model": self.jev_model, "questions": {
                     "action": {"type": "choice", "instructions": "x" * 60, "criteria": bucket_options()}}})
                 per = math.ceil(max(len(q), len(json.dumps(report_vocabulary())) + len(ctx)) / CHARS_PER_TOKEN)
