@@ -17,6 +17,10 @@ Status: pre-results. Direction set 2026-11-10 (ADR 0003, ADR 0005, docs/pitch.md
 | V4 | First curve: five-agent swarm, ~10 rounds, 3 seeds, LLM patcher, outcome oracle (judge rubric optional). Run through the workbench. Preregister C1 and C2 before the first run. Record every "not what I meant" moment with a timestamp and the oracle change it caused | two to three days | Result either way: slope, plateau with uncertainty, rule count per round (loop a); "not what I meant" moments per round, one curve per oracle version (loop b). Bloat guard checked |
 | V5 | One-page write-up with the curve; fresh-agent review council | a day or two | Council finds no claim beyond the evidence; card-only reader can follow every rule |
 
+## Version 3 scope (ADR 0011)
+
+Wanting and liking, adaptation, curiosity, endogenous ruptures, rupture and repair, appraisal vs actual quality with counterfactual runs, switchable appraisal biases, a "why they stay" view, and an appraisal accuracy score. Order of work: hedonic build (ADR 0010), empowerment, two modes, then version 3. The rediscovery test's missing cycles (ADR 0009) are logged as a negative result and deferred.
+
 ## Decisions waiting on the author
 
 - At V4: keep the in-repo harness or port to GovSim (running GovSim locally needs the author's OK; ADR 0003 ASSUMED note).
@@ -47,3 +51,4 @@ The earlier milestones (ADICO to LTS export cross-checked against philosophy-eng
 - 2026-11-10: ADR 0006 proposed (decision-model stand-in study). Agent backends (scripted, Jev, OpenRouter LLM, Claude), typed reports, Say vs do panel, dry-run pricing and a Message Batch sweep built, offline-tested only; no live call made.
 - 2026-11-10: ADR 0007 accepted. Research is norms (freedom and cooperation, household world), product is an evolving evaluator, central measure is inventive seams across a seam ladder and a model ladder. docs/goal.md added; claims IT1 and ML1 drafted. Household world and seam ladder in progress.
 - 2026-11-10: author decided typed reports for LLM agents and one untouched final exam (ADR 0007, FX1). Main and branch pushed to GitHub by the author (Claude Code pushes are blocked by auto mode).
+- 2026-11-10: ADR 0011 accepted. Two modes, world-model framing, why agents stay. Version 3 scope added; claims MU1, AP1 and DM1 drafted. Nothing built yet.

@@ -18,6 +18,18 @@ What judges the norms improves alongside them. Agents' exploits widen the formal
 
 Proofs make rules airtight inside the formal model. Clever enough agents step outside it. Those inventive seams are found by an agent, not predicted by the model checker, and they are where intelligence matters. The aim is the capability level, and the price, at which agents start escaping the model. Below it, formal rules hold. Above it, the human loop must keep widening the model.
 
+## Two modes
+
+The household runs in two modes, and the project does not settle which is right. Delegates: AI agents serve human principals, humans' welfare counts, and agents face rules at least as strict as anyone's. Peers: every member's modeled welfare counts equally, and a future where AI agents count stays open. Experiments cannot settle the metaphysics. They can show whether it matters. We report norms that win in both modes and where the modes split (ADR 0011).
+
+## World-model framing
+
+The project is the Guaranteed Safe AI shape in small. The world model is the household sim with counterfactuals. The specification is pleasure, non-offsettable suffering, empowerment and norms. The verifier is the proof checks, the seam ladder and the evaluator. Value alignment asks if norms produce good lives. Epistemic alignment asks if agents' appraisals match reality. Predictions about real people stay hypotheses until the household reproduces known findings.
+
+## Why they stay
+
+Version 3 asks why an agent stays in a bad household. Actual quality comes from counterfactual runs. Appraisal is what the agent believes. The gap is misappraisal. Switchable biases (creeping normality, sunk cost, risk aversion) can widen it. Repair after a rupture is the good reason to stay. Appraisal accuracy becomes a third score (ADR 0011).
+
 ## Two loops
 
 The rules converge on the test. The test converges on the author's intent. That gives two curves. Where they flatten says how good "good enough" can get.
@@ -50,6 +62,10 @@ In progress: the household world and the seam ladder.
 - Talking LLM agents also file typed reports, in the same fixed vocabulary as decision-model agents, alongside free talk. Say vs do can then be compared across tiers. The backend already asks for a "report" field; this is the standing rule.
 - One untouched final exam is kept for the write-up (see ADR 0007 decision 12 and claim FX1).
 - Main and the branch are on GitHub (private repo), pushed by the author on 2026-11-10. Pushes from Claude Code are blocked by auto mode, so the author pushes.
+
+## What changed
+
+- 2026-11-10: two modes (delegates and peers), the world-model framing and the why-they-stay model added (ADR 0011). Freedom is also reported as empowerment. Shocks are read as misalignment in the wider system.
 
 ## Still open
 

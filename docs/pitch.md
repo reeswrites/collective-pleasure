@@ -60,6 +60,10 @@ The aim is norms that let agents cooperate freely. Freedom means anyone can leav
 
 The evaluator is the more interesting product. It evolves with the norms. Agent exploits widen the formal model, the author's "that's not what I meant" moments refine the test, and a ladder of adversaries from cheap decision models to strong LLMs keeps the pressure honest. The timeline records how and why it changed. Used through chat (see docs/goal.md).
 
+## The world-model framing
+
+In small, this is the Guaranteed Safe AI shape (Dalrymple, Bengio, Russell et al. 2024; from memory, verify). The household sim with counterfactuals is the world model. Pleasure, non-offsettable suffering, empowerment and norms are the specification. Proof checks, the seam ladder and the evaluator are the verifier. That separates value alignment (norms produce good lives) from epistemic alignment (agents' appraisals match reality). The household is our model, so claims about real people wait on fidelity checks (ADR 0011).
+
 ## Next
 
 See docs/plan.md. Later: the format experiment (ADR 0004), and Computational Liberation's institutions as a second domain (a moonshot).
