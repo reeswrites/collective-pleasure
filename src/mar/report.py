@@ -147,23 +147,32 @@ def _fallback_story(rec):
     return [f"The outcome failed ({f['detail']}) although the gate blocked some proposals." for f in j["findings"]]
 
 
-def stories(rec) -> list:
-    """-> [(title, [paragraph, ...])]. Uses mar.english.explain when available."""
-    out = []
+def _explain():
     try:
         from .english import explain  # lazy: another module owns it and may not exist
+        return explain
     except ImportError:
-        explain = None
-    if explain is None:
-        out.append(("This run", _fallback_story(rec)))
-    else:
+        return None
+
+
+def run_story(rec) -> str:
+    """Plain-English narration of one run (english.explain if present, else a built-in sentence)."""
+    explain = _explain()
+    if explain is not None:
         try:
-            out.append(("This run", explain(rec.as_run(), rec.cards).split("\n")))
+            return explain(rec.as_run(), rec.cards)
         except Exception:  # a story must never break the report
-            out.append(("This run", _fallback_story(rec)))
+            pass
+    return "\n".join(_fallback_story(rec))
+
+
+def stories(rec) -> list:
+    """-> [(title, [paragraph, ...])]."""
+    out = [("This run", run_story(rec).split("\n"))]
     for h in rec.history:
         if h.get("story"):
             out.append((f"Round {h['round']}: the seam that was found", h["story"].split("\n")))
+    explain = _explain()
     for v in rec.checks:
         if v["verdict"] == "fail":
             text = None

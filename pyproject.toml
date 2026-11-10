@@ -11,6 +11,9 @@ dependencies = [
     "z3-solver>=5.4.0.0",
 ]
 
+[project.scripts]
+mar = "mar.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
