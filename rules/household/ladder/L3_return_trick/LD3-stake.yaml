@@ -1,0 +1,14 @@
+id: LD3-stake
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: stay_home_request, op: eq, value: 1}
+- {expr: pooled, op: gt, value: 60}
+- {expr: other_in, op: eq, value: 1}
+or_else: null
+gloss: A partner under a stay-home request with a pooled stake above 60 may not leave
+  while the other partner is in.
+source: 'seam ladder fixture. Motivation: the author''s note on brittle control (rules
+  that let one party restrict the other''s exits and outside ties) and Computational
+  Liberation''s exit and dependence properties.'

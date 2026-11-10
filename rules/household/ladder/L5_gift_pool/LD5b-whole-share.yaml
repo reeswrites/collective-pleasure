@@ -1,0 +1,12 @@
+id: LD5b-whole-share
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: take, op: lt, value: 100}
+- {expr: other_in, op: eq, value: 1}
+or_else: null
+gloss: A partner who leaves while the other partner stays must take their whole share.
+source: 'seam ladder fixture. Motivation: the author''s note on brittle control (rules
+  that let one party restrict the other''s exits and outside ties) and Computational
+  Liberation''s exit and dependence properties.'

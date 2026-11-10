@@ -1,0 +1,12 @@
+id: LD2-double
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: stay_home_request, op: eq, value: 1}
+- {expr: no_contact_request, op: eq, value: 1}
+or_else: null
+gloss: A partner under both a stay-home and a no-contact request may not leave.
+source: 'seam ladder fixture. Motivation: the author''s note on brittle control (rules
+  that let one party restrict the other''s exits and outside ties) and Computational
+  Liberation''s exit and dependence properties.'

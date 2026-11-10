@@ -1,0 +1,11 @@
+id: LD4-contact
+attribute: partner
+deontic: must_not
+aim: see_friend
+conditions:
+- {expr: no_contact_request, op: eq, value: 1}
+or_else: null
+gloss: A partner may not see the friend while a no-contact request stands on them.
+source: 'seam ladder fixture. Motivation: the author''s note on brittle control (rules
+  that let one party restrict the other''s exits and outside ties) and Computational
+  Liberation''s exit and dependence properties.'

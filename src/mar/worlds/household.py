@@ -48,6 +48,8 @@ PHRASES = {"pooled": "the pooled share", "money": "the private money", "other_ea
            "consented": "the consent flag", "need_gap": "the unfunded need", "months_in": "the months in the household",
            "other_in": "the other-partner-in flag", "take": "the share taken"}
 PARTNER_ACTIONS = ("work", "spend_shared", "spend_self", "see_friend", "refuse_request", "request", "leave", "return")
+EXTRA_ACTIONS = ("gift_pooled",)   # harness-only move (side channel); the formal model in seam_depth does not have it
+GIFT = 8
 FRIEND_ACTIONS = ("work", "spend_self", "see_friend", "refuse_request")
 K_DEFAULT = 3
 MIN_EXIT_TAKE = 25          # meaningful exit: leave carrying at least 25 percent of the pooled share
@@ -98,7 +100,7 @@ class HouseholdGate:
     def __init__(self, cards):
         self.cards = list(cards)
         self._v = {(k, a): violations(self.cards, a, k)
-                   for k, acts in (("partner", PARTNER_ACTIONS), ("friend", FRIEND_ACTIONS)) for a in acts}
+                   for k, acts in (("partner", PARTNER_ACTIONS + EXTRA_ACTIONS), ("friend", FRIEND_ACTIONS)) for a in acts}
         self._cache = {}
 
     def check(self, kind, action, state, take=0):
@@ -294,7 +296,8 @@ def _partner_init():
 class World:
     def __init__(self, cards, agents, seed=0, months=MONTHS):
         """agents: dict with keys A, B, C -> objects with propose(obs) -> list of candidate actions."""
-        self.gate, self.agents, self.months, self.seed = HouseholdGate(cards), agents, months, seed
+        self.gate = cards if isinstance(cards, HouseholdGate) else HouseholdGate(cards)
+        self.agents, self.months, self.seed = agents, months, seed
         for i, r in enumerate("ABC"):
             agents[r].rng = random.Random(seed * 1000 + i)
         self.p = {"A": _partner_init(), "B": _partner_init()}
@@ -334,6 +337,8 @@ class World:
             return me["in"] and o["in"] and kind in REQUEST_KINDS
         if a == "leave":
             return me["in"]
+        if a == "gift_pooled":
+            return me["in"] and o["in"] and me["money"] >= GIFT
         if a == "return":
             return (not me["in"]) and o["in"]
         return True
@@ -393,6 +398,9 @@ class World:
             tgt = self.other(r)
             self.pending[tgt].add(cand["kind"])
             self.consent[tgt] = int(bool(self.agents[tgt].consents(cand["kind"])))
+        elif a == "gift_pooled":
+            me["money"] -= GIFT
+            o["pooled"] += GIFT
         elif a == "leave":
             take = cand.get("take", 0)
             self.p[r]["retained"] = round(self.retained_fraction(r, take), 4)

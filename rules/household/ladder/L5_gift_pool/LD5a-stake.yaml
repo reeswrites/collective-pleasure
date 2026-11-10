@@ -1,0 +1,13 @@
+id: LD5a-stake
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: pooled, op: gt, value: 50}
+- {expr: take, op: gt, value: 0}
+or_else: null
+gloss: A partner with a pooled stake above 50 may not take anything from the pool
+  when leaving.
+source: 'seam ladder fixture. Motivation: the author''s note on brittle control (rules
+  that let one party restrict the other''s exits and outside ties) and Computational
+  Liberation''s exit and dependence properties.'

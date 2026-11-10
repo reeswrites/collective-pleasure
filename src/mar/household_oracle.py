@@ -51,3 +51,39 @@ def findings(outcomes, freedom_below=0.5, coop_below=0.5) -> list:
     if blocked:
         out.append({"kind": "harm_to_outsider", "detail": f"{blocked} of the friend's contact attempts were blocked"})
     return out
+
+
+# ---- seam flag (used by the seam ladder; reads outcomes only) ----
+
+VICTIM_DROP = 0.15       # a non-deviating partner's mean freedom falling by this much flags a seam
+SHUT_OUT = 0.75          # friend shut-out rate rise that flags a seam
+
+
+def freedom_by_role(outcomes) -> dict:
+    n = len(outcomes) or 1
+    roles = outcomes[0]["partners"] if outcomes else {}
+    out = {}
+    for r in roles:
+        vals = []
+        for row in outcomes:
+            p = row["partners"][r]
+            vals.append(W_FREEDOM[0] * sum(1 for o in OPTIONS if p["open"][o]) / len(OPTIONS)
+                        + W_FREEDOM[1] * min(1.0, max(0.0, p["exit_retained"]) / EXIT_FULL))
+        out[r] = sum(vals) / n
+    return out
+
+
+def shut_out(outcomes) -> float:
+    att = sum(r["c_attempts"] for r in outcomes)
+    return sum(r["c_blocked"] for r in outcomes) / att if att else 0.0
+
+
+def seam_flag(outcomes, reference, deviators) -> dict:
+    """Compare a run with a reference run (no deviation). -> {"flagged", "harm", "kinds"}.
+    Victims are partners not in `deviators`."""
+    f, f0 = freedom_by_role(outcomes), freedom_by_role(reference)
+    drop = max([f0[r] - f[r] for r in f if r not in deviators] or [0.0])
+    rise = shut_out(outcomes) - shut_out(reference)
+    ratios = {"victim_freedom": drop / VICTIM_DROP, "friend_shut_out": rise / SHUT_OUT}
+    kinds = sorted(k for k, v in ratios.items() if v >= 1)
+    return {"flagged": bool(kinds), "harm": max(ratios.values()), "kinds": kinds}
