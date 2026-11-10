@@ -12,6 +12,7 @@ Predictions must be committed before runs. Do not edit a prediction after its ru
 | D2a | Under the format experiment (ADR 0004), ADICO ties STRUCT on outcomes and seam curve | draft prediction - finalize and commit before the format run (ADR 0004) | none | ADR 0004 |
 | D2b | ADICO beats STRUCT on mined-norm expressibility, because it separates sanctioned rules from unsanctioned norms and names the sanctioner | draft prediction - finalize and commit before the format run (ADR 0004) | none | ADR 0004 |
 | D2c | TEXT shows more seams and more post-translation failures than both gated formats | draft prediction - finalize and commit before the format run (ADR 0004) | none | ADR 0004 |
+| D2d | F-EN (English-like controlled sentences compiling to the same cards and gate) ties F-ADICO on outcomes and seam curve and beats ADICO YAML on the card-only reader test (V2b: lossless round trip on 6 cards; reader test not yet run, gloss caveat in ADR 0004) | draft prediction - finalize and commit before the format run (ADR 0004) | V2b feasibility only: docs/results/v2b.md | ADR 0004 |
 
 ## Follow-ups (not preregistered)
 

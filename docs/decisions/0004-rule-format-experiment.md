@@ -10,10 +10,11 @@ The core of the project is evolving alignment norms by tweaking interpretable ru
 
 ## Decision
 
-Run a three-arm format experiment. The arms differ only in rule format:
+Run a four-arm format experiment. The arms differ only in rule format:
 
 - **F-ADICO:** rule cards with attribute, deontic, aim, conditions and or-else (ADR 0002).
 - **F-STRUCT:** plain structured rules. Each has an attribute, a condition, allow or deny, and an optional numeric limit. No deontic types, no sanctioner.
+- **F-EN:** English-like controlled sentences in the SLEEC style ("When <condition>, a fisher must not <aim>, otherwise <sanction>"). They parse to the same ADICO cards and compile to the same gate (src/mar/english.py, V2b). Same semantics as F-ADICO; only the authoring surface differs.
 - **F-TEXT:** plain-English rules. They are gated through an LLM translator that produces solver constraints. The translator's error rate is reported separately, because this arm partly measures the translator.
 
 All arms get the same evolution and patch budget, the same oracle, the same seeds and the same agents.
@@ -32,7 +33,12 @@ Draft now. Finalize and commit before any run (claims D2a, D2b, D2c).
 
 - ADICO about ties STRUCT on outcomes and the seam curve.
 - ADICO beats STRUCT on mined-norm expressibility. It separates sanctioned rules from unsanctioned norms and names the sanctioner, so informal swarm norms (turn-taking, shaming) fit as what they are.
+- F-EN ties ADICO on outcomes and seams, since it is the same cards and the same gate (V2b: 0 gate mismatches on the V2 grid). It beats ADICO YAML on the card-only reader test. Caveat: the cards already carry an English gloss, so this holds only if the reader test is set up to show the YAML arm's card without its gloss or to count gloss-only readers separately; otherwise the arms may tie. V2b also found that `must`, `may`, sanctions and arithmetic read less naturally than the SLEEC form, so a loss on rules that use them is plausible.
 - TEXT is the most expressive but shows more seams and more candidates that fail after translation.
+
+### Rendering counterexamples
+
+In every arm, counterexamples and seam traces shown to patchers and readers are rendered in plain English (`explain` in src/mar/english.py), not as solver output, so arms differ in rule format only and not in feedback format. Stories state the check bound.
 
 ### Decision rule
 
@@ -47,5 +53,5 @@ The experiment runs after V4's setup is fixed. It needs the swarm, because mined
 
 - The result is recorded as the format rationale whichever way it falls.
 - A negative result for ADICO goes to docs/negative-results.md and triggers ADR 0002's kill criterion.
-- Three formats need three compile paths to the solver. F-TEXT also needs the translator and a way to measure its error rate.
+- Four formats need four compile paths to the solver (F-EN reuses the ADICO path through the parser). F-TEXT also needs the translator and a way to measure its error rate.
 - Until the run, ADICO stays as the authoring layer on the strength of ADR 0002 only.
