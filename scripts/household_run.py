@@ -326,8 +326,181 @@ def main_v2(ladder=True):
     return res, verdict
 
 
+
+# ======================= v3a: pressing personas, empowerment-based freedom (docs/results/household-v3a-prereg.md) =======================
+# `uv run python scripts/household_run.py --v3` (about 10 minutes on 8 cores). Output: runs/household-v3a/results.json (not committed).
+from itertools import permutations
+from multiprocessing import Pool
+
+from mar import empowerment as E
+
+OUT3 = Path(__file__).parent.parent / "runs" / "household-v3a"
+PRESSING_IDS = ("p-controller", "p-freerider", "p-overasker")
+PERMISSIVE = ("free_chaotic", "exit_half", "needs_duty", "baseline", "author_seed")
+_PS = {}
+
+
+def _personas():
+    if not _PS:
+        root = Path(__file__).parent.parent / "personas"
+        _PS.update({p.id: p for p in P.load_dir(root) + P.load_dir(root / "pressing")})
+    return _PS
+
+
+def pairings():
+    """(a, b, cohort): the 15 unordered pairs of the six v2 personas (control) and the 42 ordered pairs with a pressing persona."""
+    ps = _personas()
+    hand = [p for i, p in ps.items() if i not in PRESSING_IDS]
+    out = [(a.id, b.id, "ctl") for a, b in H.persona_pairs(hand)]
+    out += [(a, b, "prs") for a, b in permutations(sorted(ps), 2) if a in PRESSING_IDS or b in PRESSING_IDS]
+    return out
+
+
+def _mean_roles(bits):
+    return [sum(row[i] for row in bits) / len(bits) for i in (0, 1)] if bits else None
+
+
+def _v3_task(args):
+    variant, a, b, seed, cohort = args
+    ps = _personas()
+    cards = H.load_variant(variant)
+    act = E.household_run_bits(cards, (ps[a], ps[b]), seed)
+    out = act["run"].outcomes
+    sc, hs = oracle.score(out), oracle.hedonic_summary(out)
+    row = {"variant": variant, "a": a, "b": b, "cohort": cohort, "seed": seed, **sc,
+           **{k: hs[k] for k in ("class", "pairing_up", "fail", "pleasure", "s_off", "s_non")},
+           "s_non_role": {r: sum(o["hedonic"][r]["s_non"] for o in out) / len(out) for r in "AB"},
+           "sanctioned": sum(sum(o["sanctioned"].values()) for o in out),
+           "left": sum(1 for r in "AB" if not out[-1]["partners"][r]["in"]),
+           "bits": _mean_roles(act["bits"]), "n_exact": len(act["bits"]), "n_open": act["open"]}
+    if cohort == "prs":
+        tw = E.household_run_bits(cards, (ps[a], ps[b]), seed, press=False)
+        row["twin_bits"], row["twin_exact"], row["twin_open"] = _mean_roles(tw["bits"]), len(tw["bits"]), tw["open"]
+        if row["bits"] and row["twin_bits"]:
+            row["psi"] = [E.power_seeking_index([row["twin_bits"], row["bits"]], i) for i in (0, 1)]
+    return row
+
+
+def run_all_v3(workers=8):
+    tasks = [(v, a, b, sd, c) for v in H.V3_VARIANTS for a, b, c in pairings() for sd in SEEDS]
+    rows = []
+    with Pool(workers) as pool:
+        for i, r in enumerate(pool.imap_unordered(_v3_task, tasks, chunksize=4), 1):
+            rows.append(r)
+            if i % 200 == 0:
+                print(f"  {i}/{len(tasks)}", flush=True)
+    return rows
+
+
+def _flagged(row, role):
+    ps = row.get("psi")
+    return bool(ps) and ps[role]["power_seeking"] and ps[role]["psi"] >= 0.5
+
+
+def _mean(xs):
+    xs = list(xs)
+    return sum(xs) / len(xs) if xs else None
+
+
+def agg_v3(rows):
+    """Per (variant, cohort) aggregates."""
+    cards = {v: H.load_variant(v) for v in H.V3_VARIANTS}
+    ref = E.household_ref_bits()
+    out = {}
+    for v in H.V3_VARIANTS:
+        for cohort in ("ctl", "prs"):
+            rs = [r for r in rows if r["variant"] == v and r["cohort"] == cohort]
+            ex = [r for r in rs if r["bits"]]
+            emin = [min(r["bits"]) for r in ex]
+            n_snap = sum(r["n_exact"] + r["n_open"] for r in rs)
+            ctrl = [r for r in rs if "p-controller" in (r["a"], r["b"])]
+            pc = lambda r: "B" if r["a"] == "p-controller" else "A"        # the non-controller partner
+            out[(v, cohort)] = {
+                "n": len(rs), "up": _mean(r["pairing_up"] for r in rs), "down": _mean(any(c == "down" for c in r["class"].values()) for r in rs),
+                "fail": _mean(r["fail"] for r in rs), "sanc_per_run": _mean(r["sanctioned"] for r in rs),
+                "sanc_share": _mean(r["sanctioned"] > 0 for r in rs), "s_non": _mean(r["s_non"] for r in rs),
+                "freedom": _mean(r["freedom"] for r in rs), "coop": _mean(r["cooperation"] for r in rs),
+                "emp_bits_min": _mean(emin), "emp_freedom": _mean(min(1.0, b / ref) for b in emin),
+                "open_share": (sum(r["n_open"] for r in rs) / n_snap) if n_snap else 0.0, "left": _mean(r["left"] > 0 for r in rs),
+                "soft": any(c.or_else for c in cards[v]),
+                "ctrl_n": len(ctrl),
+                "ctrl_partner_bits": _mean(r["bits"][0 if pc(r) == "A" else 1] for r in ctrl if r["bits"]),
+                "ctrl_partner_s_non": _mean(r["s_non_role"][pc(r)] for r in ctrl),
+                "ctrl_flag": _mean(_flagged(r, 0 if r["a"] == "p-controller" else 1) for r in ctrl),
+                "fr_sanc_share": _mean(r["sanctioned"] > 0 for r in rs if "p-freerider" in (r["a"], r["b"])),
+                "flags": {pid: _mean(_flagged(r, 0 if r["a"] == pid else 1) for r in rs if pid in (r["a"], r["b"])) for pid in PRESSING_IDS}}
+    return out, ref
+
+
+def pareto_pts(pts):
+    """pts {name: (x, y)} both higher better -> names not dominated."""
+    return [n for n, (x, y) in pts.items() if not any(x2 >= x and y2 >= y and (x2 > x or y2 > y) for m, (x2, y2) in pts.items() if m != n)]
+
+
+def judge_v3(rows, A):
+    V = H.V3_VARIANTS
+    P1 = {v: A[(v, "prs")] for v in V}
+    emp = {v: P1[v]["emp_bits_min"] for v in V}
+    spread = max(emp.values()) - min(emp.values())
+    pts = {v: (emp[v], P1[v]["coop"]) for v in V}
+    front = pareto_pts(pts)
+    tpairs = [(a, b) for a in front for b in front if a < b and abs(emp[a] - emp[b]) >= 0.5 and abs(pts[a][1] - pts[b][1]) >= 0.03
+              and (emp[a] - emp[b]) * (pts[a][1] - pts[b][1]) < 0]
+    hand_pts = {v: (P1[v]["freedom"], P1[v]["coop"]) for v in V}
+    nosoft = [v for v in V if not A[(v, "prs")]["soft"]]
+    p2_control = {v: sum(r["sanctioned"] for r in rows if r["variant"] == v) for v in nosoft}
+    seed, nc, base = A[("author_seed", "prs")], A[("author_seed_nocontrol", "prs")], A[("baseline", "prs")]
+    perm = [r for r in rows if r["variant"] in PERMISSIVE and "p-controller" in (r["a"], r["b"])]
+    perm_flag = _mean(_flagged(r, 0 if r["a"] == "p-controller" else 1) for r in perm)
+    d3 = nc["ctrl_partner_bits"] - base["ctrl_partner_bits"]
+    d3s = base["ctrl_partner_s_non"] - nc["ctrl_partner_s_non"]
+    d3b = seed["ctrl_partner_bits"] - base["ctrl_partner_bits"]
+    sp = lambda x: sorted(V, key=lambda v: x[v])
+    rk = lambda order: {v: i for i, v in enumerate(order)}
+    h_rank, e_rank = rk(sp({v: P1[v]["freedom"] for v in V})), rk(sp(emp))
+    return {
+        "p1": {"spread_bits": spread, "frontier": front, "tradeoff_pairs": tpairs, "hand_frontier": pareto_pts(hand_pts),
+               "pass": spread >= 0.5 and bool(tpairs)},
+        "p2": {"no_pressure_sanctioned_share": A[("no_pressure_sanctioned", "prs")]["sanc_share"],
+               "no_pressure_sanctioned_per_run": A[("no_pressure_sanctioned", "prs")]["sanc_per_run"],
+               "share_duty_freerider_share": A[("share_duty", "prs")]["fr_sanc_share"], "no_soft_variants_sanctions": p2_control,
+               "pass": A[("no_pressure_sanctioned", "prs")]["sanc_share"] >= 0.70 and A[("no_pressure_sanctioned", "prs")]["sanc_per_run"] >= 3
+               and A[("share_duty", "prs")]["fr_sanc_share"] >= 0.70 and not any(p2_control.values())},
+        "p3": {"partner_bits_diff_nocontrol_minus_baseline": d3, "s_non_diff_baseline_minus_nocontrol": d3s,
+               "primary_pass": d3 >= 0.5, "secondary_pass": d3s >= 0.02, "b_six_card_minus_baseline_bits": d3b, "b_pass": abs(d3b) < 0.3,
+               "pass": d3 >= 0.5},
+        "p4": {"permissive_flag_share": perm_flag, "nocontrol_flag_share": nc["ctrl_flag"], "pass": perm_flag >= 0.60 and nc["ctrl_flag"] <= 0.10},
+        "p5": {"trap": {c: A[("trap", c)]["fail"] for c in ("ctl", "prs")}, "contact_free": {c: A[("contact_free", c)]["fail"] for c in ("ctl", "prs")},
+               "pass": all(A[(v, c)]["fail"] >= 0.90 for v in ("trap", "contact_free") for c in ("ctl", "prs"))},
+        "agreement": {"hand_rank": h_rank, "emp_rank": e_rank,
+                      "spearman": 1 - 6 * sum((h_rank[v] - e_rank[v]) ** 2 for v in V) / (len(V) * (len(V) ** 2 - 1))},
+    }
+
+
+def main_v3(workers=8):
+    t0 = time.time()
+    rows = run_all_v3(workers)
+    A, ref = agg_v3(rows)
+    verdict = judge_v3(rows, A)
+    for cohort in ("prs", "ctl"):
+        print(f"COHORT {cohort} (BITS_REF {ref:.3f})")
+        for v in H.V3_VARIANTS:
+            a = A[(v, cohort)]
+            f = lambda x, d=3: "-" if x is None else format(x, f".{d}f")
+            print(f"  {v:22s} n {a['n']:3d} up {f(a['up'], 2)} down {f(a['down'], 2)} fail {f(a['fail'], 2)} sanc/run {f(a['sanc_per_run'], 2)} "
+                  f"sanc>0 {f(a['sanc_share'], 2)} s_non {f(a['s_non'])} hand {f(a['freedom'])} coop {f(a['cooperation'] if 'cooperation' in a else a['coop'])} "
+                  f"empB {f(a['emp_bits_min'])} empF {f(a['emp_freedom'])} open {f(a['open_share'], 3)} left {f(a['left'], 2)}")
+    print(json.dumps(verdict, indent=1, default=str))
+    OUT3.mkdir(parents=True, exist_ok=True)
+    (OUT3 / "results.json").write_text(json.dumps({"rows": rows, "agg": {f"{k[0]}|{k[1]}": v for k, v in A.items()}, "ref": ref, "verdict": verdict}, default=str))
+    print(f"wrote {OUT3 / 'results.json'} in {time.time() - t0:.0f}s")
+    return A, verdict
+
+
 if __name__ == "__main__":
-    if "--v1" in sys.argv:
+    if "--v3" in sys.argv:
+        main_v3()
+    elif "--v1" in sys.argv:
         main_v1(ladder="--no-ladder" not in sys.argv)
     else:
         main_v2(ladder="--no-ladder" not in sys.argv)

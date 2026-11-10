@@ -27,3 +27,7 @@ Allowing exit lowered mean cooperation by 0.019 over a heuristic-strategy mix, o
 ## 2026-11-10: first evolution run (fishery, scripted agents)
 
 The seam-curve fall is mostly exhaustion of a finite set of seam keys (agent mix x finding kind), so first-seen counts had to fall; it is not evidence of convergence. The evolved elite did not beat the seed spec on the held-out final exam (seam_free 0.25 vs 0.25; regrowth x1.5, 8 months, unseen agent mixes): it overfit the training conditions. Evidence: docs/results/evolve.md.
+
+## 2026-11-10: household v3a, predictions 1, 3 (primary) and 4
+
+(1) No preregistered-size freedom/cooperation trade-off: the only opposite-direction frontier pair (needs_duty vs no_pressure_wall) differs by 0.136 bits, below the 0.5 committed. (3) The author seed with a no-veto card did not raise the non-controller partner's empowerment: 6.087 against baseline's 6.411 (-0.324 bits, committed at least +0.5); it did cut that partner's non-offsettable suffering (0.009 against 0.073). (4) The power-seeking index flagged the controller in 0 of 240 permissive runs (committed at least 60 percent): the controller loses empowerment against its twin in every run (mean -1.77 bits) because pressing dissolves the household. Predictions 2 and 5 held but are near-definitional. Not retuned. Evidence: docs/results/household-v3a.md.

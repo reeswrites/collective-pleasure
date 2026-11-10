@@ -27,3 +27,10 @@ Executed actions are by construction allowed, so "every executed action passed t
 ## 2026-11-10: first evolution run
 
 Objectives saturated by generation 3, so the frontier collapsed to a single corner and path dependence could not show. A deontic flip produced a rule that restates another; the proof checks catch conflicts and deadlock but not redundancy. "Front prevalence" measured after selection was blind to the drop it was meant to see. Evidence: docs/results/evolve.md.
+
+## 2026-11-10 (household v3a)
+
+- **Empowerment counts the option to press as freedom.** With veto and take_shared in the menu and held vetoes in the key, removing them lowers an agent's own bits (week-0 bits: free_chaotic 8.087, baseline 7.555, no_pressure_wall 6.966, author_seed_nocontrol 6.658). `author_seed_nocontrol` has the lowest empowerment (5.790 bits, pressing cohort) and the lowest partner non-offsettable suffering (0.009 against baseline's 0.073). A household-welfare freedom score needs victim-side options only. Evidence: docs/results/household-v3a.md.
+- **Pressing mostly ends the household.** With a pressing persona present, 89 to 93 percent of runs end with a partner gone (33 percent without) and the fail share under free_chaotic is 0.53 (0.13 without). Walls on pressing: 0.39 fail, 48 percent dissolved, cooperation 0.815 against baseline 0.649.
+- **A price is worse than a wall.** no_pressure_sanctioned: 31.5 sanctions per run, cooperation 0.506, fail 0.63, worse than baseline. The persona agents pay and press on.
+- **Hand-made freedom stays at 0.997 to 1.000 outside the trap family even with pressing personas present.** The empowerment score spreads variants by 0.72 bits and ranks them differently (Spearman 0.33).
