@@ -28,6 +28,8 @@ AXES = {
     "directness_avoidance": ("directness", "avoidance"),
 }
 WEIGHT_KEYS = ("security", "autonomy", "togetherness", "money", "other_connections")
+NEED_KEYS = ("rest", "connection", "money", "security")
+ASPIRATION_KEYS = ("security_buffer", "together_per_week", "friends_per_week", "savings_per_week", "autonomy")
 STYLES = ("direct", "accommodating", "avoidant", "competitive", "collaborative")
 SOURCES = ("grid", "hand", "generated")
 TODO = "TODO"
@@ -65,10 +67,37 @@ class Persona:
     version: int = 1
     parent: str = ""        # id of the persona this was varied from, if any
     varied: str = ""        # what changed, e.g. "weights.security=0.9"
+    needs: dict = field(default_factory=dict)         # salience in [0,1] of each need clock (hedonic model)
+    aspirations: dict = field(default_factory=dict)   # targets; their weights are the persona's weights
+
+    def __post_init__(self):
+        """Missing needs or aspirations take the ASSUMED defaults from the weights (older files stay valid)."""
+        if not self.needs and isinstance(self.weights, dict) and set(self.weights) == set(WEIGHT_KEYS):
+            self.needs = needs_from_weights(self.weights)
+        if not self.aspirations and isinstance(self.weights, dict) and set(self.weights) == set(WEIGHT_KEYS):
+            self.aspirations = aspirations_from_weights(self.weights)
 
 
 def _r(x):
     return round(max(0.0, min(1.0, x)), 2)
+
+
+def needs_from_weights(w):
+    """ASSUMED: salience of the four need clocks (rest, connection, money, security), docs/decisions/0010.
+      rest 0.5 for everyone; connection 0.3 + 0.4 togetherness + 0.3 other_connections;
+      money 0.3 + 0.5 money; security = security weight (floored at 0.1)."""
+    return {"rest": 0.5, "connection": _r(0.3 + 0.4 * w["togetherness"] + 0.3 * w["other_connections"]),
+            "money": _r(0.3 + 0.5 * w["money"]), "security": _r(max(0.1, w["security"]))}
+
+
+def aspirations_from_weights(w):
+    """ASSUMED targets, one per weight. The persona's weight for that value is the aspiration's importance.
+      security_buffer: target security level (0.4 + 0.5 security); together_per_week: 1.5 x togetherness
+      sessions; friends_per_week: 1.5 x other_connections visits; savings_per_week: 3 x money units;
+      autonomy: share of own options kept open (1.0, importance = autonomy weight)."""
+    return {"security_buffer": _r(0.4 + 0.5 * w["security"]), "together_per_week": round(1.5 * w["togetherness"], 2),
+            "friends_per_week": round(1.5 * w["other_connections"], 2), "savings_per_week": round(3 * w["money"], 2),
+            "autonomy": 1.0}
 
 
 def profile_from_axes(axes):
@@ -114,7 +143,8 @@ def grid(axes=None, levels=2):
         pid = "g-" + "".join(str(i) for i in combo)
         poles = ", ".join(axes[n][0] if i < levels / 2 else axes[n][1] for n, i in zip(axes, combo))
         out.append(Persona(pid, f"Grid {poles}", a, [TODO] * 3, TODO, weights, style, risk,
-                           tags=["grid"], source="grid"))
+                           tags=["grid"], source="grid", needs=needs_from_weights(weights),
+                           aspirations=aspirations_from_weights(weights)))
     return out
 
 
@@ -146,6 +176,12 @@ def validate(p):
         errs.append("risk_tolerance must be in [0,1]")
     if not isinstance(p.tags, list):
         errs.append("tags must be a list")
+    if not isinstance(p.needs, dict) or set(p.needs) != set(NEED_KEYS) or \
+            not all(isinstance(v, (int, float)) and 0 <= v <= 1 for v in p.needs.values()):
+        errs.append(f"needs must be exactly {list(NEED_KEYS)} with values in [0,1]")
+    if not isinstance(p.aspirations, dict) or set(p.aspirations) != set(ASPIRATION_KEYS) or \
+            not all(isinstance(v, (int, float)) and v >= 0 for v in p.aspirations.values()):
+        errs.append(f"aspirations must be exactly {list(ASPIRATION_KEYS)} with values >= 0")
     if not isinstance(p.principles, list) or len(p.principles) != 3 or not all(isinstance(t, str) and t.strip() for t in p.principles):
         errs.append("exactly 3 non-empty principles required")
     if not isinstance(p.backstory, str) or not p.backstory.strip():
@@ -193,7 +229,8 @@ def vary(p, fld, value):
     """One-field change for tunability. fld is 'weights.<key>', 'axes.<name>', 'principles.<i>',
     or a top-level field (negotiation_style, risk_tolerance, backstory, label). Returns a new
     validated Persona with id '<id>--<field>-<value>' and parent set. The original is untouched."""
-    q = replace(p, axes=dict(p.axes), weights=dict(p.weights), principles=list(p.principles), tags=list(p.tags))
+    q = replace(p, axes=dict(p.axes), weights=dict(p.weights), principles=list(p.principles), tags=list(p.tags),
+                needs=dict(p.needs), aspirations=dict(p.aspirations))
     if "." in fld:
         head, key = fld.split(".", 1)
         if head in ("weights", "axes"):
@@ -211,6 +248,8 @@ def vary(p, fld, value):
         setattr(q, fld, value)
     else:
         raise PersonaError(f"cannot vary {fld!r}")
+    if fld.startswith("weights."):   # derived goals follow the weights (ASSUMED mapping)
+        q.needs, q.aspirations = needs_from_weights(q.weights), aspirations_from_weights(q.weights)
     slug = re.sub(r"[^a-z0-9._=-]+", "-", f"{fld}-{value}".lower())[:40].strip("-")
     q.id = f"{p.id}--{slug}"
     q.parent, q.varied = p.id, f"{fld}={value}"
@@ -232,6 +271,8 @@ def render(p):
         pos.append(f"{lo} {hi} {v:.2f}".replace(f"{lo} {hi}", f"between {lo} (0) and {hi} (1):"))
     lines.append("Leanings: " + "; ".join(pos) + ".")
     lines.append("Cares about: " + ", ".join(f"{k.replace('_', ' ')} {_band(v)} ({v:.2f})" for k, v in p.weights.items()) + ".")
+    lines.append("Needs (salience): " + ", ".join(f"{k} {v:.2f}" for k, v in p.needs.items()) + ". Aspirations (targets): "
+                 + ", ".join(f"{k.replace('_', ' ')} {v:g}" for k, v in p.aspirations.items()) + ".")
     lines.append(f"Negotiates in a {p.negotiation_style} way. Risk tolerance is {_band(p.risk_tolerance)} ({p.risk_tolerance:.2f}).")
     if p.tags:
         lines.append("Tags: " + ", ".join(p.tags) + ".")

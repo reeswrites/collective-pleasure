@@ -27,3 +27,14 @@ source: hand
 version: 1
 parent: ''
 varied: ''
+needs:
+  rest: 0.5
+  connection: 0.69
+  money: 0.5
+  security: 0.74
+aspirations:
+  security_buffer: 0.77
+  together_per_week: 1.2
+  friends_per_week: 0.36
+  savings_per_week: 1.2
+  autonomy: 1.0

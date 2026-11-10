@@ -99,3 +99,24 @@ def test_render_plain_english():
     text = P.render(P.load(ROOT / "p-wanderer.yaml"))
     assert "Principles:" in text and "Backstory:" in text and "Cares about:" in text
     assert "—" not in text
+
+
+def test_needs_and_aspirations_present_and_validated():
+    for p in P.load_dir(ROOT) + P.grid():
+        assert set(p.needs) == set(P.NEED_KEYS) and set(p.aspirations) == set(P.ASPIRATION_KEYS)
+    p = P.load(ROOT / "p-anchor.yaml")
+    assert p.needs["security"] == 0.9 and p.aspirations["together_per_week"] > p.aspirations["friends_per_week"]
+    with pytest.raises(P.PersonaError, match="needs"):
+        P.validate(P.Persona(**{**p.__dict__, "needs": {"rest": 2}}))
+
+
+def test_old_files_without_goal_fields_get_defaults():
+    p = P.load(ROOT / "p-wanderer.yaml")
+    d = {k: v for k, v in p.__dict__.items() if k not in ("needs", "aspirations")}
+    assert P.Persona(**d).needs == p.needs
+
+
+def test_vary_weights_rederives_goals():
+    p = P.load(ROOT / "p-anchor.yaml")
+    q = P.vary(p, "weights.security", 0.2)
+    assert q.needs["security"] == 0.2 and q.aspirations["security_buffer"] < p.aspirations["security_buffer"]

@@ -25,3 +25,14 @@ source: grid
 version: 1
 parent: ''
 varied: ''
+needs:
+  rest: 0.5
+  connection: 0.69
+  money: 0.4
+  security: 0.2
+aspirations:
+  security_buffer: 0.5
+  together_per_week: 0.57
+  friends_per_week: 1.2
+  savings_per_week: 0.6
+  autonomy: 1.0
