@@ -19,3 +19,7 @@ Experiments or checks that failed to show the predicted effect, reported as find
 - **No freedom/cooperation trade-off appeared.** Goals, weekly clocks and enforced sanctions did not create one: the frontier is baseline and needs_duty (freedom 1.000, cooperation 0.908), which dominate every other variant; the trap family is lower on both. Prediction 1 failed. See docs/results/household-v2.md.
 - **author_seed equals baseline on upward share (0.844 each).** Prediction 3 failed. The six cards are permissions plus an even-split exit, which the persona agents rarely meet as a constraint.
 - **The Anchor and Wanderer pair is not the hardest** (strictly lowest in 0 of 8 variants). Prediction 4 failed; the pair is upward in every non-trap variant.
+
+## 2026-11-10: bargaining rung 1, prediction 4b
+
+Allowing exit lowered mean cooperation by 0.019 over a heuristic-strategy mix, outside the committed 0.01 slack. The exit-allowed frontier advantage holds only for equilibrium players. Not retuned. Evidence: docs/results/bargaining.md.
