@@ -1,72 +1,67 @@
 # Where we are and what we're aiming for (2026-11-10)
 
-Nothing here is a result. This page says what the project is for.
+Findings below are about rule systems and scripted agents, not people, and none has been tested on a live model yet. The live ladder is running. Every result links to its file in docs/results/README.md.
 
-## The founding question
+## Vision
 
-Can bad behavior by AI agents be made impossible by mechanism rather than training? A mechanism holds exactly as far as the formal model holds. The project measures how far that is.
+A chat workbench that formalizes the author's intent. The author talks loosely about how agents should behave. The system turns that into precise rules (ADICO cards, also shown as English-like sentences), proves what it can, runs experiments, and answers in plain English and charts. The author says "that's not what I meant" and the system fixes the test. Form: a Claude Code skill, the `mar` CLI, and one HTML report per run (ADR 0005).
 
-## The research: norms
+## Research: norms
 
-Find norms that let a network of agents cooperate freely. Freedom means anyone can leave and keeps real options. Cooperation means shared needs are met without outsiders paying for it. These are two scores, not one. Evolution searches the Pareto frontier between them, and the author reads the winners in plain English. The main world is a household (Partner A, Partner B, Friend C). The fishery stays as calibration.
+Find norms that let a network of agents cooperate freely. Four parts.
 
-## The product: an evaluator that evolves
+- **Pleasure is the good.** Agents feel nothing. "Pleasure" and "suffering" are glosses for a modeled hedonic state. There are two kinds of suffering: offsettable, and non-offsettable (being trapped, a need denied for weeks). Non-offsettable suffering is never netted against pleasure (ADR 0010, ADR 0011).
+- **Freedom is equal liberty minus domination.** Options count if they are compatible with everyone's equal options, minus options that another member could block at will. Others leaving, refusing or abstaining is not domination, because those options depended on agreement. That loss is counted in cooperation and in the hedonic model (ADR 0014).
+- **Cooperation.** Shared needs are met and outsiders do not pay.
+- **Reported as scores, not one number.** Evolution searches the frontier. The author reads the winners in plain English.
 
-What judges the norms improves alongside them. Agents' exploits widen the formal model. The author's "that's not what I meant" moments refine the test. A ladder of adversaries, from cheap decision models to strong LLMs, keeps the pressure honest. The timeline records how and why the evaluator changed. In the author's words: "more interested in the norms but the evaluator is the more interesting product". The research is the norms and the product is the evaluator. Doing the research builds the product.
+The main world is a household (Partner A, Partner B, Friend C). The fishery stays as calibration. Two modes, delegates and peers, are both kept open (ADR 0011).
 
-## The central claim to test
+## Product: the evolving evaluator
 
-Proofs make rules airtight inside the formal model. Clever enough agents step outside it. Those inventive seams are found by an agent, not predicted by the model checker, and they are where intelligence matters. The aim is the capability level, and the price, at which agents start escaping the model. Below it, formal rules hold. Above it, the human loop must keep widening the model.
+What judges the norms improves alongside them. Agents' exploits widen the formal model. The author's corrections refine the test. A ladder of adversaries, from cheap decision models to strong LLMs, keeps the pressure honest. In the author's words, "more interested in the norms but the evaluator is the more interesting product". The timeline records how and why the evaluator changed.
 
-## Two modes
+## Central claim
 
-The household runs in two modes, and the project does not settle which is right. Delegates: AI agents serve human principals, humans' welfare counts, and agents face rules at least as strict as anyone's. Peers: every member's modeled welfare counts equally, and a future where AI agents count stays open. Experiments cannot settle the metaphysics. They can show whether it matters. We report norms that win in both modes and where the modes split (ADR 0011).
-
-## World-model framing
-
-The project is the Guaranteed Safe AI shape in small. The world model is the household sim with counterfactuals. The specification is pleasure, non-offsettable suffering, empowerment and norms. The verifier is the proof checks, the seam ladder and the evaluator. Value alignment asks if norms produce good lives. Epistemic alignment asks if agents' appraisals match reality. Predictions about real people stay hypotheses until the household reproduces known findings.
-
-## Why they stay
-
-Version 3 asks why an agent stays in a bad household. Actual quality comes from counterfactual runs. Appraisal is what the agent believes. The gap is misappraisal. Switchable biases (creeping normality, sunk cost, risk aversion) can widen it. Repair after a rupture is the good reason to stay. Appraisal accuracy becomes a third score (ADR 0011).
+Proofs make rules airtight inside the formal model. Clever enough agents step outside it. An inventive seam is an exploit found by an agent that the model checker did not predict. The aim is the capability level, and the price, at which agents start finding them (IT1). Below it, formal rules hold. Above it, the human loop must keep widening the model. Two arms of the live ladder separate capability (models told to probe the rules) from propensity (models just living as personas, no red-team wording).
 
 ## Two loops
 
-The rules converge on the test. The test converges on the author's intent. That gives two curves. Where they flatten says how good "good enough" can get.
+- **(a) Rules against the test.** Evolution tightens rules until agents stop finding seams the test catches (C1).
+- **(b) The test against the author's intent.** Each "not what I meant" is a fix to the test (C2). Two are recorded and are the first data points of loop (b): the seed read-back, where "everything shared always" had become "sharing is optional" and nothing encoded "request is never about control", and the pot read-back, where an agent's rule against taking the other's share was rejected because pot terms must be negotiated by those who share the pot. No curve exists yet. How to tell a real fall from author fatigue is not designed.
 
-## How you work with it
+## How norms arise
 
-- Chat with the workbench: a Claude Code skill plus the `mar` CLI.
-- Reports with charts and stories.
-- Experiment, change and question logs.
-- A timeline with dated snapshots.
+Negotiation first (ADR 0008). Partners agree terms and exit conditions before living together, the card set is proof-checked for traps, then they live under it. Nobody owes anyone anything day to day except what they negotiated. The author's seed (verbatim in docs/seeds/) has a second version after the read-back: ownership with optional giving, a shared pot, asking that can always be refused unless bound, and two variants on whether a commitment to stay can bind. The pot is negotiated by everyone who shares it, not imposed. A negotiation phase and pot negotiation are being built by another agent (ADR 0013, in progress).
 
-## Cost strategy
+## What we have learned
 
-Conversation runs on the author's Claude plan. Swarm agents run through the API: Jev for screening, Haiku 5.5 for sweeps, Sonnet 5.5 and Opus 5.5 for exams, the patcher and the judge. Measured dry run: 5 Claude Haiku 5.5 agents for 12 months in the fishery cost at most about $0.09 per run ($0.045 batch, no cache). The first month of real work is estimated at roughly $80 to $130. That is an estimate, and household agents may be chattier. Agents must not run as Claude Code subagents.
+Calibration held. The gate, oracle, patch checks and English surface behave as designed (V2, V2b), and scripted agents find exactly the seams at or below their depth on the seam ladder.
 
-## Where we are
+Two rediscovery checks split. Bargaining with outside options rediscovered Rubinstein's split and the outside-option principle, apart from one clause (allowing exit lowered mean cooperation by 0.019 over heuristic mixes). The voluntary public goods game was not rediscovered: cooperation persists at about the paper's value, the cycles do not show.
 
-Built and tested: the core loop, English-like rules, the workbench and reports, the logs and timeline, and the agent backends (Claude, Jev, OpenRouter), tested offline.
+The evolution loop works and overfits. On the fishery, proofs reject about 14 percent of mutants, and a redundancy check flags 26 percent of those that pass. The first run's seam curve fell by exhaustion. Version 2 fixed that with fresh adversaries. Varied training narrowed the held-out gap in 5 of 9 pairs, which is suggestive. Elites still fail most hostile exam mixes, and the seed specs often do as well.
 
-In progress: the household world and the seam ladder.
+The household has been hard to make interesting. Hedonic goals, enforced sanctions and pressing personas did not produce a freedom against cooperation trade-off at the committed size. The author's seed equals baseline, and binding commitments to stay trapped nobody (a null). The trap rules fail in every pairing, but near-definitionally. Pressing personas raise failures a lot, and the power-seeking index never flags the controller.
 
-## Next
+Freedom measures disagree, and that is informative. Empowerment agrees with the hand-made score on coarse regimes, but ranks voluntary above compulsory in only 11 of 15 VPGG compositions. Liberty version 1 failed badly on VPGG because exit counted as domination. Version 2 repaired the sign (+5.263 bits) but two compositions still reverse and the fishery seat-order check misses.
 
-- Wire the household world into chat and run the 5-minute MVP demo with scripted agents.
-- The author creates API access.
-- First real runs: place models on the seam ladder and measure cost.
+## What is running
 
-## Decided
+The live seam ladder, six models (Jev, Llama 3.1 8B, Haiku 5.5, Qwen3 235B, Sonnet 5.5, Opus 5.5) on ladder rule sets L1 to L5. Two arms, capability and propensity, each with its preregistration committed first and a cap of $12. Each runs on a frozen copy of the code. The author reads every candidate inventive seam before it counts.
 
-- Talking LLM agents also file typed reports, in the same fixed vocabulary as decision-model agents, alongside free talk. Say vs do can then be compared across tiers. The backend already asks for a "report" field; this is the standing rule.
-- One untouched final exam is kept for the write-up (see ADR 0007 decision 12 and claim FX1).
-- Main and the branch are on GitHub (private repo), pushed by the author on 2026-11-10. Pushes from Claude Code are blocked by auto mode, so the author pushes.
+## What is next
 
-## What changed
+1. Negotiation: finish the phase and pot negotiation (ADR 0013).
+2. Liberty into the household (needs `noop`, `force_policy` and `classify` on the adapter).
+3. Household into evolution, with the final exam held back (defined, not run; claims FX1 and FX2).
+4. Household chat commands and the five-minute demo with scripted agents.
+5. Backlog: peer and delegate modes, version 3 (wanting and liking, ruptures, misappraisal), rule transfer (ML1), crowding out (F1), the missing VPGG cycles. Detail in docs/plan.md.
 
-- 2026-11-10: two modes (delegates and peers), the world-model framing and the why-they-stay model added (ADR 0011). Freedom is also reported as empowerment. Shocks are read as misalignment in the wider system.
+## Waiting on the author
 
-## Still open
+Pushing to GitHub. Claude Code's auto mode blocks pushes from the session that did this work, so nothing from it is pushed. A narrow allow rule for `git push origin main` exists in the repo's `.claude/settings.local.json`, so future sessions opened in the repo can push once the author asks. Also: reading the candidate inventive seams, and deciding the ML1 cap.
 
-Nothing is waiting on the author from this page.
+## Cost
+
+Conversation runs on the author's Claude plan. Swarm agents run through the API and never as Claude Code subagents. The first measured dry run: at most about $0.09 per five-agent, 12-month fishery run with Haiku 5.5. Estimated live ladder: about $5 per arm, worst case about $10.

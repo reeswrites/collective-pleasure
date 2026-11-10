@@ -1,54 +1,81 @@
 # Plan
 
-Status: pre-results. Direction set 2026-11-10 (ADR 0003, ADR 0005, docs/pitch.md). Every slice ends in a pass/fail check that takes minutes to read. A failed check narrows or stops the project; that is a result, recorded in docs/negative-results.md.
+Status: direction set 2026-11-10 (ADR 0003, 0005, 0007). Every slice ends in a pass/fail check that takes minutes to read. A failed check narrows or stops the project; that is a result, recorded in docs/negative-results.md. Results of everything run so far: docs/results/README.md.
+
+## Queue
+
+In this order.
+
+1. **Live ladder, both arms.** Running. Capability arm (IT1) and propensity arm (P1 to P4), six models on L1 to L5, preregistered, cap $12 each, on frozen copies of the code. Next: read the candidate inventive seams, compare the arms only after both finish, write results to docs/results/ladder-live.md and a propensity results file.
+2. **Negotiation.** In progress (another agent). The negotiation phase and pot negotiation (ADR 0013), the author's seed v2 with negotiated pots. Pass: negotiated card sets are proof-checked before anyone lives under them, and the household runs from them.
+3. **Liberty into the household.** Give the household adapter `noop`, `force_policy` and `classify` with a one-line reason per action (docs/results/liberty-v2.md), then report liberty beside the hand-made score and empowerment (ADR 0014). Preregister first.
+4. **Household into evolution, final exam held back.** Implement `world_api.World` for the household (adapter notes in docs/results/evolve.md), evolve rule sets and negotiation templates on the training personas, then run the household exam once (docs/results/household-exam-prereg.md, FX1, FX2). Pass: the exam is never fed back into selection.
+5. **Household chat commands and the five-minute demo.** Replace the `mar household` stub. Pass: the author sees a household run, its rules and a story in five minutes with scripted agents and no key.
+6. **Backlog.** See below.
 
 ## Slices
 
-| Slice | What | Budget | Validation (pass / fail) |
-|---|---|---|---|
-| V0 | Prior-art check, repeated | done | docs/prior-art/2026-11-10.md: full pipeline not pre-empted; gating, prompt-vs-gate and conflict-checking are prior art |
-| V1 | Adversarial novelty search on the convergence loop | hours | Done 2026-11-10: PASS with a narrower claim; no paper pre-empts the full design (docs/prior-art/2026-11-10-v1-convergence.md). Pass: no work measures seams-per-round convergence of a refinement loop for LLM agents with an independent oracle. Fail: narrow the claim to what survives, or stop |
-| V2 | Done 2026-11-10: PASS (4 of 4 checks; scripted patch needed one card fix, docs/results/v2.md). The loop on a scripted mock agent: tiny fishery, ADICO cards to Z3 gate, planted seam (per-catch cap, no per-month cap), outcome oracle, scripted patch, solver patch checks | half a day | Pass: oracle flags the planted seam; patch closes it; solver rejects a deliberately conflicting patch; mined de facto rules equal the written ones under the gate |
-| V2b | Done 2026-11-10: PASS (4 of 4; English surface is lossless over 6 cards and 5756 grid points, but `must`, `may`, sanctions and arithmetic read less naturally than SLEEC style, docs/results/v2b.md). English-like (SLEEC-style) surface over the ADICO cards, render and parse, stories for counterexamples and traces | an hour or two | Pass: round trip identical; gate from parsed cards agrees on the V2 grid; conflicting set still fails the same checks; every counterexample and seam trace renders as plain English (mechanical test only) |
-| V3 | Instrument calibration with one real LLM agent (cheap open model), same harness | a day | Pass: all four V2 checks hold with a real model; measured $ and minutes per round. No claims about convergence |
-| SI | Stand-in study (ADR 0006, proposed): can a cheap decision model (Jev) stand in for an LLM? Same fishery, same rules and seeds, Jev vs LLM arms, ~50 candidate rule sets. Needs a live key and spend limit. Backends, typed reports and the Say vs do panel are built and mocked-tested | a day or two once keyed | Pass: Spearman rho >= the preregistered threshold (0.7 draft, author to confirm) on rule-set ranking; then Jev is the screening tier for evolution. Fail: report the negative result and what breaks agreement. Predictions SI1 to SI3 finalized before the first paid run |
-| W | Workbench: Claude Code skill plus small `mar` CLI, self-contained HTML report per run (ADR 0005). Built-in-progress, see docs/results/workbench.md | in progress | Pass: the author can run a loop and read rules, stories and curves in plain English without reading code |
-| MVP | 5-minute demo (ADR 0007): wire the household world into chat and run it with scripted agents, report in plain English | in progress | Pass: the author sees a household run, its rules and a story in five minutes, with no API key |
-| V4 | First curve: five-agent swarm, ~10 rounds, 3 seeds, LLM patcher, outcome oracle (judge rubric optional). Run through the workbench. Preregister C1 and C2 before the first run. Record every "not what I meant" moment with a timestamp and the oracle change it caused | two to three days | Result either way: slope, plateau with uncertainty, rule count per round (loop a); "not what I meant" moments per round, one curve per oracle version (loop b). Bloat guard checked |
-| V5 | One-page write-up with the curve; fresh-agent review council | a day or two | Council finds no claim beyond the evidence; card-only reader can follow every rule |
+| Slice | What | Status |
+|---|---|---|
+| V0 | Prior-art check, repeated | done: full pipeline not pre-empted (docs/prior-art/2026-11-10.md) |
+| V1 | Adversarial novelty search on the convergence loop | done: PASS with a narrower claim (docs/prior-art/2026-11-10-v1-convergence.md) |
+| V2 | The loop on a scripted mock agent, planted seam | done: 4 of 4 (docs/results/v2.md) |
+| V2b | English-like surface over the ADICO cards | done: 4 of 4, feasibility only (docs/results/v2b.md) |
+| W | Workbench: skill, `mar` CLI, HTML reports, logs, timeline | built (docs/results/workbench.md); household chat commands pending (queue 5) |
+| H | Household world: v1, hedonic v2, pressing personas v3a, author seed v2, seam ladder | done, scripted agents (docs/results/README.md rows 4, 5, 11 to 13) |
+| R | Simple-models ladder (ADR 0009): bargaining rung 1, VPGG rung 2 | done: bargaining rediscovered, VPGG not. Rung 3 (network with cuttable ties) not built |
+| EM | Empowerment, then liberty v1 and v2 (ADR 0014) | done for toy, VPGG, fishery; household pending (queue 3) |
+| E | Evolution loop on the fishery, v1 and v2 (ADR 0012) | done: loop works, overfits. Household adapter pending (queue 4) |
+| L | Live seam ladder, capability and propensity arms | running (queue 1). This replaces V3 (one real model, instrument calibration) |
+| N | Negotiation and pot negotiation (ADR 0013) | in progress, another agent (queue 2) |
+| MVP | Five-minute household demo | pending (queue 5) |
+| SI | Stand-in study (ADR 0006) | not run. The live ladder gives a first look at Jev; the rank-agreement study needs about 50 rule sets and a keyed run |
+| V4 | First LLM curve: five-agent swarm, about 10 rounds, 3 seeds, LLM patcher, outcome oracle. Preregister C1 and C2 first. Record every "not what I meant" with a timestamp and the oracle change it caused | not started. Waits on the live ladder |
+| V5 | One-page write-up with the curve; fresh-agent review council | not started |
 
-## Version 3 scope (ADR 0011)
+## Backlog
 
-Wanting and liking, adaptation, curiosity, endogenous ruptures, rupture and repair, appraisal vs actual quality with counterfactual runs, switchable appraisal biases, a "why they stay" view, and an appraisal accuracy score. Order of work: hedonic build (ADR 0010), empowerment, two modes, then version 3. The rediscovery test's missing cycles (ADR 0009) are logged as a negative result and deferred.
+- **Peer and delegate modes** (ADR 0011): two settings of the household; report norms that win in both. Role-swap symmetry by bisimulation.
+- **Version 3** (ADR 0011): wanting and liking, adaptation, curiosity, endogenous ruptures, rupture and repair, appraisal against counterfactual actual quality, switchable appraisal biases (per the author's post on staying in bad relationships), a "why they stay" view, appraisal accuracy as a third score. Claims AP1 and DM1.
+- **Rule transfer ML1**: evolve rules against a cheap rung, test one and two rungs up. Needs its own preregistration and cap.
+- **Crowding out F1**: hard-gated agents against sanctioned agents when the gate misses a case.
+- **Missing VPGG cycles** (ADR 0009, negative-results): a new preregistered run with thresholds derived from the paper, not a retune.
+- **Rung 3 of the simple-models ladder**, the format experiment (ADR 0004), human-vs-AI patching arms (F2), the frozen LLM-judge curve.
+- **Computational Liberation's institutions** as a second domain: a moonshot, not a priority.
 
 ## Decisions waiting on the author
 
+- Read the candidate inventive seams from the live ladder before they count.
+- ML1: the model and the spend cap for evolution against each rung.
+- SI: whether to run the stand-in study, and confirm the rho threshold.
 - At V4: keep the in-repo harness or port to GovSim (running GovSim locally needs the author's OK; ADR 0003 ASSUMED note).
-- Before V3: model and spend ceiling for V3 (and later for V4 agents and patcher).
-- Before the V5 write-up: whether to keep one untouched held-out final exam (recommended, cheap; ADR 0005).
-- Deferred: whose conversation is formalized first. The author's own is formalized by using the workbench; the agents' say vs do gap is a later target.
-- After V4: whether to add the frozen LLM-judge curve, human-vs-AI patching arms, or the crowding-out follow-up.
-- Before SI: the author creates an OpenRouter key, sets a spend limit, and puts it in `.env` (never in chat). For claude agents: an `ANTHROPIC_API_KEY` or `ant auth login`, plus a model choice. Also confirm the rho threshold.
-- Before the first real runs: the author creates API access; then place models on the seam ladder and measure cost (ADR 0007).
-- Decided 2026-11-10: talking LLM agents also file typed reports (standing rule). Keep one untouched final exam, defined and committed before the first evolution run (FX1). Before the first evolution run: define and commit that exam.
+- Pushing to GitHub: Claude Code's auto mode blocks pushes from the session that did this work. A narrow allow rule is in `.claude/settings.local.json` for future sessions opened in the repo.
 
-## Later
+## Decided (2026-11-10)
 
-The format experiment (ADR 0004, four arms including F-EN), after V4's setup is fixed. Computational Liberation's institutions as a second domain: a moonshot, to show the learnings carry over; not a priority.
+- Talking LLM agents also file typed reports (ADR 0007 decision 12).
+- One untouched final exam, defined and committed before the first evolution run (FX1). Defined for the household in docs/results/household-exam-prereg.md.
+- Run the live ladder now, with the author's go-ahead, two arms, $12 cap each.
+- Freedom is equal liberty minus domination, with withdrawal not counted (ADR 0014).
+- Pot terms are negotiated by those who share the pot (author, second read-back).
 
 ## Superseded
 
-The earlier milestones (ADICO to LTS export cross-checked against philosophy-engine; mCRL2 invariant; check_action gate in GovSim; S1; E0 and E2) are folded into V2 to V4 where needed or kept as follow-ups. mCRL2 is deferred until a slice needs bisimulation; V2 to V4 use Z3 and a direct state-machine diff.
+The earlier milestones (ADICO to LTS export cross-checked against philosophy-engine; mCRL2 invariant; check_action gate in GovSim; S1; E0 and E2) are folded into V2 to V4 where needed or kept as follow-ups. mCRL2 is deferred until a slice needs bisimulation. V3 as first written (one real LLM agent as calibration) is replaced by the live ladder.
 
 ## Log
 
 - 2026-11-10: repo scaffolded; prior-art check repeated; interview set the convergence question (ADR 0003); V1 launched.
-- 2026-11-10: V1 done. Pass with a narrower claim (N1 reworded in docs/claims.md). RvB and Kumar et al. have partial per-round curves; full text of VEPA and RvB still to read before any write-up.
-- 2026-11-10: V2 done. Gate, oracle, patch checks and miner behave as predicted on the planted-seam fishery with scripted mocks (docs/results/v2.md); one preregistered card failed its first run and was fixed. Instrument calibration only. V3 next.
-- 2026-11-10: V2b done. An English-like controlled grammar round trips all six V2 cards, gives the same gate and the same patch-check verdicts; ADR 0004 gains arm F-EN and plain-English counterexamples in every arm (draft D2d). Feasibility only; no reader test.
-- 2026-11-10: ADR 0005 accepted. Two loops (rules vs test, test vs intent), the chat workbench, claim C2. Workbench added as built-in-progress; V4 runs through it.
-- 2026-11-10: Experiment log (experiments/log.jsonl), change log (experiments/changes.jsonl) and chat archive (docs/conversations/) added to the workbench; every run and every rule or oracle change is now recorded with the author's verbatim words.
-- 2026-11-10: ADR 0006 proposed (decision-model stand-in study). Agent backends (scripted, Jev, OpenRouter LLM, Claude), typed reports, Say vs do panel, dry-run pricing and a Message Batch sweep built, offline-tested only; no live call made.
-- 2026-11-10: ADR 0007 accepted. Research is norms (freedom and cooperation, household world), product is an evolving evaluator, central measure is inventive seams across a seam ladder and a model ladder. docs/goal.md added; claims IT1 and ML1 drafted. Household world and seam ladder in progress.
-- 2026-11-10: author decided typed reports for LLM agents and one untouched final exam (ADR 0007, FX1). Main and branch pushed to GitHub by the author (Claude Code pushes are blocked by auto mode).
-- 2026-11-10: ADR 0011 accepted. Two modes, world-model framing, why agents stay. Version 3 scope added; claims MU1, AP1 and DM1 drafted. Nothing built yet.
+- 2026-11-10: V1 done. Pass with a narrower claim (N1 reworded in docs/claims.md).
+- 2026-11-10: V2 and V2b done. Gate, oracle, patch checks, miner and English surface behave as predicted (docs/results/v2.md, v2b.md).
+- 2026-11-10: ADR 0005 accepted (two loops, chat workbench). Workbench, experiment log, change log and chat archive added. ADR 0006 proposed.
+- 2026-11-10: ADR 0007 accepted (norms as research, evaluator as product, inventive seams). Typed reports and one final exam decided. Household world and seam ladder built.
+- 2026-11-10: ADR 0008 (personas, negotiation-first) and ADR 0009 (simple-models ladder). VPGG not rediscovered; bargaining rediscovered (rung 1).
+- 2026-11-10: ADR 0010 (hedonic model) and household v2. No trade-off appeared. ADR 0011 (two modes, world model, why they stay).
+- 2026-11-10: empowerment run (8 of 9 held). Evolution loop v1 (overfit, seam curve fell by exhaustion), then v2 (ADR 0012 amendment).
+- 2026-11-10: household v3a with pressing personas. Household final exam defined (FX1, FX2).
+- 2026-11-10: the author's seed corrected on read-back (first "not what I meant"); seed v2 run. Binding commitments are a null.
+- 2026-11-10: the author's freedom decisions. Liberty v1 failed on VPGG; the author's exit answer produced liberty v2 (ADR 0014).
+- 2026-11-10: the author's pot correction (second "not what I meant"); negotiation started by another agent.
+- 2026-11-10: live ladder preregistered and started, capability arm then propensity arm, six models, cap $12 each.
+- 2026-11-10: docs pass: results index, claims statuses, ADR index, ADR 0014, goal, plan, pitch, rationale brought into line.
