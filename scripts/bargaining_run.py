@@ -81,7 +81,7 @@ def share_chart(rows, rows3, theme):
         ax.plot(xs, [1 - r[3] for r in sel], color=pal[0], lw=2, label="theory: player 2 share")
         ax.plot(xs, [1 - r[2] for r in sel], "o", color=pal[1], ms=6, label="exit-allowed (sim)")
         ax.plot(xs, [1 - r[2] for r in sel3], "s", color=pal[2], ms=5, mfc="none", label="no-exit (sim)")
-        ax.plot(xs, [B.split_the_difference(0, o2) * 0 + 1 - B.split_the_difference(0, o2) for o2 in xs], "--", color=c["ink2"], lw=1.2, label="split-the-difference")
+        ax.plot(xs, [1 - B.split_the_difference(0, o2) for o2 in xs], "--", color=c["ink2"], lw=1.2, label="split-the-difference")
         ax.set_ylim(0, 0.8)
         ax.set_ylabel(f"d={d}\nplayer 2 share", color=c["ink2"], fontsize=9)
     axes[0].legend(loc="upper left", frameon=False, fontsize=8, labelcolor=c["ink2"])
@@ -97,7 +97,8 @@ def frontier_local(pts, theme):
     ax = fig.subplots()
     _style_axes(ax, c)
     ax.xaxis.grid(True, color=c["grid"], lw=0.8)
-    ax.scatter([p["freedom"] for p in pts], [p["cooperation"] for p in pts], s=10, color=c["ink2"], alpha=0.15, linewidths=0)
+    uniq = sorted({(round(p["freedom"], 2), round(p["cooperation"], 2)) for p in pts})  # keeps the SVG small
+    ax.scatter([u[0] for u in uniq], [u[1] for u in uniq], s=10, color=c["ink2"], alpha=0.3, linewidths=0)
     for i, g in enumerate(B.REGIMES):
         f, co, _ = agg[g]
         ax.scatter([f], [co], s=90, zorder=3, color=pal[i] if g in front else c["surface"], edgecolors=pal[i], linewidths=2)
