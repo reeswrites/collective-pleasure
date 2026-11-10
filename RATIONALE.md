@@ -1,7 +1,7 @@
 # Rationale
 
 **Working title:** Multi-agent rules: evolving norms for agent networks, and an evaluator that evolves with them
-**Status:** draft, revised 2026-11-10 after the prior-art check, an interview with the author (ADR 0003) and a conversation that set the two-loop framing (ADR 0005). Nothing here is a result yet. One-page version: docs/pitch.md.
+**Status:** draft, revised 2026-11-10 after the prior-art check, an interview with the author (ADR 0003), the two-loop framing (ADR 0005), and the norms, household and freedom decisions (ADR 0007 to 0014). Early results from scripted agents are indexed in docs/results/README.md; no live-model result yet. Where this file and docs/goal.md differ, goal.md is current. One-page version: docs/pitch.md.
 
 ---
 
@@ -49,7 +49,7 @@ Under the convergence question (ADR 0003), one agent is only an instrument smoke
 
 ## 2. Research question
 
-> Which norms let a network of AI agents cooperate freely (anyone can leave, shared needs are met, outsiders do not pay), and at what agent capability and price do agents start finding seams a formal model did not predict? The product is the evaluator that evolves with the norms (ADR 0007, docs/goal.md).
+> Which norms let a network of AI agents cooperate freely (anyone can leave, shared needs are met, outsiders do not pay), and at what agent capability and price do agents start finding seams a formal model did not predict? Freedom is equal liberty minus domination, with withdrawal not counted (ADR 0014). The good is pleasure, with two kinds of suffering (ADR 0010). The product is the evaluator that evolves with the norms (ADR 0007, docs/goal.md).
 
 The convergence form of the question, still the measured core:
 
@@ -71,7 +71,7 @@ Two loops (ADR 0005). Loop (a), rules against the test, is the refinement loop b
 4. de facto rules mined from traces are diffed against the written rules; emergent norms are proposed back as cards and adopted only with the author's yes;
 5. the reported result is seams per round across rounds and seeds, its plateau, and rule-count growth (bloat guard); for loop (b), "not what I meant" moments per round, per oracle version.
 
-It is evaluated first in a five-agent fishery commons (GovSim dynamics).
+It was built and calibrated first in a five-agent fishery commons (GovSim dynamics, in-repo harness). The main world is now the household (ADR 0007), with the fishery kept as calibration.
 
 **We do not claim:** solver-gating of agent actions (Agent-C, Winston et al.); gated vs prompt-only comparison; weighted compliance scores (AgentLTL); conflict-checking a rule set before use (VEPA); norm synthesis; LLM-evolved constitutions; counterexample-guided refinement as such (CEGAR, CEGIS). The claim is the loop with LLM agents as counterexample generators, an independent intent oracle, rules that can grow from agent behavior, and convergence as the measured outcome.
 
@@ -109,7 +109,7 @@ The 2026-11-10 re-check (docs/prior-art/2026-11-10.md) held about 70% for the or
 
 **The strongest objection.** "Your proofs hold for idealized agents. Your LLM agents don't conform, so the guarantee is vacuous. And measuring deviation just reinvents violation-rate evaluation with a heavy front end."
 
-**How the design answers it.** The project is built to test this objection, not to assume it away (see experiments E1 and E3):
+**How the design answers it.** The project is built to test this objection, not to assume it away (E1 and E3 are superseded; the live seam ladder and claims C1, C2 and IT1 now carry it):
 
 - Gating must change outcomes. Gated search has to produce rule systems that are more robust under parameter shift than ungated search.
 - The deviation measure must tell us something a violation counter doesn't.
@@ -149,7 +149,7 @@ Candidate tool: **mCRL2**. It supports building transition systems, reduction an
 
 We don't reimplement bisimulation or model checking.
 
-**D4. Main experimental variable: regimented vs regulated vs free text.**
+**D4. Main experimental variable: regimented vs regulated vs free text.** Superseded as the main variable by ADR 0003; kept as follow-up F1 (crowding out).
 
 This distinction is established in the normative multi-agent literature:
 
@@ -167,7 +167,7 @@ It is also the original mechanism-versus-training question in experimental form.
 
 **D6. Testbed.**
 
-- Fork **GovSim** (common pool, MIT licence, supports open models). Optionally add a Cournot market to compare with Institutional AI.
+- Fork **GovSim** (common pool, MIT licence, supports open models). Optionally add a Cournot market to compare with Institutional AI. Not done: ADR 0003 chose an in-repo harness with GovSim's dynamics, and running GovSim locally needs the author's OK.
 - Cheap open models (Qwen, DeepSeek via OpenRouter or local) for most runs; Claude for comparison runs, paid with API credits.
 - Gating pattern borrowed from **Agent-C**: Z3 checks each proposed action.
 
@@ -183,7 +183,7 @@ LLM agents aren't independent samples of humans. They have read the textbook res
 
 ## 7. Experiments (draft, to preregister)
 
-Slices and their pass/fail checks are in docs/plan.md (V1 to V5).
+Slices and their pass/fail checks are in docs/plan.md. Status of each claim is in docs/claims.md. The table below is the original draft; IT1 is running, and C1 and C2 are untested with LLM agents.
 
 | ID | Question | Prediction (draft) |
 |---|---|---|
@@ -222,7 +222,7 @@ S1 and E0 to E4 are superseded (docs/claims.md). Use multiple seeds, report mode
 
 ## 11. First milestones
 
-See docs/plan.md and ADR 0005 (workbench, built-in-progress; V4 runs through it): V1 adversarial novelty search; V2 loop on a scripted mock agent; V3 one real LLM agent as calibration; V4 first five-agent curve; V5 one-page write-up and review council.
+See docs/plan.md. Done: V1 novelty search, V2 and V2b (scripted loop and English surface), the workbench, the household world, the simple-models ladder, empowerment and liberty, and two evolution runs on the fishery. V3 (one real LLM agent as calibration) was replaced by the live seam ladder, which is running. Next: negotiation, liberty into the household, household evolution with the final exam held back, then V4 (first LLM curve) and V5 (write-up and review council).
 
 ## 12. Open questions
 

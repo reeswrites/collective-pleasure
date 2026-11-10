@@ -1,6 +1,6 @@
 # Pitch: evolving alignment norms, and checking the test against intent
 
-Status: direction set 2026-11-10 (ADR 0003, ADR 0005). Nothing here is a result.
+Status: direction set 2026-11-10 (ADR 0003, 0005, 0007). Early results from scripted agents are in docs/results/README.md; no live-model result yet.
 
 ## The vision
 
@@ -19,7 +19,7 @@ Evolution always reverse-engineers the test. So there are two loops.
 - **(a) Rules against the test.** Evolution tightens rules until agents stop finding seams the test catches. Curve: seams per round (claim C1).
 - **(b) The test against the author's intent.** The author reads the winning rules and run stories in plain English. Each "that's not what I meant" is a fix to the test. The evolved rules are a readable mirror of what the test rewards. Curve: "not what I meant" moments per round (claim C2).
 
-Loop (b) is the more original result: how well a person's intent can be formalized through conversation. A flat curve in either loop is as publishable as a falling one.
+Loop (b) is the more original result: how well a person's intent can be formalized through conversation. A flat curve in either loop is as publishable as a falling one. Two "not what I meant" corrections are recorded so far, the seed read-back and the pot read-back. They are the first data points of loop (b), not a curve.
 
 ## The loop
 
@@ -54,7 +54,7 @@ Formal-methods people know counterexample-guided refinement (CEGAR, CEGIS) but d
 
 Readable rules for AI agent networks, evolved under pressure.
 
-The aim is norms that let agents cooperate freely. Freedom means anyone can leave and keeps real options. Cooperation means shared needs are met without outsiders paying. Evolution maps the frontier between the two scores, and the author reads the winners in plain English. The central measure is the capability level, and price, at which agents find inventive seams: exploits the model checker did not predict (ADR 0007, claims IT1 and ML1).
+The aim is norms that let agents cooperate freely. Pleasure is the good, with two kinds of suffering, one that pleasure can offset and one that it cannot (ADR 0010). Freedom is the options compatible with everyone's equal options, minus options another member could block at will. Others leaving, refusing or abstaining is not counted as domination, since those options depended on agreement (ADR 0014). Cooperation means shared needs are met without outsiders paying. Evolution maps the frontier between the scores, and the author reads the winners in plain English. The central measure is the capability level, and price, at which agents find inventive seams: exploits the model checker did not predict (ADR 0007, claims IT1 and ML1). Norms arise by negotiation first: partners agree terms and exit conditions, the card set is proof-checked, then they live under it (ADR 0008).
 
 ## For builders: the evaluator
 
@@ -62,8 +62,12 @@ The evaluator is the more interesting product. It evolves with the norms. Agent 
 
 ## The world-model framing
 
-In small, this is the Guaranteed Safe AI shape (Dalrymple, Bengio, Russell et al. 2024; from memory, verify). The household sim with counterfactuals is the world model. Pleasure, non-offsettable suffering, empowerment and norms are the specification. Proof checks, the seam ladder and the evaluator are the verifier. That separates value alignment (norms produce good lives) from epistemic alignment (agents' appraisals match reality). The household is our model, so claims about real people wait on fidelity checks (ADR 0011).
+In small, this is the Guaranteed Safe AI shape (Dalrymple, Bengio, Russell et al. 2024; from memory, verify). The household sim with counterfactuals is the world model. Pleasure, non-offsettable suffering, liberty and norms are the specification. Proof checks, the seam ladder and the evaluator are the verifier. That separates value alignment (norms produce good lives) from epistemic alignment (agents' appraisals match reality). The household is our model, so claims about real people wait on fidelity checks (ADR 0011).
+
+## What we've learned so far
+
+On scripted agents only. The instruments work: gate, oracle, patch checks and English surface held, and scripted agents find exactly the seams at or below their depth. The simple-models ladder split: bargaining was rediscovered, the voluntary public goods game was not (no cycles). Fishery evolution works but overfits: the first seam curve fell by exhaustion, and varied training narrowed the held-out gap in 5 of 9 pairs, no more. The household has shown no freedom against cooperation trade-off at the committed size, and binding commitments to stay trapped nobody. The freedom measures disagree in useful ways, and the author's answer that withdrawal is not domination turned a failed score into a mostly working one. Over a third of the world-level predictions missed, and each miss is logged. The live seam ladder, which is the real test of the central claim, is running.
 
 ## Next
 
-See docs/plan.md. Later: the format experiment (ADR 0004), and Computational Liberation's institutions as a second domain (a moonshot).
+See docs/plan.md. The queue is the live ladder, negotiation, liberty into the household, household into evolution with the final exam held back, then chat commands and a five-minute demo. Later: the format experiment (ADR 0004), version 3 (why agents stay), and Computational Liberation's institutions as a second domain (a moonshot).
