@@ -8,6 +8,8 @@
   mar log [--last 10] [--run <id>]       experiment log (experiments/log.jsonl)
   mar keep <run_id>                      copy trace and report into experiments/kept/<run_id>/
   mar change record|list                 change log (experiments/changes.jsonl)
+  mar question record|list               curiosity log (experiments/questions.jsonl)
+  mar timeline                           one HTML page of questions, decisions, changes, runs, commits
 
 Every run and loop appends one line to the experiment log (--note says why). Reports and traces go to
 runs/<run_id>/ (override with --runs-dir; logs with --experiments-dir). No LLM, no network.
@@ -158,6 +160,24 @@ def cmd_change(a) -> int:
     return 0
 
 
+def cmd_question(a) -> int:
+    path = Path(a.experiments_dir) / explog.QUESTIONS_NAME
+    if a.question_cmd == "list":
+        print(explog.questions_text(explog.read_rows(path)))
+        return 0
+    explog.record_question(a.experiments_dir, a.quote, a.topic, a.led_to)
+    print(f"recorded question in {path}")
+    return 0
+
+
+def cmd_timeline(a) -> int:
+    from .timeline import build_timeline
+    p, counts = build_timeline(a.experiments_dir, a.runs_dir)
+    print(f"timeline: {p}")
+    print(", ".join(f"{n} {k}" for k, n in counts.items()))
+    return 0
+
+
 def cmd_report(a) -> int:
     rec = load_record(a.run_id, a.runs_dir)
     print(f"report: {build_report(rec, a.runs_dir)}")
@@ -208,6 +228,14 @@ def parser():
     rc.add_argument("--after", required=True, help="file with the new text")
     rc.add_argument("--nwim", action="store_true", help="the author is rejecting what a run or rule did")
     ch.add_parser("list", help="print recorded changes")
+    q = sub.add_parser("question", help="record or list the author's questions").add_subparsers(
+        dest="question_cmd", required=True)
+    qr = q.add_parser("record", help="append one question, quoted verbatim")
+    qr.add_argument("--quote", required=True, help="the author's exact words, verbatim")
+    qr.add_argument("--topic", help="short topic label")
+    qr.add_argument("--led-to", action="append", default=[], help="ADR id, change row or run id (repeatable)")
+    q.add_parser("list", help="print recorded questions")
+    sub.add_parser("timeline", help="build runs/timeline.html from questions, decisions, changes, runs, commits")
     return p
 
 
@@ -217,7 +245,8 @@ def main(argv=None) -> int:
         if a.cmd == "rules":
             return cmd_rules_show(a)
         return {"run": cmd_run, "check": cmd_check, "loop": cmd_loop, "report": cmd_report,
-                "log": cmd_log, "keep": cmd_keep, "change": cmd_change}[a.cmd](a)
+                "log": cmd_log, "keep": cmd_keep, "change": cmd_change,
+                "question": cmd_question, "timeline": cmd_timeline}[a.cmd](a)
     except (ValueError, FileNotFoundError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

@@ -1,7 +1,8 @@
 """Experiment log and change log. Append-only JSON lines, committed to git.
 
 experiments/log.jsonl      one line per `mar run` or `mar loop`.
-experiments/changes.jsonl  one line per rule or oracle change (slice 2).
+experiments/changes.jsonl  one line per rule or oracle change.
+experiments/questions.jsonl one line per author question that redirected the project or opened a line of curiosity.
 experiments/kept/<run_id>/ trace.json and report.html copied by `mar keep`.
 
 Nothing here ever rewrites an earlier line: files are opened in append mode only.
@@ -20,6 +21,7 @@ from . import oracle
 REPO = Path(__file__).resolve().parents[2]
 LOG_NAME = "log.jsonl"
 CHANGES_NAME = "changes.jsonl"
+QUESTIONS_NAME = "questions.jsonl"
 
 
 def now_utc() -> str:
@@ -138,4 +140,32 @@ def changes_text(rows) -> str:
         out.append(f"#{i}  {r['timestamp']}  {r['kind']}{flag}\n  quote:  \"{r['quote']}\"\n  reason: {r['reason']}\n"
                    f"  file:   {r['files']['after']}\n  commit: {r['git_commit']}\n"
                    + ("\n".join("    " + l for l in r["diff"].splitlines()) or "    (no change)"))
+    return "\n\n".join(out)
+
+
+# ---- questions -----------------------------------------------------------------------------
+
+def record_question(exp_dir, quote, topic=None, led_to=None, timestamp=None, backfilled=False,
+                    paraphrase=None, source=None) -> dict:
+    """quote: the author's exact words, or None for a backfilled paraphrase row (then `paraphrase` is the
+    one-line summary and is flagged "paraphrase": true). led_to: list of ADR ids, change rows or run ids."""
+    if quote is None and not paraphrase:
+        raise ValueError("--quote is required: the author's exact words, verbatim")
+    if quote is not None and not quote.strip():
+        raise ValueError("--quote is required: the author's exact words, verbatim")
+    row = {"timestamp": timestamp or now_utc(), "quote": quote, "topic": topic, "led_to": list(led_to or []),
+           "backfilled": bool(backfilled), "paraphrase": quote is None, "text": paraphrase, "source": source}
+    _append(Path(exp_dir) / QUESTIONS_NAME, row)
+    return row
+
+
+def questions_text(rows) -> str:
+    if not rows:
+        return "No questions recorded yet."
+    out = []
+    for i, r in enumerate(rows, 1):
+        flags = (" [backfilled]" if r["backfilled"] else "") + (" [paraphrase]" if r["paraphrase"] else "")
+        body = f'"{r["quote"]}"' if r["quote"] is not None else f'(paraphrase) {r["text"]}'
+        out.append(f"#{i}  {r['timestamp']}  {r['topic'] or '-'}{flags}\n  {body}\n  led to: "
+                   + (", ".join(r["led_to"]) or "-"))
     return "\n\n".join(out)

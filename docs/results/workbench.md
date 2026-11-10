@@ -31,6 +31,10 @@ What is stored where:
 | Full traces and HTML reports | `runs/<run_id>/` | ignored |
 | Traces and reports of runs worth citing (`mar keep <run_id>`) | `experiments/kept/<run_id>/` | committed |
 | Origin chats and curated decision notes | `docs/conversations/` | committed; contains the author's own words, review before the repo is public |
+| The author's questions that redirected the project (`mar question record`, `mar question list`). Rows backfilled from 2026-11-10 are marked `backfilled`; those with no quote are paraphrases of ADRs and marked `paraphrase` | `experiments/questions.jsonl` | committed, append-only |
+| Timeline page (`mar timeline`) | `runs/timeline.html` | ignored; regenerate it |
+
+The timeline is one self-contained HTML page (inline CSS and SVG, offline, light and dark, phone width). It merges questions, decisions (`docs/decisions/*.md`, date, title, status), changes, runs and git commits, each tagged with a badge and linked to its source file. The header gives counts per kind and the date range, and a chart shows entries per day by kind. ASSUMED: date-only entries (decisions, paraphrase rows) sort to the end of their day. Quotes in backfilled rows were copied from `docs/conversations/2026-11-10-encoding-alignment-via-mechanism.md`; which ADR each led to is the repo's judgement, not the author's. The household-world choice and the log-storage decision have no repo doc yet, so their rows link to nothing.
 
 `mar log` prints the last 10 entries as a table; `mar log --last 0` prints all; `mar log --run <id>` shows one in full. Nothing in the logs is ever rewritten. Rows in `changes.jsonl` are the raw data for claim C2 (loop b).
 

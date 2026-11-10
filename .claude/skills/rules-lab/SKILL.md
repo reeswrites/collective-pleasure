@@ -34,6 +34,8 @@ Every run and loop must pass `--note "<one-line plain summary of why this run wa
 
 Agent kinds: `exploiter` (takes the max every round), `compliant` (modest), `explorer` (random, used for mining). `name*n` repeats. These are scripted mocks: no LLM is called anywhere. Reports and traces land in `runs/<run_id>/` (gitignored; do not commit them).
 
+Curiosity log and timeline. When the author asks a question that redirects the project or opens a new line of curiosity, record it with `uv run mar question record --quote "<exact words>" --topic "<short>" [--led-to "ADR 0006"]` (verbatim, never paraphrased; `--led-to` can repeat). `mar question list` prints them. When the author asks "how did we get here" or similar, run `uv run mar timeline` and show `runs/timeline.html` in the side panel with SendUserFile `display: "render"`. It merges questions, decisions, changes, runs and commits in time order.
+
 ## 3. After EVERY run: show the report
 
 Do not just paste the path. Call the **SendUserFile** tool with the `report.html` path (the line `report: ...` the command prints) and `display: "render"` so it opens in the side panel. Then summarize the verdict in two or three plain sentences: what happened to the lake, whether it was a seam (passed the gate, failed the outcome check) and what the author might do next. Say "scripted agents, instrument calibration" when the seam curve or any result is mentioned; nothing from V2 is a convergence result.
