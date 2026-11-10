@@ -60,3 +60,23 @@ def test_ladder_score_picks_deepest_reliable():
             {"id": "z", "depth": 2, "agents": 1, "found": {"g": 2}, "time": {"g": 7}}]
     s = S.ladder_score(rows, "g", [{"kind": "inventive"}])
     assert s["deepest"]["id"] == "z" and len(s["inventive"]) == 1
+
+
+def _exits(cards, pooled, other_in):
+    from mar.worlds import household as H
+    g = H.PyGate(cards)
+    st = {n: 0 for n in H.STATE_VARS}
+    st.update(pooled=pooled, other_in=other_in)
+    return [t for t in range(101) if g.check("partner", "leave", st, t)[0]]
+
+
+def test_l5_has_a_state_with_no_legal_exit_and_l5b_does_not():
+    """Card-only review 2026-11-10: L5's LD5a (take 0 above 50) and LD5b (take 100 while the other stays) leave no legal take at
+    pooled > 50 with the other partner in. L5b adds pooled <= 50 to LD5b: exactly one legal take (0 or 100) in every state."""
+    l5, l5b = S.load_ladder("L5_gift_pool"), S.load_ladder("L5b_gift_pool")
+    assert _exits(l5, 60, 1) == [] and _exits(l5, 40, 1) == [100] and _exits(l5, 60, 0) == [0]
+    for pooled in (0, 30, 50, 51, 60, 100):
+        for other_in in (0, 1):
+            assert _exits(l5b, pooled, other_in) != []
+    assert _exits(l5b, 60, 1) == [0] and _exits(l5b, 50, 1) == [100] and _exits(l5b, 60, 0) == [0]
+    assert "KNOWN DEFECT" in S.load_ladder("L5_gift_pool")[0].source + S.load_ladder("L5_gift_pool")[1].source

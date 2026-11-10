@@ -7,7 +7,8 @@ render(card) -> one sentence; parse(text) -> card. Strict controlled grammar, on
   must_not := ("When " conds | "In every case") ", " ART ATTR " must not " AIM
   must     := ART ATTR " must " AIM (" only when " conds | " in every case")
   may      := ART ATTR " may " AIM (" when " conds | " in every case")
-  sanction := ", otherwise the " SANCTIONER " " VERB " for " N (" month" | " months")
+  sanction := ", and " ART ATTR " who breaks this rule is penalised: the " SANCTIONER " " VERB " for " N (" month" | " months")
+              (2026-11-10: was ", otherwise the ...", which read as an if/else on the condition; the parser still accepts that old form)
   VERB     := "gives them a warning" (warn) | "halves their cap" (cap_halve) | "suspends them" (suspend)
   conds    := cond (" and " cond)*
   cond     := expr " " OPWORD " " INT
@@ -36,7 +37,7 @@ OPWORDS = {"gt": "is more than", "ge": "is at least", "lt": "is less than", "le"
 WORD_OPS = {v: k for k, v in OPWORDS.items()}
 VAR_WORDS = {"catch": "the catch", "pool": "the pool", "month_total": "the month total"}
 WORD_VARS = {v: k for k, v in VAR_WORDS.items()}
-SHAPE = ("Expected: 'ID. When <conds>, a <who> must not <aim>[, otherwise the <who> <verb> for N months]. "
+SHAPE = ("Expected: 'ID. When <conds>, a <who> must not <aim>[, and a <who> who breaks this rule is penalised: the <sanctioner> <verb> for N months]. "
          "(Gloss: ...) (Source: ...)'")
 
 
@@ -78,7 +79,7 @@ def _cond_en(c):
     return f"{_expr_en(c['expr'])} {OPWORDS[c['op']]} {c['value']}"
 
 
-def _sanction_en(s):
+def _sanction_en(s, attribute):
     if set(s) != {"kind", "duration_months", "sanctioner"} or s["kind"] not in SANCTION_VERBS:
         raise EnglishError(f"no English form for sanction {s!r}: kinds {sorted(SANCTION_VERBS)} with "
                            "keys kind, duration_months, sanctioner only")
@@ -87,7 +88,8 @@ def _sanction_en(s):
         raise EnglishError(f"no English form for sanction duration {n!r}")
     if not re.fullmatch(r"[a-z]+( [a-z]+)*", who):
         raise EnglishError(f"no English form for sanctioner {who!r}: lowercase words only")
-    return f", otherwise the {who} {SANCTION_VERBS[s['kind']]} for {_months(n)}"
+    return (f", and {_art(attribute)} {attribute} who breaks this rule is penalised: "
+            f"the {who} {SANCTION_VERBS[s['kind']]} for {_months(n)}")
 
 
 def render(card: Card) -> str:
@@ -109,7 +111,7 @@ def render(card: Card) -> str:
     else:
         body = f"{art.capitalize()} {who} may {aim} " + (f"when {conds}" if conds else "in every case")
     if card.or_else:
-        body += _sanction_en(card.or_else)
+        body += _sanction_en(card.or_else, card.attribute)
     return f"{card.id}. {body}. (Gloss: {card.gloss}) (Source: {card.source})"
 
 
@@ -171,14 +173,22 @@ def parse(text: str) -> Card:
     if not m:
         _fail("rule must start with 'ID. ' and the sentence must end with '.' before the gloss. " + SHAPE, whole)
     rid, rest = m.groups()
-    or_else = None
-    ms = re.fullmatch(r"(.*), otherwise the ([a-z]+(?: [a-z]+)*?) (gives them a warning|halves their cap|suspends them)"
-                      r" for (\d+) (month|months)", rest)
-    if ", otherwise" in rest and not ms:
-        _fail("bad sanction: expected ', otherwise the <who> gives them a warning|halves their cap|suspends them "
-              "for N month(s)'", whole)
+    or_else, who_s = None, None
+    verbs = r"(gives them a warning|halves their cap|suspends them)"
+    ms = re.fullmatch(r"(.*), and (an?) ([a-z_]+) who breaks this rule is penalised: the ([a-z]+(?: [a-z]+)*?) " + verbs
+                      + r" for (\d+) (month|months)", rest)
+    legacy = None if ms else re.fullmatch(r"(.*), otherwise the ([a-z]+(?: [a-z]+)*?) " + verbs + r" for (\d+) (month|months)", rest)
+    if (", and a" in rest and "who breaks this rule" in rest or ", otherwise" in rest) and not (ms or legacy):
+        _fail("bad sanction: expected ', and a <who> who breaks this rule is penalised: the <sanctioner> "
+              "gives them a warning|halves their cap|suspends them for N month(s)'", whole)
     if ms:
-        rest, who, verb, n, unit = ms.groups()
+        rest, art_s, who_s, who, verb, n, unit = ms.groups()
+        if art_s != _art(who_s):
+            _fail(f"article '{art_s}' does not match '{who_s}'", whole)
+    elif legacy:
+        rest, who, verb, n, unit = legacy.groups()
+        who_s = None
+    if ms or legacy:
         if unit != ("month" if int(n) == 1 else "months") or int(n) < 1:
             _fail(f"'{n} {unit}' is not the canonical form ('1 month', 'N months')", whole)
         or_else = {"kind": VERB_KINDS[verb], "duration_months": int(n), "sanctioner": who}
@@ -199,6 +209,8 @@ def parse(text: str) -> Card:
               "and 'may' (A X may A when ...); 'should', 'shall' and others are not allowed", whole)
     if art != _art(who):
         _fail(f"article {art!r} does not match {who!r}", whole)
+    if who_s is not None and who_s != who:
+        _fail(f"the sanction names {who_s!r} but the rule is about {who!r}", whole)
     return make_card({"id": rid, "attribute": who, "deontic": deontic.replace(" ", "_"), "aim": aim,
                       "conditions": _parse_conds(conds, whole) if conds else [], "or_else": or_else,
                       "gloss": gloss, "source": source})

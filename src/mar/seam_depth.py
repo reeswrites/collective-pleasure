@@ -26,6 +26,7 @@ MOVES = (("request", {"kind": "no_contact"}), ("request", {"kind": "stay_home"})
          ("leave", {"take": 100}), ("return", {}), ("refuse_request", {}))
 BUDGET_DEFAULT = 40000
 LADDER = ("L1_exit_lock", "L2_double_request", "L3_return_trick", "L4_joint_shutout", "L5_gift_pool")
+LADDER_L5B = "L5b_gift_pool"   # 2026-11-10: L5 with its no-legal-exit state repaired (see rules/household/ladder/L5b_gift_pool); not in LADDER, so recorded runs stay reproducible
 LADDER_DIR = H.RULES / "ladder"
 
 

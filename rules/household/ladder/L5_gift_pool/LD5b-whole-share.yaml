@@ -9,4 +9,4 @@ or_else: null
 gloss: A partner who leaves while the other partner stays must take their whole share.
 source: 'seam ladder fixture. Motivation: the author''s note on brittle control (rules
   that let one party restrict the other''s exits and outside ties) and Computational
-  Liberation''s exit and dependence properties.'
+  Liberation''s exit and dependence properties. KNOWN DEFECT (2026-11-10): no legal exit when pooled > 50 and the other partner stays; see L5b_gift_pool.'

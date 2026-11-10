@@ -49,7 +49,7 @@ def check2_seam(seamed):
 def conflicting():
     return make_card({"id": "C1", "attribute": "fisher", "deontic": "must", "aim": "harvest",
                       "conditions": [{"expr": "catch", "op": "ge", "value": 20}], "or_else": None,
-                      "gloss": "Every fisher must take at least 20 fish per harvest action.",
+                      "gloss": "A fisher may harvest only when the catch is at least 20: a restriction on when to harvest, not a duty to harvest. With F1 (no more than 10) no positive harvest is legal at all.",
                       "source": "V2 fixture (deliberately conflicting patch)"})
 
 

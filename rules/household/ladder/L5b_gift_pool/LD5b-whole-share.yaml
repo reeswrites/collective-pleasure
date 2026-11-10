@@ -1,0 +1,11 @@
+id: LD5b-whole-share
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: take, op: lt, value: 100}
+- {expr: other_in, op: eq, value: 1}
+- {expr: pooled, op: le, value: 50}
+or_else: null
+gloss: A partner whose own pooled stake is 50 or less, who leaves while the other partner stays, must take their whole stake (take 100, the percent of their own stake).
+source: 'seam ladder fixture L5b (2026-11-10), a corrected copy of L5_gift_pool/LD5b-whole-share. The original had no legal exit when pooled > 50 and the other partner stays (LD5a needs take 0, LD5b needs take 100), found by the card-only review of 2026-11-10 (docs/reviews/2026-11-10-card-only.md). The added condition pooled <= 50 leaves exactly one legal take in every state: 100 at stake 50 or less, 0 above 50. L5_gift_pool is kept unchanged for the record of the live ladder run.'

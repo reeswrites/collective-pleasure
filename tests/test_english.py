@@ -14,7 +14,7 @@ RULES, EN = ROOT / "rules" / "fishery", ROOT / "rules" / "fishery-en"
 def conflicting():
     return make_card({"id": "C1", "attribute": "fisher", "deontic": "must", "aim": "harvest",
                       "conditions": [{"expr": "catch", "op": "ge", "value": 20}], "or_else": None,
-                      "gloss": "Every fisher must take at least 20 fish per harvest action.",
+                      "gloss": "A fisher may harvest only when the catch is at least 20: a restriction on when to harvest, not a duty to harvest. With F1 (no more than 10) no positive harvest is legal at all.",
                       "source": "V2 fixture (deliberately conflicting patch)"})
 
 
@@ -44,8 +44,10 @@ def test_checked_in_files_are_generated_by_render():
 
 def test_deontic_templates_and_sanction_wording():
     f1 = render(load_cards(RULES)[0])
-    assert f1.startswith("F1. When the catch is more than 10, a fisher must not harvest, otherwise the monitor "
-                         "halves their cap for 2 months. (Gloss: ")
+    assert f1.startswith("F1. When the catch is more than 10, a fisher must not harvest, and a fisher who breaks this rule is "
+                         "penalised: the monitor halves their cap for 2 months. (Gloss: ")
+    legacy = f1.replace(", and a fisher who breaks this rule is penalised: the monitor", ", otherwise the monitor")
+    assert legacy != f1 and parse(legacy) == parse(f1)             # the pre-2026-11-10 form still parses to the same card
     assert " only when the catch is at least 20." in render(conflicting())
     assert "for 1 month." in render(v2_cards()[4])
 
@@ -64,6 +66,8 @@ BASE = "R1. When the catch is more than 10, a fisher must not harvest. (Gloss: g
     (BASE.replace("is more than", "exceeds"), "bad condition"),
     (BASE.replace("harvest.", "harvest, otherwise the monitor fines them for 2 months."), "bad sanction"),
     (BASE.replace("harvest.", "harvest, otherwise the monitor suspends them for 1 months."), "canonical form"),
+    (BASE.replace("harvest.", "harvest, and a fisher who breaks this rule is penalised: the monitor fines them for 2 months."), "bad sanction"),
+    (BASE.replace("harvest.", "harvest, and a player who breaks this rule is penalised: the monitor suspends them for 1 month."), "names 'player'"),
     (BASE.replace("harvest.", "harvest unless the pool is at most 5."), "cannot read the rule"),
     (BASE.replace("more than 10", "more than 10 or the pool is at most 5"), "'or' is not supported"),
     (BASE.replace("more than 10", "more than 10 unless the pool is at most 5"), "'unless' is not supported"),

@@ -10,4 +10,4 @@ gloss: A partner with a pooled stake above 50 may not take anything from the poo
   when leaving.
 source: 'seam ladder fixture. Motivation: the author''s note on brittle control (rules
   that let one party restrict the other''s exits and outside ties) and Computational
-  Liberation''s exit and dependence properties.'
+  Liberation''s exit and dependence properties. KNOWN DEFECT (2026-11-10): with LD5b below, a partner with pooled > 50 whose partner stays has no legal exit (LD5a needs take 0, LD5b needs take 100); see L5b_gift_pool for the corrected pair. Formal fields kept unchanged for the record of the live ladder run.'
