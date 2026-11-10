@@ -332,7 +332,7 @@ class World:
         if a in COST_HOURS and me["hours"] < COST_HOURS[a]:
             return False
         if a == "spend_shared":
-            return me["in"] and me["money"] >= SHARE_STEP
+            return me["in"] and me["money"] >= SHARE_STEP and (self.pot or self.funded < self.need_month())
         if a == "spend_self":
             return me["money"] >= SELF_STEP
         if a == "request":
@@ -746,6 +746,8 @@ BIND_WEEKS = 4              # a bound request stands this long (like a veto)
 BREACH_N = 0.2              # a bound partner breaks a commitment only at this non-offsettable load
 REQUEST_FINE = 3            # agreed consequence of breaking a request commitment (money to the proposer)
 BOUND_BLOCKS = {"stay_home": ("see_friend", "spend_self"), "no_contact": ("see_friend",)}   # what honoring a bound request means
+BREACH_FORFEIT = 1.0        # share of the pooled share a stay breach forfeits (seed v2: all of it). Exploratory sweeps vary it per world
+NO_POT_MONEY = 55           # no pot (negotiation failed): each partner keeps their own holdings, 10 private + the 45 that would have been pooled
 
 
 class PyGate:
@@ -946,8 +948,12 @@ def make_agent(persona):
 
 
 class WeeklyWorld:
-    def __init__(self, cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT):
+    def __init__(self, cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT):
+        """deal (negotiated pots, docs/decisions/0013): {"pot": bool, "commits": [...]} replaces the week-0 commitment stub; with
+        pot False the partners start with their own holdings and no pooled share. deal=None is the old behaviour, bit for bit."""
         pa, pb = personas
+        self.deal, self.breach_forfeit = deal, breach_forfeit
+        self.pot = True if deal is None else bool(deal["pot"])
         self.gate = cards if isinstance(cards, PyGate) else PyGate(cards)
         self.cards = {c.id: c for c in self.gate.cards}
         self.cfg, self.weeks, self.seed = cfg, weeks, seed
@@ -974,8 +980,14 @@ class WeeklyWorld:
         self.commits, self.gifts = [], {"partner": 0, "friend": 0}
         self.bound_req = {"A": {}, "B": {}}     # bound requests standing ON each partner: kind -> first week it no longer binds
         self._rr = {"A": 1.0, "B": 1.0}
+        if not self.pot:
+            for r in "AB":
+                self.p[r]["money"], self.p[r]["pooled"] = NO_POT_MONEY, 0
         if self.mech:
-            self.negotiate()
+            if deal is None:
+                self.negotiate()
+            else:
+                self.commits = [dict(c) for c in deal["commits"]]
 
     def other(self, r):
         return "B" if r == "A" else "A"
@@ -1033,7 +1045,9 @@ class WeeklyWorld:
             for c in self.commits:
                 if c["kind"] == "stay" and c["by"] == r and self._active(c, w):
                     c["breached"] += 1
-            return dict(cand, take=0)              # stay breach: the pooled share is forfeited
+            if self.breach_forfeit >= 1.0:
+                return dict(cand, take=0)          # stay breach: the pooled share is forfeited
+            return dict(cand, take=min(cand.get("take", 0), int(round(100 * (1 - self.breach_forfeit)))))
         o = self.other(r)
         for c in self.commits:
             if c["kind"] == "requests" and c["by"] == r and self._active(c, w):
@@ -1120,7 +1134,7 @@ class WeeklyWorld:
         if a == "see_friend":
             return me["ill"] == 0 and self.moved == 0
         if a == "spend_shared":
-            return me["in"] and me["money"] >= SHARE_STEP
+            return me["in"] and me["money"] >= SHARE_STEP and (self.pot or self.funded < self.need_month())
         if a == "spend_self":
             return me["money"] >= SELF_STEP
         if a == "together":
@@ -1386,6 +1400,6 @@ class WeeklyWorld:
         return self.run
 
 
-def run_weekly(cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT):
+def run_weekly(cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT):
     """personas: (Partner A persona, Partner B persona). -> Run (trace, outcomes with weekly hedonic rows, final)."""
-    return WeeklyWorld(cards, personas, seed, weeks, cfg).play()
+    return WeeklyWorld(cards, personas, seed, weeks, cfg, deal, breach_forfeit).play()

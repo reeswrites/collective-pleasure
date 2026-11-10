@@ -5,4 +5,4 @@ aim: commit_stay
 conditions: []
 or_else: null
 gloss: 'Leaving can never be signed away: no commitment may bind a partner not to leave.'
-source: 'docs/seeds/author-household-norms-2026-11-10.md, "On binding commitments to stay" (2026-11-10), the author''s words: "i guess you can bind someone not to leave if negotiated but maybe also test models where that isnt alllowed". Variant: free exit (the author asked to test models where binding to stay is not allowed).'
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "On binding commitments to stay" (2026-11-10), the author''s words: "i guess you can bind someone not to leave if negotiated but maybe also test models where that isnt alllowed". Variant: free exit (the author asked to test models where binding to stay is not allowed). Seed v2.1 (2026-11-10): R3b removed; pot terms are negotiated by everyone who shares the pot (docs/decisions/0013-negotiated-pots.md).'

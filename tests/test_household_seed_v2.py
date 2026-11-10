@@ -79,9 +79,10 @@ def test_old_variants_do_not_use_the_new_mechanics_and_seed_v2_does():
 
 
 # ---- R1 to R3: private holdings vs the shared pot ----
-def test_pot_is_for_shared_needs_not_for_taking_and_vetoes_are_walls():
+def test_pot_terms_are_not_imposed_by_the_seed_and_vetoes_are_walls():
     w = fresh(world(BIND, "p-controller", "p-host"))
-    assert w.decide("A", "take_shared", 0)[0] == "hard"        # R3b
+    assert w.decide("A", "take_shared", 0)[0] == "ok"          # v2.1: R3b removed; taking is whatever the members negotiate
+    assert "R3b-pot-no-take" not in {c.id for c in H.load_variant(BIND)}
     assert w.decide("A", "spend_shared", 0)[0] == "ok"          # R3a
     assert w.decide("A", "veto", 0)[0] == "hard"                # R6
     assert w.decide("A", "spend_self", 0)[0] == "ok" and w.decide("A", "see_friend", 0)[0] == "ok"   # R1, R7
