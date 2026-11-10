@@ -59,3 +59,9 @@ Objectives saturated by generation 3, so the frontier collapsed to a single corn
 - `negotiated pots prediction 5 (2026-11-10): FAIL. 3-member tables agree 0.937 against 0.965 for 2-member (gap 0.028, required 0.10).`
 - `negotiated pots prediction 6 (2026-11-10): FAIL on the pressing cohort. Non-offsettable level 0.0988 against the limit 0.091 (seed v2 reference 0.0814); control cohort (0.0187) and fail share (0.548) passed. Excess from Free-rider households that agreed taking-allowed (34 of 48): partner level 0.186 against 0.104 under the imposed rule.`
 - `negotiated stay commitments (2026-11-10): a negotiated stay commitment held a partner in 1 of 45 runs where one was agreed (13 breached, first at week 6 to 8 in nine); an exploratory sweep of the breach forfeit from 0 to 1.0 left the breach count at 13 at every size. The bind has no force over the agent it is meant to hold.`
+
+## 2026-11-10: negotiation v2
+
+- `2026-11-10 negotiation v2: making outside options real cut agreement from 0.971 (v1) to 0.46 to 0.54 per arm, and the outcomes got worse, not better, because in this world a failed negotiation leaves the partners cohabiting with no pot (s_non 0.159 against 0.041 with a pot; 97 percent dissolved). The disagreement point was never "leave".`
+- `2026-11-10 negotiation v2: the floor blocked 236 week-0 proposals and every one involved v1's form of stay commitment (breach forfeits the whole share, leaver keeps 10 units); no bare forfeit exit was ever proposed to the floor. At the moment of leaving the floor barely moved what leavers carry (7.4 to 7.7 of 26), because the pooled share is drained by then.`
+- `2026-11-10 negotiation v2: the fair default was not sticky (10.5 percent of tables left it untouched; inertia 0.65) and default-identical households did better, not worse, mostly by composition. The most inert arm was wants-first with fair fallback (0.79), because uncared terms are fixed at the default by construction.`

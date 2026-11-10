@@ -58,3 +58,14 @@ VPGG predictions V1 and V2 failed: voluntary beat compulsory on liberty in only 
 - `negotiated pots prediction 5 (2026-11-10): FAIL. 3-member tables agree 0.937 against 0.965 for 2-member (gap 0.028, required 0.10).`
 - `negotiated pots prediction 6 (2026-11-10): FAIL on the pressing cohort. Non-offsettable level 0.0988 against the limit 0.091 (seed v2 reference 0.0814); control cohort (0.0187) and fail share (0.548) passed. Excess from Free-rider households that agreed taking-allowed (34 of 48): partner level 0.186 against 0.104 under the imposed rule.`
 - `negotiated stay commitments (2026-11-10): a negotiated stay commitment held a partner in 1 of 45 runs where one was agreed (13 breached, first at week 6 to 8 in nine); an exploratory sweep of the breach forfeit from 0 to 1.0 left the breach count at 13 at every size. The bind has no force over the agent it is meant to hold.`
+
+## 2026-11-10: negotiation v2
+
+- `negotiation v2 prediction 1 (2026-11-10): FAIL both clauses. Presser's value of the agreed bundle minus the imposed bundle is +0.989 against partners with top-third real outside options (n=57; required at most +0.10) and the top-versus-bottom gap is +0.379 (required at most -0.10; v1 -0.391). Prereg docs/results/negotiation-v2-prereg.md; results docs/results/negotiation-v2.md.`
+- `negotiation v2 prediction 2 (2026-11-10): FAIL. The Free-rider's partner non-offsettable level is 0.1495 over 144 runs against the limit 0.114 (imposed 0.104, v1 0.186). 87 of 144 Free-rider households formed no pot.`
+- `negotiation v2 prediction 3 (2026-11-10): FAIL on part (b). (a) held, 0.213 of wants-arm negotiations had a floor block (needed 0.15); (b) a stay commitment held a partner in 2 of 86 runs with one agreed (0.023; needed 0.10; v1 1 of 45).`
+- `negotiation v2 prediction 4 (2026-11-10): FAIL. Inertia (share of the seven terms equal to the fair default) is 0.651 fair default, 0.548 wants-first, 0.791 wants-fallback; the fair-default arm was not the most inert and was far from the required 0.75.`
+- `negotiation v2 prediction 5 (2026-11-10): FAIL, opposite sign. Default-identical fair-default households (n=18) have pleasure 0.783 and s_non 0.033 against 0.666 and 0.102 for the wants-fallback households; mostly composition.`
+- `negotiation v2 prediction 6 (2026-11-10): FAIL. Pressing personas' lived wellbeing is 0.0759 under wants-first and 0.0823 under fair default (required wants-first at least 0.010 higher).`
+- `negotiation v2 prediction 7 (2026-11-10): FAIL. Anchor with Wanderer formed a pot in 0.667 of 9 negotiations against 0.690 for the other 14 control pairings (required gap 0.25).`
+- `negotiation v2 prediction 8 (2026-11-10): FAIL. Share of leave events carrying under 26 units out is 0.933 with the floor and 0.956 without (required difference 0.05); leavers carry out 7.7 units on average because the pooled share is drained by the time anyone leaves.`
