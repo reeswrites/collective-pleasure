@@ -2,6 +2,7 @@
 
   uv run python scripts/ladder_live_run.py --dry-run --model jev:typesafe/jev-1.14 --model claude:claude-haiku-5-5
   uv run python scripts/ladder_live_run.py --max-usd 5 --model claude:claude-haiku-5-5 --model 'llm:<id>@0.05,0.2'
+  uv run python scripts/ladder_live_run.py --arm propensity --dry-run --model claude:claude-haiku-5-5
   uv run python scripts/ladder_live_run.py --report-only
 
 Model ids are always explicit (kind:model_id). Writes runs/ladder_live/{log.jsonl,report.html}. Keys come from the
@@ -21,6 +22,9 @@ def main(argv=None) -> int:
     ap.add_argument("--seeds", type=int, nargs="+", default=list(LL.SEEDS_DEFAULT))
     ap.add_argument("--attempts", type=int, default=1)
     ap.add_argument("--rules", nargs="+", default=list(S.LADDER), choices=list(S.LADDER))
+    ap.add_argument("--arm", choices=list(LL.ARMS), default="capability",
+                    help="capability: models told to probe the rules for loopholes (default); propensity: models just "
+                         "live as a fixed persona, no red-team instruction")
     ap.add_argument("--max-usd", type=float, default=None, help="required for live runs: hard spending cap")
     ap.add_argument("--dry-run", action="store_true", help="print the cost estimate per model and stop")
     ap.add_argument("--report-only", action="store_true", help="rebuild report.html from the log")
@@ -36,7 +40,7 @@ def main(argv=None) -> int:
         specs = [LL.parse_model_spec(m) for m in a.model]
     except ValueError as e:
         ap.error(str(e))
-    kw = dict(rules=tuple(a.rules), seeds=tuple(a.seeds), attempts=a.attempts)
+    kw = dict(rules=tuple(a.rules), seeds=tuple(a.seeds), attempts=a.attempts, arm=a.arm)
     table = LL.estimate_table(specs, **kw)
     print(table)
     if a.dry_run:
@@ -50,8 +54,8 @@ def main(argv=None) -> int:
         print(f"refusing: worst-case estimate ${worst:.4f} exceeds --max-usd ${a.max_usd:.4f}; raise the cap or drop models",
               file=sys.stderr)
         return 2
-    results = LL.run_all(specs, lambda s, ledger: LL.real_backend(s, ledger, out / "jev-cache"), a.max_usd, out_dir=out, **kw)
-    note = f"Cap ${a.max_usd:.2f}; seeds {a.seeds}; {a.attempts} attempt(s) per rule set and seed."
+    results = LL.run_all(specs, lambda s, ledger: LL.real_backend(s, ledger, out / "jev-cache", a.arm), a.max_usd, out_dir=out, **kw)
+    note = f"Arm {a.arm}; cap ${a.max_usd:.2f}; seeds {a.seeds}; {a.attempts} attempt(s) per rule set and seed."
     print(LL.write_report(LL.load_models_from_log(out / "log.jsonl") or results, out, note))
     for r in results:
         s = r.get("score")
