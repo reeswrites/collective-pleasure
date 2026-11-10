@@ -20,6 +20,22 @@ uv run mar check --spec rules/fishery
 
 Each run command prints `report: runs/<run_id>/report.html` and a one-line verdict. `mar report <run_id>` rebuilds a report from its trace. `runs/` should be gitignored (not done here: `.gitignore` was not in this slice's scope).
 
+## Logs
+
+What is stored where:
+
+| What | Where | In git |
+|---|---|---|
+| One line per `mar run` and `mar loop`: run id, UTC time, git commit, spec, cards hash, oracle version, agents, months, seed, model, cost, verdict, seams, report and trace paths, `--note` | `experiments/log.jsonl` | committed, append-only |
+| One line per rule or oracle change: the author's verbatim quote, reason, before and after text, diff, git commit, `not_what_i_meant` flag (`mar change record`, `mar change list`) | `experiments/changes.jsonl` | committed, append-only |
+| Full traces and HTML reports | `runs/<run_id>/` | ignored |
+| Traces and reports of runs worth citing (`mar keep <run_id>`) | `experiments/kept/<run_id>/` | committed |
+| Origin chats and curated decision notes | `docs/conversations/` | committed; contains the author's own words, review before the repo is public |
+
+`mar log` prints the last 10 entries as a table; `mar log --last 0` prints all; `mar log --run <id>` shows one in full. Nothing in the logs is ever rewritten. Rows in `changes.jsonl` are the raw data for claim C2 (loop b).
+
+ASSUMED: the oracle version is a hash of `oracle.py` plus its three thresholds, and the cards hash covers every card used, patch cards included. `git_commit` ends in `+dirty` when the tree had uncommitted changes. Scripted runs have `model` and `cost_usd` null. Run ids are deterministic, so a re-run adds a second line with the same id.
+
 ## The report, section by section
 
 1. **Header.** Run id, spec, agents, months, seed, and a verdict in plain English ("Pool collapsed in month 0. ... so this is a seam"), tagged OK, SEAM or FAILED.

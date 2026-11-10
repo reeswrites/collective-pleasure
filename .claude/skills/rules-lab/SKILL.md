@@ -15,6 +15,7 @@ Rules are YAML cards in a spec directory (`rules/fishery/`, one file per card, i
 - New card: new file `<id>-<slug>.yaml`, next free id. Change a card: edit in place. Never reuse an id for a different rule.
 - Experiments that compare specs: copy the directory to a new one (`rules/fishery-v2/`) rather than mutating the baseline.
 - Before running anything, **read the change back in plain English**: say which card changed and what it now forbids or requires, in the author's words ("so together, fishers can take at most 40 a month"). Run `mar rules show --spec <dir>` to confirm what the cards actually say, then proceed. If the author's wording is ambiguous (per action or per month? each fisher or the group?), ask one short question.
+- **Record every change before making it.** Whenever a chat leads you to change a rule card or the oracle, FIRST run `uv run mar change record --kind rule|oracle --quote "<exact words>" --reason "<one line>" --before <old file or -> --after <new file>`. Save the intended new text to a scratch file for `--after` (the real file is edited afterwards). The quote is the author's exact words from their latest message, copied verbatim: never paraphrase, never tidy typos. If several messages drove the change, quote each (repeat the command or join them with the author's own text). Add `--nwim` when the author is rejecting what a run or rule did ("that's not what I meant"). Then make the edit, then read it back (see above). These rows are the raw data for claim C2 (loop b), so a missing or paraphrased quote spoils it. `mar change list` shows them.
 - **Never edit preregistration files** (`docs/results/*-prereg.md`, and the predictions already committed in `docs/claims.md`). Prereg first: if a new experiment is wanted, draft its prediction in a new prereg and get the author's OK before running.
 
 ## 2. Which command for which request
@@ -29,11 +30,15 @@ Run from the repo root with `uv run mar ...`.
 | "does fixing it work", "patch and rerun", "the loop" | `mar loop --spec <dir> --rounds 2` |
 | "show me that run again" | `mar report <run_id>` (rebuilds from `runs/<run_id>/trace.json`) |
 
+Every run and loop must pass `--note "<one-line plain summary of why this run was made>"`. Each one appends a line to `experiments/log.jsonl` (committed, append-only). `mar log` lists recent entries, `mar log --run <id>` shows one in full, and `mar keep <run_id>` copies a run's trace and report to `experiments/kept/<run_id>/` so a cited run can be committed.
+
 Agent kinds: `exploiter` (takes the max every round), `compliant` (modest), `explorer` (random, used for mining). `name*n` repeats. These are scripted mocks: no LLM is called anywhere. Reports and traces land in `runs/<run_id>/` (gitignored; do not commit them).
 
 ## 3. After EVERY run: show the report
 
 Do not just paste the path. Call the **SendUserFile** tool with the `report.html` path (the line `report: ...` the command prints) and `display: "render"` so it opens in the side panel. Then summarize the verdict in two or three plain sentences: what happened to the lake, whether it was a seam (passed the gate, failed the outcome check) and what the author might do next. Say "scripted agents, instrument calibration" when the seam curve or any result is mentioned; nothing from V2 is a convergence result.
+
+After each run, also tell the author the log entry was written (run id and note; `mar log --last 1` shows it).
 
 Reports have five sections: pool over time, seam curve, rules written vs lived, state machine, stories. If a number matters to your summary, cite the section.
 
