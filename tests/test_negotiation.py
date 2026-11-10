@@ -187,7 +187,7 @@ def test_the_negotiated_deal_replaces_the_commitment_stub_and_the_agreed_terms_a
 
 def test_no_pot_means_own_holdings_no_pooled_share_and_nothing_to_take():
     w = H.WeeklyWorld(N.base_cards(BIND), (PERS["p-freerider"], PERS["p-host"]), 0, 30, deal={"pot": False, "commits": []})
-    assert not w.pot and (w.p["A"]["money"], w.p["A"]["pooled"]) == (H.NO_POT_MONEY, 0) and w.commits == []
+    assert not w.pot and (w.p["A"]["money"], w.pool) == (H.NO_POT_MONEY, 0) and w.commits == []
     w.wk = {r: {"took": 0} for r in "AB"}
     w.units = {"A": 10, "B": 10}
     assert not w.feasible("A", "take_shared")

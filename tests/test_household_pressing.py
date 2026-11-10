@@ -74,12 +74,12 @@ def test_take_shared_moves_three_units_once_a_week():
     w.units = {"A": 10, "B": 10}
     w.wk = {r: {"income": 0, "spent_self": 0, "works": 0, "rests": 0, "friends": 0, "together": 0, "contrib": 0, "friend_initiated": 0,
                 "sanctioned": 0, "conn_hit": 0.0, "sec_hit": 0.0, "pressed": 0, "took": 0} for r in "AB"}
-    m0, p0 = w.p["A"]["money"], w.p["B"]["pooled"]
+    m0, p0 = w.p["A"]["money"], w.pool
     assert w.feasible("A", "take_shared")
     w.apply("A", {"a": "take_shared"}, 0, [])
-    assert w.p["A"]["money"] == m0 + H.TAKE_SHARED and w.p["B"]["pooled"] == p0 - H.TAKE_SHARED
+    assert w.p["A"]["money"] == m0 + H.TAKE_SHARED and w.pool == p0 - H.TAKE_SHARED     # one shared pot: either member draws from it
     assert not w.feasible("A", "take_shared")                    # once a week
-    w.p["B"]["pooled"] = 0
+    w.pool = 0
     w.wk["A"]["took"] = 0
     assert not w.feasible("A", "take_shared")                    # nothing left to take
 

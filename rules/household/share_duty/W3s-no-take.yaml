@@ -7,6 +7,5 @@ or_else:
   kind: cap_halve
   duration_months: 2
   sanctioner: household
-gloss: A partner who takes from the other's pooled share has their own spending halved for two months.
-source: 'docs/results/household-v3a-prereg.md (v3a variant, committed before any v3a run). Motivation:
-  restraining a partner who presses on the other (the author''s note on control and brittle households).'
+gloss: A partner who draws from the shared pot for themselves has their own spending barred for two months (in the household world the cap_halve sanction bars self-spending; it does not halve it).
+source: 'docs/results/household-v3a-prereg.md (v3a variant, committed before any v3a run). Motivation: restraining a partner who presses on the other (the author''s note on control and brittle households). Post-fix note 2026-11-10: in the weekly world take_shared now draws from the one shared pot (the pooled-share wording of runs before this date describes the pre-fix per-person-share world).'

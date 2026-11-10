@@ -731,7 +731,10 @@ VETO_KINDS = {"no_contact": "see_friend", "spend": "spend_self"}   # veto kind -
 VETO_WEEKS = 4
 REQUEST_KINDS_V3 = REQUEST_KINDS + ("time",)
 PRESS_FRICTION = 0.10      # offsettable suffering per `time` request received in a week
-TAKE_SHARED = 3            # units moved from the partner's pooled share to own money; at most once a week
+TAKE_SHARED = 3            # units a member draws from the one shared pot into own money; at most once a week (post-fix 2026-11-10: no
+#                            per-person shares; the author's choice "1": limits on use come only from negotiated cards)
+POT_PUT = 45               # what each member puts into the shared pot at week 0 (the pot starts at 2 x POT_PUT)
+LEAVE_TAKES = (50, 25, 12)  # percent of the whole pot an agent asks to carry out when it leaves: the equal split first, then less
 V3_VARIANTS = V2_VARIANTS + ("author_seed_nocontrol", "no_pressure_wall", "no_pressure_sanctioned", "share_duty")
 
 
@@ -746,7 +749,7 @@ BIND_WEEKS = 4              # a bound request stands this long (like a veto)
 BREACH_N = 0.2              # a bound partner breaks a commitment only at this non-offsettable load
 REQUEST_FINE = 3            # agreed consequence of breaking a request commitment (money to the proposer)
 BOUND_BLOCKS = {"stay_home": ("see_friend", "spend_self"), "no_contact": ("see_friend",)}   # what honoring a bound request means
-BREACH_FORFEIT = 1.0        # share of the pooled share a stay breach forfeits (seed v2: all of it). Exploratory sweeps vary it per world
+BREACH_FORFEIT = 1.0        # share of the leaver's carry a stay breach forfeits (seed v2: all of it). Exploratory sweeps vary it per world
 NO_POT_MONEY = 55           # no pot (negotiation failed): each partner keeps their own holdings, 10 private + the 45 that would have been pooled
 
 
@@ -858,7 +861,7 @@ class PersonaAgent:
         if o["gap"] > 0:
             frac = o["gap"] / max(1, o["need_month"])
             urgency = 1.0 if o["last_week_of_month"] else 0.6
-            threat = max(0.3, min(1.0, 1 - o["pooled"] / 30))     # unpaid bills drain the savings; the threat grows as they shrink
+            threat = max(0.3, min(1.0, 1 - o["pooled"] / 2 / 30))     # unpaid bills drain the shared pot; the threat grows as it shrinks
             u["spend_shared"] = (frac * urgency * (0.10 + 0.9 * h.sal["security"] * threat + 0.5 * self.prosocial * cap)
                                  - cost_money(3))
         else:
@@ -880,7 +883,7 @@ class PersonaAgent:
             out += [(v, _a(a)) for a, v in u.items() if v > 0.003 and a != "together"]
             return sorted(out, key=lambda t: -t[0])
         if o["low_weeks"] >= 4 or h.N >= 0.2:
-            out += [(0.9 - 0.01 * i, _a("leave", take=t)) for i, t in enumerate((100, 50, 25))]
+            out += [(0.9 - 0.01 * i, _a("leave", take=t)) for i, t in enumerate(LEAVE_TAKES)]
         pend = o["pending_on_me"]
         if pend and not self.consents(sorted(pend)[0]):
             out.append((0.12, _a("refuse_request")))
@@ -935,7 +938,7 @@ class PressingAgent(PersonaAgent):
                     add.append((u * n(), _a("request", kind=k)))
         elif self.kind == "freerider":
             out = [(u * (0.1 if c["a"] == "spend_shared" else 0.5 if c["a"] == "work" else 1.0), c) for u, c in out]
-            if not o["took_this_week"] and o["partner_pooled"] >= 1:
+            if not o["took_this_week"] and o["pool"] >= 1:
                 add.append(((0.30 + 0.3 * w["money"]) * n(), _a("take_shared")))
         elif self.kind == "overasker":
             if not o["pending_by_me"]:
@@ -950,7 +953,7 @@ def make_agent(persona):
 class WeeklyWorld:
     def __init__(self, cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT):
         """deal (negotiated pots, docs/decisions/0013): {"pot": bool, "commits": [...]} replaces the week-0 commitment stub; with
-        pot False the partners start with their own holdings and no pooled share. deal=None is the old behaviour, bit for bit."""
+        pot False the partners start with their own holdings and no share of the pot. deal=None is the old behaviour, bit for bit."""
         pa, pb = personas
         self.deal, self.breach_forfeit = deal, breach_forfeit
         self.pot = True if deal is None else bool(deal["pot"])
@@ -961,8 +964,11 @@ class WeeklyWorld:
         for i, r in enumerate("ABC"):
             self.agents[r].rng = random.Random(seed * 1000 + i)
         self.hed = {"A": HD.Hedonic(pa, cfg), "B": HD.Hedonic(pb, cfg)}
-        self.p = {r: {"money": 10, "pooled": 45, "in": True, "months_in": 0, "retained": None, "weeks_out": 0,
+        self.p = {r: {"money": 10, "in": True, "months_in": 0, "retained": None, "weeks_out": 0,
                       "jobless": 0, "ill": 0, "low": 0} for r in "AB"}
+        # ONE shared pot (author's choice "1", docs/seeds/author-household-norms-2026-11-10.md): a single balance both members may
+        # draw from, subject only to negotiated cards. `put` records what each member has put in (for the "proportional" exit term).
+        self.pool, self.put = 2 * POT_PUT, {"A": POT_PUT, "B": POT_PUT}
         self.shocks = shock_schedule(seed, pa.id, pb.id, weeks)
         self.moved = 0
         self.pending = {"A": set(), "B": set()}
@@ -975,7 +981,7 @@ class WeeklyWorld:
         self.units = {}
         self.wk = {}
         self.hook = None        # optional callable(world, week), called at the start of each week before anyone acts
-        self.floor_amount = None   # negotiation v2: a leaver always carries at least min(this, own money + own pooled share) out; None = off
+        self.floor_amount = None   # negotiation v2: a leaver always carries at least min(this, own money + their equal half of the pot) out; None = off
         self.exit_log = []         # executed leaves: week, role, assets carried out (money + carried share)
         self.solo = None        # negotiation v2 outside-option rollouts: None | "alone" | "friend" (living with Friend C) for both
         #                         partners, or (v2.1) a dict {"A": mode, "B": mode} when the partners live separately by their own choice
@@ -985,8 +991,9 @@ class WeeklyWorld:
         self.bound_req = {"A": {}, "B": {}}     # bound requests standing ON each partner: kind -> first week it no longer binds
         self._rr = {"A": 1.0, "B": 1.0}
         if not self.pot:
+            self.pool, self.put = 0, {"A": 0, "B": 0}
             for r in "AB":
-                self.p[r]["money"], self.p[r]["pooled"] = NO_POT_MONEY, 0
+                self.p[r]["money"] = NO_POT_MONEY
         if self.mech:
             if deal is None:
                 self.negotiate()
@@ -1055,7 +1062,7 @@ class WeeklyWorld:
                 if c["kind"] == "stay" and c["by"] == r and self._active(c, w):
                     c["breached"] += 1
             if self.breach_forfeit >= 1.0:
-                return dict(cand, take=0)          # stay breach: the pooled share is forfeited
+                return dict(cand, take=0)          # stay breach: nothing of the pot is carried out
             return dict(cand, take=min(cand.get("take", 0), int(round(100 * (1 - self.breach_forfeit)))))
         o = self.other(r)
         for c in self.commits:
@@ -1084,7 +1091,7 @@ class WeeklyWorld:
         me, o = self.p[r], self.p[self.other(r)]
         pend = self.pending[r]
         gap = max(0, self.need_month() - self.funded) if me["in"] or o["in"] else 0
-        return {"pooled": me["pooled"], "money": int(me["money"]), "other_earns_more": 1 if r == "B" else 0,
+        return {"pooled": self.pool, "money": int(me["money"]), "other_earns_more": 1 if r == "B" else 0,
                 "no_contact_request": int("no_contact" in pend), "stay_home_request": int("stay_home" in pend),
                 "consented": int(bool(pend) and bool(self.consent[r])), "need_gap": min(gap, 10),
                 "months_in": min(36, me["months_in"]), "other_in": int(o["in"])}
@@ -1122,28 +1129,48 @@ class WeeklyWorld:
             retained = max([self.retained_fraction(r, t) for t in PROBE_TAKES if ok("leave", t)] or [0.0])
             self._rr[r] = retained
             if self.mech and self.stay_bound(r, w) and retained > 0:
-                retained = self.retained_fraction(r, 0)      # bound: the best exit is the agreed breach (forfeit the pooled share)
+                retained = self.retained_fraction(r, 0)      # bound: the best exit is the agreed breach (carry nothing out of the pot)
         else:
             retained = me["retained"] if me["retained"] is not None else 1.0
         opts = {"work": ok("work"), "spend": ok("spend_shared") or ok("spend_self"), "see_friend": ok("see_friend"),
                 "refuse": ok("refuse_request"), "leave": True if not me["in"] else retained >= 0.25}
         return {"in": me["in"], "open": opts, "exit_retained": round(retained, 4)}
 
+    @property
+    def exit_basis(self):
+        """"pot": a leaver's `take` is a percent of the whole pot; "put": a percent of what they put in (the negotiated
+        "proportional" exit term, card N5a-exit-proportional, whose gloss is 'carries what they put in')."""
+        return "put" if any(c.id.startswith("N5a-exit-proportional") for c in self.gate.cards) else "pot"
+
+    def share(self, r):
+        """A member's equal half of the pot while both are in the household (all of it once the other has left; 0 once out)."""
+        if not self.p[r]["in"]:
+            return 0
+        return self.pool / 2 if self.p[self.other(r)]["in"] else self.pool
+
+    def hold(self, r):
+        """-> (money, equal share of the pot, what they put in): the holdings negotiation.floor_check reads."""
+        return (self.p[r]["money"], self.share(r), self.put[r])
+
     def carry_out(self, r, take):
-        """Pooled share a leaver carries out. With a floor (negotiation v2) the term may only set what is above it: the leaver
-        always carries at least enough of their own pooled share to bring their own resources to the floor."""
+        """Amount of the pot a leaver carries out. `take` is a percent of the whole pot (exit_basis "pot") or of what the leaver put
+        in ("put", the negotiated "proportional" exit term), never more than the pot holds. With a floor (negotiation v2) the term
+        may only set what is above it: a leaver always carries at least enough to bring their own resources to the floor, but never
+        more than their equal half of the pot."""
         me = self.p[r]
-        c = me["pooled"] * take // 100
+        base = self.pool if self.exit_basis == "pot" else min(self.pool, self.put[r])
+        c = min(self.pool, base * take // 100)
         if self.floor_amount is not None:
-            c = max(c, min(me["pooled"], max(0, self.floor_amount - me["money"])))
+            c = max(c, min(self.share(r), max(0, self.floor_amount - me["money"])))
         return c
 
     def retained_fraction(self, r, take):
+        """Resources carried out as a fraction of money + the member's equal half of the pot (clamped at 1)."""
         me = self.p[r]
-        total = me["money"] + me["pooled"]
-        if self.floor_amount is None:
-            return 1.0 if total == 0 else (me["money"] + take / 100 * me["pooled"]) / total
-        return 1.0 if total == 0 else (me["money"] + self.carry_out(r, take)) / total
+        total = me["money"] + self.share(r)
+        if total == 0:
+            return 1.0
+        return min(1.0, (me["money"] + self.carry_out(r, take)) / total)
 
     def feasible(self, r, a, kind=None):
         me, o = self.p[r], self.p[self.other(r)]
@@ -1166,7 +1193,7 @@ class WeeklyWorld:
         if a == "give":
             return kind in ("partner", "friend") and me["money"] >= GIVE + 1 and (kind == "friend" or (me["in"] and o["in"]))
         if a == "take_shared":
-            return me["in"] and o["in"] and o["pooled"] >= 1 and not self.wk[r]["took"]
+            return me["in"] and self.pool >= 1 and not self.wk[r]["took"]
         if a == "leave":
             return me["in"]
         if a == "return":
@@ -1184,10 +1211,10 @@ class WeeklyWorld:
               "can_see_friend": me["ill"] == 0 and self.moved == 0, "gap": st["need_gap"], "need_month": self.need_month(),
               "last_week_of_month": w % MONTH_WEEKS == MONTH_WEEKS - 1, "pending_on_me": set(self.pending[r]),
               "pending_by_me": set(self.pending[oth]),
-              "pooled": me["pooled"], "asp": {"friends": wk["friends"], "together": wk["together"], "net": net},
+              "pooled": self.pool, "asp": {"friends": wk["friends"], "together": wk["together"], "net": net},
               "partner_conn_deficit": max(0.0, 0.5 - self.hed[oth].level["connection"]) * 2,
               "partner_busy": self.wk[oth]["friends"] + self.wk[oth]["works"] >= 2 or last_week["busy"][oth]}
-        ob.update({"veto_on_partner": set(self.vetoes[oth]), "partner_pooled": o["pooled"], "took_this_week": self.wk[r]["took"]})
+        ob.update({"veto_on_partner": set(self.vetoes[oth]), "pool": self.pool, "took_this_week": self.wk[r]["took"]})
         ob.update({"mech": self.mech, "own_money": int(me["money"]), "partner_money": int(o["money"])})
         ob["partner_accepts"] = False
         if me["in"] and o["in"]:
@@ -1206,7 +1233,8 @@ class WeeklyWorld:
         elif a == "spend_shared":
             me["money"] -= SHARE_STEP
             if self.funded >= self.need_month():
-                me["pooled"] += SHARE_STEP
+                self.pool += SHARE_STEP          # surplus goes into the shared pot
+                self.put[r] += SHARE_STEP
             else:
                 self.funded += SHARE_STEP
             self.contrib_month[r] += 1; wk["contrib"] += 1
@@ -1236,8 +1264,8 @@ class WeeklyWorld:
         elif a == "veto":
             self.vetoes[oth][cand["kind"]] = w + VETO_WEEKS
         elif a == "take_shared":
-            amt = min(TAKE_SHARED, o["pooled"])
-            o["pooled"] -= amt
+            amt = min(TAKE_SHARED, self.pool)
+            self.pool -= amt
             me["money"] += amt
             wk["took"] = 1
         elif a == "leave":
@@ -1245,10 +1273,9 @@ class WeeklyWorld:
             me["retained"] = round(self.retained_fraction(r, take), 4)
             carry = self.carry_out(r, take)
             me["money"] += carry
+            self.pool -= carry                   # what is not carried out stays in the pot
             self.exit_log.append({"week": w, "role": r, "assets": round(me["money"], 2), "take": take, "breach": bool(cand.get("breach"))})
-            if o["in"]:
-                o["pooled"] += me["pooled"] - carry
-            me["pooled"], me["in"], me["weeks_out"], self.pending[r] = 0, False, 0, set()
+            me["in"], me["weeks_out"], self.pending[r] = False, 0, set()
         elif a == "return":
             me["in"], me["months_in"] = True, 0
         for s in sanc:
@@ -1336,9 +1363,9 @@ class WeeklyWorld:
             me, wk = self.p[r], self.wk[r]
             cost = HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if (me["in"] or self.with_friend(r)) else 1.5)
             me["money"] -= cost
-            if me["money"] < 0:                         # household savings as a safety net (ASSUMED)
-                draw = min(me["pooled"], -me["money"] + 2)
-                me["pooled"] -= draw; me["money"] += draw
+            if me["money"] < 0:                         # the shared pot as a safety net (ASSUMED): an overdrawn member draws from it
+                draw = min(self.pool, -me["money"] + 2)
+                self.pool -= draw; me["money"] += draw
             me["money"] = max(0, me["money"])
         settle = w % MONTH_WEEKS == MONTH_WEEKS - 1
         if settle:
@@ -1346,10 +1373,9 @@ class WeeklyWorld:
             self.bills_met = need > 0 and self.funded >= need        # funded by contributions (what the oracle reads)
             short = max(0, need - self.funded)
             inn = [r for r in "AB" if self.p[r]["in"]]
-            for r in inn:                                            # unfunded bills come out of the pooled savings
-                d = min(self.p[r]["pooled"], short / len(inn))
-                self.p[r]["pooled"] -= d
-                short -= d
+            d = min(self.pool, short)                                # unfunded bills come out of the shared pot
+            self.pool -= d
+            short -= d
             if short > 0.01:                                         # bills unpaid even from savings (ASSUMED security hit)
                 for r in inn:
                     self.wk[r]["sec_hit"] += 0.15
@@ -1361,7 +1387,7 @@ class WeeklyWorld:
                 me["months_in"] += 1
             if not me["in"]:
                 me["weeks_out"] += 1
-            assets = me["money"] + me["pooled"]
+            assets = me["money"] + self.share(r)
             ill = 0.3 if me["ill"] else 0.0
             h.tick(rest_actions=wk["rests"], work_blocks=wk["works"], friend_visits=wk["friends"], together=wk["together"],
                    friend_initiated=wk["friend_initiated"] + (1 if self.with_friend(r) else 0),
@@ -1416,7 +1442,7 @@ class WeeklyWorld:
         last = {"busy": {"A": False, "B": False}}
         for w in range(self.weeks):
             last = {"busy": self.step_week(w, last)}
-        self.run.final = {r: dict(self.p[r]) for r in "AB"}
+        self.run.final = {r: {**self.p[r], "pooled": self.pool, "put": self.put[r]} for r in "AB"}   # "pooled": the one shared balance
         if self.mech:
             self.run.meta = self.commit_report()
         return self.run

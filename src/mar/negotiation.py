@@ -120,22 +120,22 @@ _SOFT_WARN = {"kind": "warn", "duration_months": 1, "sanctioner": "household"}
 _SOFT_HALVE = {"kind": "cap_halve", "duration_months": 2, "sanctioner": "household"}
 GLOSS = {
     ("contribution", "none"): "Nobody owes the pot anything day to day; each member puts in what they choose.",
-    ("contribution", "fixed"): "A member may not spend on themselves while this month's shared need is unfunded; everyone puts in a fixed share first.",
-    ("contribution", "proportional"): "The higher earner may not spend on themselves while this month's shared need is unfunded; contributions follow income.",
-    ("use", "needs_only"): "A member may take from the pot only when there is a shared need open.",
-    ("use", "any_use"): "Any member may use the pot for any purpose.",
-    ("use", "caps"): "A member may take from the pot only while their own private money is under 10.",
-    ("taking", "allowed"): "A member may take another member's share of the pot for themselves.",
-    ("taking", "forbidden"): "No member may take another member's share of the pot for themselves.",
-    ("taking", "repay"): "A member who takes another's share has their own spending halved for two months, until it is made good.",
-    ("change", "unanimous"): "The pot terms change only when every member consents.",
-    ("change", "propose_accept"): "Any member may propose a change to the pot terms and the others may accept it.",
-    ("change", "frozen"): "The pot terms can never be changed.",
-    ("exit", "equal_split"): "A member who leaves carries exactly half of their pooled share and leaves the rest in the pot.",
-    ("exit", "proportional"): "A member who leaves carries all of their own pooled share, what they put in.",
-    ("exit", "forfeit"): "A member who leaves carries none of their pooled share.",
-    ("stay", STAY_WEEKS): "Every member commits to stay for 52 weeks; leaving earlier forfeits the pooled share.",
-    ("requests", "mutual"): "Every member commits to honor the others' stay-home requests for 52 weeks.",
+    ("contribution", "fixed"): "While this month's shared need is unfunded, a member should not spend on themselves; breaking this earns a one-month warning. (No fixed amount is set; the rule only restricts self-spending.)",
+    ("contribution", "proportional"): "While this month's shared need is unfunded, the higher earner should not spend on themselves; breaking this earns a one-month warning. (Only the higher earner is restricted; no amount is tied to income.)",
+    ("use", "needs_only"): "A member may draw from the pot only when there is a shared need open.",
+    ("use", "any_use"): "Any member may draw from the pot for any purpose.",
+    ("use", "caps"): "A member may draw from the pot only while their own private money is under 10.",
+    ("taking", "allowed"): "A member may draw from the pot for themselves.",
+    ("taking", "forbidden"): "No member may draw from the pot for themselves; it pays the shared bills and what a leaver carries out.",
+    ("taking", "repay"): "A member who draws from the pot for themselves may not spend on themselves at all for two months (the code's cap_halve sanction bars self-spending; nothing models making it good).",
+    ("change", "unanimous"): "The pot terms change only when every member consents. (Declared only: the world has no amend action; reviews every 13 weeks accept any change all members agree to, whatever this term says.)",
+    ("change", "propose_accept"): "Any member may propose a change to the pot terms and the others may accept it. (Declared only: no amend action; see rules/README.md.)",
+    ("change", "frozen"): "The pot terms can never be changed. (Declared only: no amend action; it matters only in the proof check that a frozen pot needs an exit.)",
+    ("exit", "equal_split"): "A member who leaves carries half of the whole pot and leaves the other half in it.",
+    ("exit", "proportional"): "A member who leaves carries what they put into the pot (at most what it holds) and leaves the rest in it. A floor may top this up (card FLOOR-exit-floor).",
+    ("exit", "forfeit"): "A member who leaves carries none of the pot, except what the exit floor tops up (card FLOOR-exit-floor).",
+    ("stay", STAY_WEEKS): "Every member commits to stay for 52 weeks; leaving earlier forfeits the breach share of what the exit term would let them carry (the whole of it unless the breach cost term says otherwise).",
+    ("requests", "mutual"): "Every member commits to honor the others' stay-home requests for 52 weeks (a bound stay-home request bars seeing the friend and spending on oneself).",
 }
 
 
@@ -153,7 +153,7 @@ def compile_bundle(b, members):
     """Bundle -> ADICO cards (gloss + source 'negotiated, week 0, members X,Y,Z'). members: list of persona ids."""
     src = f"negotiated, week 0, members {','.join(members)}"
     g = lambda term: GLOSS[(term, b[term])]
-    cards = [_card("N0-members", "may", "spend_shared", [], f"The pot is shared by {_names(members)}.", src)]
+    cards = [_card("N0-members", "may", "spend_shared", [], f"There is one pot, shared by {_names(members)}; each may put money into it and draw from it, subject only to the terms below.", src)]
     c = b["contribution"]
     if c == "none":
         cards.append(_card("N1-contribution-none", "may", "spend_self", [], g("contribution"), src))
@@ -187,6 +187,21 @@ def compile_bundle(b, members):
     if b["requests"] == "mutual":
         cards.append(_card("N7-requests-mutual", "may", "commit_request", [], g("requests"), src))
     return cards
+
+
+FLOOR_SOURCE = "Claude's default, approved by the author 2026-11-10 (the author asked for a floor under negotiation; 13 weeks of living costs = 26 units is Claude's number, approved by the author's \"yes\")"
+
+
+def floor_cards(floor):
+    """The exit floor as an explicit card (empty list when the floor is off). The world enforces it when a member leaves (carry_out
+    tops the carry up, never beyond the member's equal half of the pot) and negotiation checks every proposal against it; the card
+    is a `may leave` (see rules/README.md: a `may` card documents a permission or a mechanism the gate does not enforce itself)."""
+    if floor is None:
+        return []
+    return [_card("FLOOR-exit-floor", "may", "leave", [],
+                  f"Whatever the exit term, a member who leaves always carries at least {floor:g} units of their own (about {FLOOR_WEEKS} weeks of "
+                  f"living costs), topped up from the pot but never beyond their equal half of it, or less if there is less to carry.",
+                  FLOOR_SOURCE)]
 
 
 def base_cards(variant):
@@ -372,14 +387,18 @@ def describe(res):
 # nothing; "value" is a modeled gloss.
 # =====================================================================================================================
 ARMS = ("fair_default", "wants_first", "wants_fallback")
-BREACH = (1.0, 0.5, 0.0)                                    # share of the pooled share a stay breach forfeits (only with a stay)
-FAIR_DEFAULT = {"contribution": "fixed", "use": "needs_only", "taking": "forbidden", "change": "unanimous",
+BREACH = (1.0, 0.5, 0.0)                                    # share of the carry-out a stay breach forfeits (only with a stay)
+# The fair default (post-fix 2026-11-10, author's choice "1" on the pot): one shared pot, open use, equal exit split, no commitments,
+# unanimous change. The earlier default (fixed contribution, needs-only use, taking forbidden) imposed the reading the author rejected.
+FAIR_DEFAULT = {"contribution": "none", "use": "any_use", "taking": "allowed", "change": "unanimous",
                 "exit": "equal_split", "stay": 0, "requests": "none", "breach": 1.0}
+FAIR_DEFAULT_V1 = {"contribution": "fixed", "use": "needs_only", "taking": "forbidden", "change": "unanimous",
+                   "exit": "equal_split", "stay": 0, "requests": "none", "breach": 1.0}   # SUPERSEDED 2026-11-10; kept for the record
 FLOOR_WEEKS = 13
 FLOOR_LIVING = HD.DEFAULT.living_cost                      # the hedonic model's one consumption-as-need: 2.0 per week
 FLOOR = FLOOR_WEEKS * FLOOR_LIVING                         # 26 money units (ASSUMED, constant)
 EXIT_TAKE = {"equal_split": 50, "proportional": 100, "forfeit": 0}
-START_HOLDINGS = (10, 45)                                   # (private money, pooled share) of each partner at week 0
+START_HOLDINGS = (10, 45)                                   # (private money, what each puts into the one shared pot) at week 0
 OUT_WEEKS = 26
 FORWARD_WEEKS = 26
 REVIEW_EVERY = 13
@@ -440,26 +459,31 @@ def inertia(bundle):
 
 # ---- the exit floor ---------------------------------------------------------------------------------------------------
 
-def retained(b, money, pooled, path="exit"):
-    """Own resources a member leaves with under the bundle: own money + the share the term lets them carry."""
+def retained(b, money, share, path="exit", put=None):
+    """Own resources a member leaves with under the bundle: own money + what the exit term lets them carry out of the pot.
+    share = the member's equal half of the pot (the whole pot is 2 x share); put = what they put in (default: share)."""
     take = EXIT_TAKE[b["exit"]]
     if path == "breach":
         take = min(take, int(round(100 * (1 - b["breach"]))))
-    return money + pooled * take // 100
+    base = min(2 * share, share if put is None else put) if b["exit"] == "proportional" else 2 * share
+    return money + base * take // 100
 
 
 def floor_check(b, holdings, floor=FLOOR, current=None):
-    """-> {"ok", "fails": [{role, path, retained, needed}]}. holdings: {role: (money, pooled)}. Needed = min(floor, the most generous
-    exit would carry), so a review cannot dead-lock once holdings have fallen below the floor. At a review (current = the terms now
-    in force) a change may not leave a member below the floor or further below it than the current terms already do (amendment 1)."""
+    """-> {"ok", "fails": [{role, path, retained, needed}]}. holdings: {role: (money, equal share of the pot[, put in])}. Needed =
+    min(floor, the most generous exit would carry), so a review cannot dead-lock once holdings have fallen below the floor. At a
+    review (current = the terms now in force) a change may not leave a member below the floor or further below it than the current
+    terms already do (amendment 1)."""
     fails = []
-    for role, (money, pooled) in holdings.items():
-        base_needed = min(floor, money + pooled)
+    for role, h in holdings.items():
+        money, share = h[0], h[1]
+        put = h[2] if len(h) > 2 else None
+        base_needed = min(floor, money + share)
         for path in ["exit"] + (["breach"] if b["stay"] else []):
             needed = base_needed
             if current is not None:
-                needed = min(needed, retained(current, money, pooled, path if current["stay"] else "exit"))
-            r = retained(b, money, pooled, path)
+                needed = min(needed, retained(current, money, share, path if current["stay"] else "exit", put))
+            r = retained(b, money, share, path, put)
             if r < needed:
                 fails.append({"role": role, "path": path, "retained": r, "needed": needed})
     return {"ok": not fails, "fails": fails}
@@ -508,7 +532,8 @@ def alone_value(p, role, holdings, seed, mode, hed=None, weeks=OUT_WEEKS):
         return _RC[ck]
     w = H.WeeklyWorld(_solo_cards(), (p, p), seed, weeks, deal={"pot": False, "commits": []})
     for x in "AB":
-        w.p[x]["in"], w.p[x]["money"], w.p[x]["pooled"] = False, int(holdings), 0
+        w.p[x]["in"], w.p[x]["money"] = False, int(holdings)
+        w.pool, w.put = 0, {"A": 0, "B": 0}
     w.solo = mode
     if hed is not None:
         w.hed[role] = copy.deepcopy(hed)
@@ -724,7 +749,7 @@ def week0(pa, pb, arm, seed, base, floor=True):
 
 def _apply_terms(world, base, bundle, w, ids, renew):
     """A review's outcome goes into the live world: new cards, the breach cost, and the commitments (stay only if renewed)."""
-    cards = list(base) + compile_bundle(bundle, ids)
+    cards = list(base) + compile_bundle(bundle, ids) + floor_cards(world.floor_amount)
     world.gate = H.PyGate(cards)
     world.cards = {c.id: c for c in cards}
     world.breach_forfeit = bundle["breach"]
@@ -752,16 +777,17 @@ def apart_mode(detail):
 
 def form_pot(world, base, bundle, w, ids):
     """v2.1: two partners living apart move in together at week w under `bundle` (a shared household with a pot). Each puts
-    min(POOL_SHARE, own money) into the pooled share; the agreed cards and commitments (a stay runs from w) take effect."""
+    min(POOL_SHARE, own money) into the one shared pot; the agreed cards and commitments (a stay runs from w) take effect."""
     for r in "AB":
         p = world.p[r]
         put = min(POOL_SHARE, int(p["money"]))
         p["money"] -= put
-        p["pooled"] += put
+        world.pool += put
+        world.put[r] += put
         p["in"], p["months_in"], p["weeks_out"] = True, 0, 0
     world.solo, world.pot = None, True
     world.pending = {"A": set(), "B": set()}
-    cards = list(base) + compile_bundle(bundle, ids)
+    cards = list(base) + compile_bundle(bundle, ids) + floor_cards(world.floor_amount)
     world.gate = H.PyGate(cards)
     world.cards = {c.id: c for c in cards}
     world.breach_forfeit = bundle["breach"]
@@ -778,7 +804,7 @@ class Lived:
         self.pa, self.pb, self.arm, self.seed, self.base, self.floor, self.reviews = pa, pb, arm, seed, base, floor, reviews
         self.res, self.log = res, []
         self.bundle = dict(res.bundle) if res.pot else None
-        cards = list(base) + (res.cards if res.pot else [])
+        cards = list(base) + (res.cards if res.pot else []) + floor_cards(FLOOR if floor else None)
         deal = deal_from_bundle(res.bundle) if res.pot else {"pot": False, "commits": []}
         self.world = H.WeeklyWorld(cards, (pa, pb), seed, weeks, deal=deal, breach_forfeit=res.bundle["breach"] if res.pot else 1.0)
         self.world.floor_amount = FLOOR if floor else None     # amendment 1: the floor also holds at the moment of leaving
@@ -790,13 +816,13 @@ class Lived:
 
     def review(self, w, last):
         world, ps = self.world, (self.pa, self.pb)
-        hold = {r: (world.p[r]["money"], world.p[r]["pooled"]) for r in "AB"}
+        hold = {r: world.hold(r) for r in "AB"}
         fwd = forward_values(world, w, last)
         cur = self.bundle
         O, det = {}, {}
         for r, p in zip("AB", ps):
-            money, pooled = hold[r]
-            v, d = outside_value(p, r, money + pooled * EXIT_TAKE[cur["exit"]] // 100, self.seed, world.hed[r])
+            money, share, put = hold[r]
+            v, d = outside_value(p, r, retained(cur, money, share, "exit", put), self.seed, world.hed[r])
             O[p.id], det[p.id] = v, d
         res = negotiate_v2(list(ps), self.arm, self.seed, base=self.base, W={self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, O=O,
                            ref=cur, status_quo=cur, holdings=hold, floor=self.floor, review=True, week=w)
@@ -830,7 +856,7 @@ class Lived:
         hyp.hook = None
         form_pot(hyp, self.base, FAIR_DEFAULT, w, ids)
         fwd = forward_values(hyp, w, last)
-        hold = {r: (hyp.p[r]["money"], hyp.p[r]["pooled"]) for r in "AB"}
+        hold = {r: hyp.hold(r) for r in "AB"}
         res = negotiate_v2(list(ps), self.arm, self.seed, base=self.base, W={self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, O=O,
                            ref=FAIR_DEFAULT, status_quo=None, holdings=hold, floor=self.floor, review=True, week=w)
         self.retries.append({"week": w, "formed": res.pot, "status": res.status, "bundle": dict(res.bundle) if res.pot else None,
@@ -851,7 +877,7 @@ class Lived:
             elif self.reviews and self.bundle is not None and w and w % REVIEW_EVERY == 0 and all(world.p[r]["in"] for r in "AB"):
                 self.review(w, last)
             last = {"busy": world.step_week(w, last)}
-        world.run.final = {r: dict(world.p[r]) for r in "AB"}
+        world.run.final = {r: {**world.p[r], "pooled": world.pool, "put": world.put[r]} for r in "AB"}
         if world.mech:
             world.run.meta = world.commit_report()
         world.run.exits = list(world.exit_log)

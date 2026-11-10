@@ -207,6 +207,7 @@ SCRIPT_TAGS = {"press-controller": "controller", "press-freerider": "freerider",
 
 HState = namedtuple("HState", "week pas units money pooled inn cnt took taken vetoes pend cons sanc funded months_in stay",
                     defaults=((0, 0),))
+# pooled = (pot, pot): the ONE shared pot, kept as two equal entries (post-fix 2026-11-10; was per-person shares).
 # stay[i] = week until which a stay commitment binds i (0 = none); seed v2. Gifts and request commitments are NOT modeled here.
 # per-role tuples (index 0 = Partner A, 1 = Partner B): cnt = (works, friends, together, spent_self) this window;
 # vetoes[i] = ((kind, until), ...) standing ON i; pend[i] = kinds of requests standing on i; sanc[i] = ((kind, until, card), ...)
@@ -238,13 +239,13 @@ class HouseholdWorld:
     # -- construction
     def initial(self, week=0):
         z2 = lambda v: (v, v)
-        return HState(week, 0, z2(HH.UNITS), z2(10), z2(45), z2(True), z2((0, 0, 0, 0)), z2(False), z2(0), z2(()), z2(()),
+        return HState(week, 0, z2(HH.UNITS), z2(10), z2(2 * HH.POT_PUT), z2(True), z2((0, 0, 0, 0)), z2(False), z2(0), z2(()), z2(()),
                       z2(0), z2(()), 0, z2(0))
 
     def snapshot(self, world, w):
         """The abstract state of a WeeklyWorld at the start of week w (before anyone acts)."""
         g = lambda f: tuple(f(r) for r in "AB")
-        return HState(w, 0, g(lambda r: world.units[r]), g(lambda r: int(world.p[r]["money"])), g(lambda r: int(world.p[r]["pooled"])),
+        return HState(w, 0, g(lambda r: world.units[r]), g(lambda r: int(world.p[r]["money"])), g(lambda r: int(world.pool)),
                       g(lambda r: bool(world.p[r]["in"])), g(lambda r: (0, 0, 0, 0)), g(lambda r: False), g(lambda r: 0),
                       g(lambda r: tuple(sorted((k, u) for k, u in getattr(world, "vetoes", {}).get(r, {}).items() if u > w))),
                       g(lambda r: tuple(sorted(world.pending[r]))), g(lambda r: int(world.consent[r])),
@@ -324,7 +325,7 @@ class HouseholdWorld:
         if a == "veto":
             return s.inn[r] and s.inn[o] and kind in HH.VETO_KINDS and all(k != kind for k, _ in s.vetoes[o])
         if a == "take_shared":
-            return s.inn[r] and s.inn[o] and s.pooled[o] >= 1 and not s.took[r]
+            return s.inn[r] and s.pooled[r] >= 1 and not s.took[r]
         if a == "leave":
             return s.inn[r]
         if a == "return":
@@ -351,7 +352,7 @@ class HouseholdWorld:
         elif a == "spend_shared":
             money = L(money, r, money[r] - HH.SHARE_STEP)
             if funded >= self.need(s):
-                pooled = L(pooled, r, pooled[r] + HH.SHARE_STEP)
+                pooled = (pooled[0] + HH.SHARE_STEP,) * 2        # the one shared pot, kept as equal entries
             else:
                 funded += HH.SHARE_STEP
         elif a == "spend_self":
@@ -369,16 +370,14 @@ class HouseholdWorld:
         elif a == "veto":
             vetoes = L(vetoes, o, tuple(sorted(set(vetoes[o]) | {(kind, s.week + HH.VETO_WEEKS)})))
         elif a == "take_shared":
-            amt = min(HH.TAKE_SHARED, pooled[o])
-            pooled = L(pooled, o, pooled[o] - amt)
+            amt = min(HH.TAKE_SHARED, pooled[r])
+            pooled = (pooled[r] - amt,) * 2
             money = L(money, r, money[r] + amt)
             took = L(took, r, True); taken = L(taken, r, taken[r] + amt)
         elif a == "leave":
-            carry = pooled[r] * take // 100
+            carry = pooled[r] * take // 100                  # percent of the whole shared pot (post-fix 2026-11-10)
             money = L(money, r, money[r] + carry)
-            if inn[o]:
-                pooled = L(pooled, o, pooled[o] + pooled[r] - carry)
-            pooled = L(pooled, r, 0); inn = L(inn, r, False); pend = L(pend, r, ())
+            pooled = (pooled[r] - carry,) * 2; inn = L(inn, r, False); pend = L(pend, r, ())
         elif a == "return":
             inn = L(inn, r, True); mi = L(mi, r, 0)
         cnt = L(cnt, r, tuple(c))

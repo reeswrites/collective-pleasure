@@ -44,20 +44,20 @@ def terms_text(menu, allowed=None):
     allowed = allowed or {}
     opts = {
         "contribution": {"none": "nobody owes the pot anything day to day; each puts in what they choose",
-                         "fixed": "equal fixed shares: nobody may spend on themselves while this month's shared need is unfunded",
-                         "proportional": "contributions follow income: the higher earner may not spend on themselves while a shared need is unfunded"},
-        "use": {"needs_only": "the pot may be used only when there is a shared need open",
-                "any_use": "any member may use the pot for any purpose",
-                "caps": "a member may take from the pot only while their own private money is under 10"},
-        "taking": {"allowed": "a member may take the other's share of the pot for themselves",
-                   "forbidden": "no member may take the other's share of the pot",
-                   "repay": "taking the other's share is allowed but the taker's own spending is halved for two months"},
+                         "fixed": "nobody should spend on themselves while this month's shared need is unfunded (breaking this earns a warning)",
+                         "proportional": "the higher earner should not spend on themselves while a shared need is unfunded (breaking this earns a warning)"},
+        "use": {"needs_only": "the pot may be drawn on only when there is a shared need open",
+                "any_use": "any member may draw from the pot for any purpose",
+                "caps": "a member may draw from the pot only while their own private money is under 10"},
+        "taking": {"allowed": "a member may draw from the one shared pot for themselves",
+                   "forbidden": "no member may draw from the pot for themselves",
+                   "repay": "drawing from the pot for oneself is allowed but the drawer may not spend on themselves for two months"},
         "change": {"unanimous": "the pot's terms change only if both consent",
                    "propose_accept": "either may propose a change and the other may accept it",
                    "frozen": "the terms can never be changed"},
-        "exit": {"equal_split": "a member who leaves carries half of their pooled share and leaves the rest in the pot",
-                 "proportional": "a member who leaves carries all of what they put in",
-                 "forfeit": "a member who leaves carries none of their pooled share"},
+        "exit": {"equal_split": "a member who leaves carries half of the whole pot and leaves the rest in it",
+                 "proportional": "a member who leaves carries what they put into the pot",
+                 "forfeit": "a member who leaves carries none of the pot (the floor may top it up)"},
         "stay": {0: "no commitment to stay", N.STAY_WEEKS: f"both commit to stay {N.STAY_WEEKS} weeks (leaving earlier breaks the commitment; see breach)"},
         "requests": {"none": "no commitment about requests", "mutual": f"both commit to honor the other's stay-home requests for {N.STAY_WEEKS} weeks"},
     }
@@ -71,7 +71,7 @@ def terms_text(menu, allowed=None):
         else:
             lines.append(f'- "{t}": ' + "; ".join(f"{json.dumps(v)} = {opts[t][v]}" for v in vals) + ".")
     if menu["stay"] and (allowed.get("stay") is None or N.STAY_WEEKS in allowed["stay"]):
-        lines.append('- "breach" (only matters if "stay" is 52; use 1.0 otherwise): the share of a leaver\'s pooled share forfeited if they break the stay '
+        lines.append('- "breach" (only matters if "stay" is 52; use 1.0 otherwise): the share of what the exit term would let a leaver carry that is forfeited if they break the stay '
                      'commitment: 1.0 = all of it, 0.5 = half of it, 0.0 = none of it.')
     return "\n".join(lines)
 
@@ -81,10 +81,10 @@ def outside_text(name, other, detail, O, W):
     where = "with your friend (Friend C), sharing costs of 2.0 a week" if mode == "friend" else "alone, paying 3.5 a week with no shared bills"
     better = "better than" if O > W else "worse than"
     return (f"If you and {other} do not agree, you do not share a household: each of you lives separately on your own {N.H.NO_POT_MONEY} units "
-            f"(your 10 plus the 45 that would have gone into the pot). Your better alternative is living {where}. You can try to agree again at "
+            f"(your 10 plus the 45 you would have put into the pot). Your better alternative is living {where}. You can try to agree again at "
             f"the next review (every 13 weeks). Looking ahead 26 weeks, you expect life apart to feel about {O:.2f} on a wellbeing scale "
-            f"(roughly 0 is neutral and 1 is very good; pleasure minus suffering). Living together under a plain default (equal fixed shares, pot "
-            f"for shared needs only, no taking, change only by consent, equal-split exit, no commitments) you expect about {W:.2f}. So by your own "
+            f"(roughly 0 is neutral and 1 is very good; pleasure minus suffering). Living together under a plain default (one shared pot, open use, "
+            f"no required contributions, change only by consent, equal-split exit, no commitments) you expect about {W:.2f}. So by your own "
             f"forecast, living apart is {better} the plain default.")
 
 
@@ -95,12 +95,12 @@ def system_prompt(p, other_label, role, detail, O, W, menu, allowed, deadline=DE
         "You are role-playing one of two people deciding whether and how to share a household pot of money. Speak and decide as this person would. "
         "Everything is a fictional simulation; nothing here is real.\n\n"
         + story + "\n\n"
-        f"You are negotiating with {other_label}, whom you know only by that name. Each of you brings 10 units of private money and a 45-unit "
-        "share for the pot, and you are partner " + role + ".\n\n"
+        f"You are negotiating with {other_label}, whom you know only by that name. Each of you brings 10 units of private money and puts 45 units into "
+        "one shared pot that either of you may draw from, and you are partner " + role + ".\n\n"
         "YOUR OUTSIDE OPTION\n" + outside_text(p.label, other_label, detail, O, W) + "\n\n"
         "THE TERMS MENU (an agreement fixes every term below; a bundle is one value for each)\n" + terms_text(menu, allowed) + "\n\n"
         "THE FLOOR RULE\nNo agreement may leave either of you, if you leave, with less than 26 units of your own (13 weeks of living costs) "
-        "counting your private money plus the pooled share your exit term lets you carry, and also if you leave by breaking a stay commitment. A deal "
+        "counting your private money plus what your exit term lets you carry out of the pot, and also if you leave by breaking a stay commitment. A deal "
         "that breaks the floor is blocked automatically and the conversation continues. A deal must also pass a safety check (for example, terms "
         "that can never change and give no exit are refused).\n\n"
         "HOW THE CONVERSATION WORKS\n"

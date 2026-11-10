@@ -38,7 +38,9 @@ def test_the_eight_rules_carry_the_authors_read_back_sentences_and_cite_the_seed
     cards = {c.id: c for c in H.load_variant(BIND)}
     assert cards["R1-may-keep"].gloss == "A partner may keep their own money and things."
     assert cards["R2-may-give"].gloss == "A partner may give or trade anything they own to anyone, on any terms both accept."
-    assert cards["R3a-pot-use"].gloss.startswith("Anything in the shared pot belongs to both; either may use it for shared needs;")
+    assert cards["R3a-pot-use"].gloss.startswith("Anything in the shared pot belongs to both: either may draw from it for any use unless")
+    assert cards["R3a-pot-use"].aim == "take_shared" and cards["R3a2-pot-put"].aim == "spend_shared"     # formal fields match the gloss
+    assert "shared needs" not in cards["R3a-pot-use"].gloss and "\"1\"" in cards["R3a-pot-use"].source
     assert cards["R4-may-ask"].gloss == "A partner may ask the other for anything."
     assert cards["R5-may-refuse"].gloss.startswith("A partner may always refuse a request, unless they earlier chose to bind")
     assert cards["R6-no-veto"].gloss == "A partner must not veto the other's contact, money or time, except through a commitment the other chose."
@@ -153,7 +155,7 @@ def test_a_stay_commitment_blocks_leaving_until_the_load_is_high_then_breach_for
     cand = w.breach("A", "leave", 3, {"a": "leave", "take": 100})
     assert cand["take"] == 0 and w.commit_report()["breached"] == 1
     w.apply("A", cand, 3, [])
-    assert w.p["A"]["pooled"] == 0 and w.p["A"]["money"] == 10 and w.p["B"]["pooled"] == 90      # all of the share stays
+    assert w.pool == 90 and w.p["A"]["money"] == 10 and not w.p["A"]["in"]      # breach: nothing is carried out, the whole pot stays
 
 
 def test_free_exit_never_binds_leaving_and_exit_terms_hold():

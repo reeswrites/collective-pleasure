@@ -217,7 +217,7 @@ def test_household_key_counts_power_held_and_amounts_taken():
     v = hw.step(s, g, 0, ("veto", "spend"), pol)
     assert hw.key(v, 0) != hw.key(s, 0) and hw.key(v, 1) != hw.key(s, 1)       # held by A, standing on B
     t = hw.step(s, g, 0, ("take_shared", None), pol)
-    assert t.pooled == (45, 42) and t.money[0] == 13 and hw.key(t, 0) != hw.key(s, 0)
+    assert t.pooled == (87, 87) and t.money[0] == 13        # one shared pot of 90, drawn down by 3 and hw.key(t, 0) != hw.key(s, 0)
     assert hw.step(t, g, 0, ("take_shared", None), pol).taken == t.taken      # once a week
 
 

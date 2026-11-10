@@ -28,8 +28,8 @@ def HD_LIVING():
 
 
 def test_floor_blocks_below_floor_deals_and_passes_above_floor_ones():
-    hold = {"A": N.START_HOLDINGS, "B": N.START_HOLDINGS}              # money 10, pooled share 45
-    assert N.floor_check(b(), hold)["ok"]                                # equal split carries 10 + 22 = 32
+    hold = {"A": N.START_HOLDINGS, "B": N.START_HOLDINGS}              # money 10, equal half of the one pot 45
+    assert N.floor_check(b(), hold)["ok"]                                # equal split carries half the pot: 10 + 45 = 55
     assert N.floor_check(b(exit="proportional"), hold)["ok"]
     forfeit = N.floor_check(b(exit="forfeit"), hold)
     assert not forfeit["ok"] and forfeit["fails"][0]["retained"] == 10 and forfeit["fails"][0]["needed"] == 26
@@ -46,11 +46,11 @@ def test_floor_cannot_dead_lock_a_review_once_holdings_are_below_the_floor():
 
 
 def test_the_floor_blocks_an_all_accepted_agreement_and_an_above_floor_consented_stay_is_flagged_not_blocked():
-    off = N.week0(PERS["p-anchor"], PERS["p-host"], "fair_default", 0, BASE, floor=False)
-    on = N.week0(PERS["p-anchor"], PERS["p-host"], "fair_default", 0, BASE, floor=True)
+    off = N.week0(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE, floor=False)
+    on = N.week0(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE, floor=True)
     hold = {"A": N.START_HOLDINGS, "B": N.START_HOLDINGS}
     assert off.pot and not N.floor_check(off.bundle, hold)["ok"]         # without the floor, a below-floor stay deal was agreed
-    assert on.floor_blocks and on.floor_blocks[0]["fails"][0]["path"] == "breach"
+    assert on.floor_blocks and any(f["path"] == "breach" for blk in on.floor_blocks for f in blk["fails"])
     assert on.pot and N.floor_check(on.bundle, hold)["ok"]
     assert on.bundle["stay"] == 52 and on.bundle["breach"] < 1.0         # a consented stay commitment above the floor stands
     assert on.flagged and N.v1_flag(on.bundle, BASE)                     # and is flagged: v1's exit-within-k check would have failed it
@@ -59,8 +59,8 @@ def test_the_floor_blocks_an_all_accepted_agreement_and_an_above_floor_consented
 
 
 def test_a_floor_cleared_stay_commitment_is_lived_with_its_breach_cost():
-    on = N.week0(PERS["p-anchor"], PERS["p-host"], "fair_default", 0, BASE)
-    L = N.Lived(PERS["p-anchor"], PERS["p-host"], "fair_default", 0, BASE, on, weeks=20)
+    on = N.week0(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE)
+    L = N.Lived(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE, on, weeks=20)
     assert sorted(c["kind"] for c in L.world.commits).count("stay") == 2 and L.world.breach_forfeit == on.bundle["breach"]
 
 
@@ -100,15 +100,15 @@ def test_friend_arrangement_is_cheaper_than_living_alone_in_the_world():
 def test_inertia_rate_on_a_hand_case():
     d = dict(N.FAIR_DEFAULT)
     assert N.inertia(d)[0] == 1.0
-    two_off = dict(d, taking="allowed", exit="proportional")
+    two_off = dict(d, taking="forbidden", exit="proportional")
     rate, same = N.inertia(two_off)
     assert rate == pytest.approx(5 / 7) and not same["taking"] and not same["exit"] and same["contribution"]
-    assert N.inertia(dict(d, stay=52, breach=0.5, requests="mutual", use="caps", change="frozen", contribution="none", taking="repay", exit="forfeit"))[0] == 0.0
+    assert N.inertia(dict(d, stay=52, breach=0.5, requests="mutual", use="caps", change="frozen", contribution="fixed", taking="repay", exit="forfeit"))[0] == 0.0
     assert N.inertia(dict(d, breach=0.5))[0] == 1.0       # breach is not one of the seven terms
 
 
 def test_fair_default_arm_stands_by_consent_when_nobody_prefers_a_change():
-    r = N.week0(PERS["p-anchor"], PERS["p-wanderer"], "fair_default", 0, BASE)
+    r = N.week0(PERS["p-freerider"], PERS["p-peacekeeper"], "fair_default", 2, BASE)      # the only stood table of 108 (3 seeds x 36 pairs)
     assert r.status == "stood" and r.bundle == N.FAIR_DEFAULT and not r.changed
     assert all(p["outcome"] in ("pass", "refused") for p in r.proposals) and N.inertia(r.bundle)[0] == 1.0
 
@@ -150,12 +150,12 @@ def test_reviews_every_13_weeks_while_both_are_in_and_unchanged_terms_continue()
 
 
 def test_a_stay_commitment_expires_at_a_review_unless_renewed():
-    on = N.week0(PERS["p-anchor"], PERS["p-host"], "fair_default", 0, BASE)
-    L = N.Lived(PERS["p-anchor"], PERS["p-host"], "fair_default", 0, BASE, on, weeks=30)
+    on = N.week0(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE)
+    L = N.Lived(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE, on, weeks=30)
     assert on.bundle["stay"] == 52
-    N._apply_terms(L.world, BASE, on.bundle, 13, ["p-anchor", "p-host"], renew=False)
+    N._apply_terms(L.world, BASE, on.bundle, 13, ["p-controller", "p-peacekeeper"], renew=False)
     assert all(c["until"] <= 13 for c in L.world.commits if c["kind"] == "stay") and not L.world.stay_bound("A", 14)
-    N._apply_terms(L.world, BASE, on.bundle, 26, ["p-anchor", "p-host"], renew=True)
+    N._apply_terms(L.world, BASE, on.bundle, 26, ["p-controller", "p-peacekeeper"], renew=True)
     assert L.world.stay_bound("A", 27) and all(c["until"] == 26 + 52 for c in L.world.commits if c["kind"] == "stay" and c["until"] > 26)
 
 
@@ -182,26 +182,68 @@ def _world(floor):
     return w
 
 
-def test_a_leaver_always_carries_at_least_the_floor_when_their_pooled_share_holds_it():
+def test_a_leaver_always_carries_at_least_the_floor_when_their_half_of_the_pot_holds_it():
     w = _world(N.FLOOR)
-    w.p["A"]["money"], w.p["A"]["pooled"] = 3, 40
-    assert w.carry_out("A", 0) == 23 and w.carry_out("A", 50) == 23 and w.carry_out("A", 100) == 40    # term sets only what is above the floor
-    w.p["A"]["money"], w.p["A"]["pooled"] = 30, 40
-    assert w.carry_out("A", 0) == 0                                                                    # already above the floor
-    w.p["A"]["money"], w.p["A"]["pooled"] = 3, 10
-    assert w.carry_out("A", 0) == 10                                                                   # cannot carry more than their own share
+    w.p["A"]["money"], w.pool = 3, 80                                   # one shared pot of 80: each member's equal half is 40
+    assert w.carry_out("A", 0) == 23 and w.carry_out("A", 25) == 23 and w.carry_out("A", 50) == 40
+    assert w.carry_out("A", 100) == 80                                  # no cap but the pot: a negotiated term may let a leaver carry more
+    w.p["A"]["money"] = 30
+    assert w.carry_out("A", 0) == 0                                     # already above the floor
+    w.p["A"]["money"], w.pool = 3, 20
+    assert w.carry_out("A", 0) == 10                                    # the top-up never exceeds their equal half of the pot
     off = _world(None)
-    off.p["A"]["money"], off.p["A"]["pooled"] = 3, 40
-    assert off.carry_out("A", 0) == 0 and off.carry_out("A", 50) == 20
-    assert off.retained_fraction("A", 50) == (3 + 0.5 * 40) / 43                                      # floor off: exactly the old formula
+    off.p["A"]["money"], off.pool = 3, 80
+    assert off.carry_out("A", 0) == 0 and off.carry_out("A", 50) == 40
+    assert off.retained_fraction("A", 50) == 1.0                        # floor off: half the pot is the equal share (clamped at 1)
+    assert off.retained_fraction("A", 25) == (3 + 20) / 43
+
+
+def test_proportional_exit_carries_what_the_leaver_put_in_not_a_share_of_the_pot():
+    cards = H.load_variant(BIND) + N.compile_bundle(b(exit="proportional"), ["a", "b"])
+    w = H.WeeklyWorld(cards, (PERS["p-anchor"], PERS["p-host"]), 0, 5)
+    assert w.exit_basis == "put" and w.put == {"A": 45, "B": 45}
+    w.put["A"], w.pool = 60, 100
+    assert w.carry_out("A", 100) == 60 and w.carry_out("A", 50) == 30
+    assert _world(None).exit_basis == "pot"
+
+
+def test_the_exit_floor_is_on_a_card_exactly_when_it_is_on():
+    assert N.floor_cards(None) == []
+    (c,) = N.floor_cards(N.FLOOR)
+    assert c.id == "FLOOR-exit-floor" and "26" in c.gloss and "approved by the author" in c.source and "Claude's default" in c.source
+    res = N.week0(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE)
+    on = N.Lived(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE, res, weeks=2)
+    off = N.Lived(PERS["p-controller"], PERS["p-peacekeeper"], "fair_default", 0, BASE, res, floor=False, weeks=2)
+    assert "FLOOR-exit-floor" in on.world.cards and on.world.floor_amount == N.FLOOR
+    assert "FLOOR-exit-floor" not in off.world.cards and off.world.floor_amount is None
+    N._apply_terms(on.world, BASE, res.bundle, 13, ["a", "b"], renew=False)        # a review keeps the card
+    assert "FLOOR-exit-floor" in on.world.cards
+
+
+def test_the_one_pot_is_a_single_balance_both_may_draw_from_with_no_imposed_limit():
+    w = H.WeeklyWorld(BASE + N.compile_bundle(N.FAIR_DEFAULT, ["a", "b"]), (PERS["p-anchor"], PERS["p-host"]), 0, 5)
+    assert w.pool == 90 and "pooled" not in w.p["A"]
+    assert N.FAIR_DEFAULT["use"] == "any_use" and N.FAIR_DEFAULT["taking"] == "allowed" and N.FAIR_DEFAULT["contribution"] == "none"
+    for r in "AB":
+        assert w.decide(r, "take_shared", 0)[0] == "ok"
+    w.units = {"A": 10, "B": 10}
+    w.wk = {r: {"income": 0, "spent_self": 0, "works": 0, "rests": 0, "friends": 0, "together": 0, "contrib": 0, "friend_initiated": 0,
+                "sanctioned": 0, "conn_hit": 0.0, "sec_hit": 0.0, "pressed": 0, "took": 0} for r in "AB"}
+    w.apply("A", {"a": "take_shared"}, 0, [])
+    w.apply("B", {"a": "take_shared"}, 0, [])
+    assert w.pool == 90 - 2 * H.TAKE_SHARED                                       # both drew from the same balance
+    w.apply("A", {"a": "spend_shared"}, 0, [])                                    # contributing goes into the same balance (need funded)
+    w.funded = 99
+    w.apply("B", {"a": "spend_shared"}, 0, [])
+    assert w.pool == 90 - 2 * H.TAKE_SHARED + H.SHARE_STEP and w.put["B"] == 45 + H.SHARE_STEP
 
 
 def test_the_floor_on_a_review_is_no_worse_than_the_current_terms_already_leave():
-    hold = {"A": (5, 20), "B": (5, 20)}                                      # drifted: even the most generous exit carries 25 < 26
-    cur = b(exit="equal_split")                                              # now: 5 + 10 = 15
-    assert not N.floor_check(b(exit="equal_split"), hold)["ok"]              # week-0 rule would block even the current terms
-    assert N.floor_check(b(exit="equal_split", contribution="none"), hold, current=cur)["ok"]    # a change that leaves exit alone passes
-    assert N.floor_check(b(exit="proportional"), hold, current=cur)["ok"]
+    hold = {"A": (5, 20, 10), "B": (5, 20, 10)}                              # drifted: money 5, equal half of the pot 20, but only 10 put in
+    cur = b(exit="proportional")                                             # now: 5 + the 10 they put in = 15 (< the 25 the most generous exit would carry)
+    assert not N.floor_check(cur, hold)["ok"]                                # week-0 rule would block even the current terms
+    assert N.floor_check(b(exit="proportional", contribution="fixed"), hold, current=cur)["ok"]    # a change that leaves exit alone passes
+    assert N.floor_check(b(exit="equal_split"), hold, current=cur)["ok"]
     assert not N.floor_check(b(exit="forfeit"), hold, current=cur)["ok"]    # but nothing may make a leaver worse off than now
 
 
@@ -225,7 +267,7 @@ def test_a_failed_negotiation_lives_apart_each_on_own_holdings_in_their_better_o
     assert not res.pot
     L = N.Lived(PERS["p-steward"], PERS["p-overasker"], "fair_default", 0, BASE, res, weeks=14, apart=True)
     assert L.apart and L.bundle is None
-    assert all(not L.world.p[r]["in"] and L.world.p[r]["money"] == H.NO_POT_MONEY and L.world.p[r]["pooled"] == 0 for r in "AB")
+    assert all(not L.world.p[r]["in"] and L.world.p[r]["money"] == H.NO_POT_MONEY for r in "AB") and L.world.pool == 0
     assert L.world.solo == {r: N.apart_mode(res.outside_detail[pid]) for r, pid in zip("AB", res.members)}
     assert N.apart_mode({"alone": 1.0, "friend": 0.5}) == "alone" and N.apart_mode({"alone": 0.5, "friend": 1.0}) == "friend"
 
@@ -237,9 +279,9 @@ def test_v2_behaviour_is_the_default_still_sharing_the_house():
 
 
 def test_retry_at_a_review_is_held_while_apart_and_forms_a_household_when_agreed():
-    res = _week0("p-wanderer", "p-overasker")           # no pot at week 0; v2.1 pilot: a pot forms at the week-13 retry
+    res = _week0("p-anchor", "p-freerider")             # no pot at week 0; v2.1 pilot: a pot forms at the week-13 retry
     assert not res.pot
-    L = N.Lived(PERS["p-wanderer"], PERS["p-overasker"], "fair_default", 0, BASE, res, weeks=15, apart=True)
+    L = N.Lived(PERS["p-anchor"], PERS["p-freerider"], "fair_default", 0, BASE, res, weeks=15, apart=True)
     L.play()
     assert [x["week"] for x in L.retries] == [13]
     x = L.retries[0]
@@ -253,8 +295,8 @@ def test_form_pot_pools_at_most_the_start_share_and_keeps_the_rest_private():
     L = N.Lived(PERS["p-steward"], PERS["p-overasker"], "fair_default", 0, BASE, res, weeks=2, apart=True)
     L.world.p["A"]["money"], L.world.p["B"]["money"] = 30, 100
     N.form_pot(L.world, BASE, b(stay=52, breach=0.5, requests="mutual"), 13, list(res.members))
-    assert (L.world.p["A"]["money"], L.world.p["A"]["pooled"]) == (0, 30)
-    assert (L.world.p["B"]["money"], L.world.p["B"]["pooled"]) == (55, 45)
+    assert L.world.p["A"]["money"] == 0 and L.world.put == {"A": 30, "B": 45} and L.world.pool == 75     # A could only put in 30
+    assert L.world.p["B"]["money"] == 55
     stay = [c for c in L.world.commits if c["kind"] == "stay"]
     assert len(stay) == 2 and all(c["from"] == 13 and c["until"] == 13 + 52 for c in stay)
     assert L.world.breach_forfeit == 0.5

@@ -4,6 +4,5 @@ deontic: must_not
 aim: take_shared
 conditions: []
 or_else: null
-gloss: No partner may take from the other's pooled share.
-source: 'docs/results/household-v3a-prereg.md (v3a variant, committed before any v3a run). Motivation:
-  restraining a partner who presses on the other (the author''s note on control and brittle households).'
+gloss: A partner may not draw from the shared pot for themselves.
+source: 'docs/results/household-v3a-prereg.md (v3a variant, committed before any v3a run). Motivation: restraining a partner who presses on the other (the author''s note on control and brittle households). Post-fix note 2026-11-10: in the weekly world take_shared now draws from the one shared pot (the pooled-share wording of runs before this date describes the pre-fix per-person-share world).'
