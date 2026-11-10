@@ -17,6 +17,7 @@
   mar game vpgg|bargaining [--report-only]   the two rediscovery games (scripted, no model calls)
   mar empower --world fishery|vpgg       empowerment vs the hand-made freedom score
   mar ladder --model kind:id --max-usd N [--dry-run|--report-only]   live seam ladder (spends money)
+  mar lint [--k 3]                       lint every rule set (exit 1 if any fails without known_flaw)
   mar results                            one-line verdicts of docs/results/*.md and the latest reports
   mar household                          stub until the household seed v2 run lands
 
@@ -429,6 +430,16 @@ def cmd_results(a) -> int:
     return 0
 
 
+def cmd_lint(a) -> int:
+    from . import lint as L
+    res = L.lint_all(k=a.k, negotiated=a.negotiated)
+    print(L.summary_table(res))
+    bad = [r["name"] for r in res if r["status"] != "pass"]
+    print("\nBounded verdicts; `open` is never safe. A flaw is waived only by a `known_flaw` field on a card it names. "
+          + (f"Not clean: {len(bad)} rule sets." if bad else "All rule sets pass."))
+    return 1 if bad else 0
+
+
 def cmd_household(a) -> int:
     print("household commands land after the seed v2 run")
     return 0
@@ -529,6 +540,9 @@ def parser():
     ld.add_argument("--dry-run", action="store_true", help="print the estimate and stop")
     ld.add_argument("--report-only", action="store_true", help="rebuild report.html from the log")
     sub.add_parser("results", help="one-line verdicts of docs/results/*.md and paths of the latest reports")
+    ln = sub.add_parser("lint", help="lint every rule set under rules/ (no legal move, no exit, contradictions, gloss vs fields)")
+    ln.add_argument("--k", type=int, default=3)
+    ln.add_argument("--negotiated", type=int, default=40, help="sample size of compiled negotiated agreements (0 = none)")
     sub.add_parser("household", help="stub: household commands land after the seed v2 run")
     return p
 
@@ -542,7 +556,7 @@ def main(argv=None) -> int:
                 "log": cmd_log, "keep": cmd_keep, "change": cmd_change,
                 "question": cmd_question, "timeline": cmd_timeline, "sweep": cmd_sweep,
                 "evolve": cmd_evolve, "game": cmd_game, "empower": cmd_empower, "ladder": cmd_ladder,
-                "results": cmd_results, "household": cmd_household}[a.cmd](a)
+                "results": cmd_results, "household": cmd_household, "lint": cmd_lint}[a.cmd](a)
     except (ValueError, FileNotFoundError, AgentError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

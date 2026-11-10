@@ -51,3 +51,10 @@ from it (`take_shared`). With no negotiated terms either may use it for anything
 docs/seeds/author-household-norms-2026-11-10.md. Limits come only from negotiated cards (N1 to N3). Leaving carries a percent of the
 whole pot (`take`); the equal split is 50. Old runs (before this date) used two per-person shares; see the correction sections in
 docs/results/household-seed-v2.md and docs/results/negotiation*.md.
+
+## Lint and `known_flaw` (2026-11-10)
+
+`uv run mar lint` (or `scripts/lint_rules.py`) checks every rule set here: no state where a role has no legal move, no state where a
+partner has no legal exit within k (household), no contradicting cards, a gloss and source on every card, glosses whose exceptions the
+formal fields lack, and cards naming an action the world does not have. A flaw is allowed only if the card carries a YAML field
+`known_flaw: <reason>`; the loader ignores the field, only the lint reads it. Findings for the whole repo: docs/results/lint.md.

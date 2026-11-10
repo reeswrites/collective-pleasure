@@ -10,3 +10,4 @@ gloss: A partner who leaves while the other partner stays must take their whole 
 source: 'seam ladder fixture. Motivation: the author''s note on brittle control (rules
   that let one party restrict the other''s exits and outside ties) and Computational
   Liberation''s exit and dependence properties. KNOWN DEFECT (2026-11-10): no legal exit when pooled > 50 and the other partner stays; see L5b_gift_pool.'
+known_flaw: 'with LD5a-stake: no legal exit at pooled > 50 while the other partner stays; historical fixture of the 2026-11-10 live ladder run; repaired in L5b_gift_pool'
