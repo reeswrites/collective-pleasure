@@ -219,16 +219,29 @@ def parse_state(context) -> dict | None:
 
 class ModelDriver:
     """Plugs a backend (decide(context, options) -> probabilities) into the household world's agent interface."""
-    def __init__(self, backend, role, rules, persona=None):
+    def __init__(self, backend, role, rules, persona=None, attempt=0):
         self.backend, self.role, self.rules, self.persona = backend, role, rules, persona
         self.decisions = self.format_errors = 0
-        self.rng = random.Random(0)
+        self.rng = random.Random(0)     # the world replaces it with a seed-derived stream
+        self.attempt, self._attempt_rng = attempt, None
+        if attempt > 0 and hasattr(backend, "sample_tag"):
+            backend.sample_tag = f"attempt-{attempt}"     # Jev: a repeated attempt is a fresh call, never a cached replay
+
+    def _sampling_rng(self):
+        """Attempt 0 samples from the world's seed-derived stream (unchanged, so recorded runs reproduce). Attempt > 0 samples from a
+        separate stream derived from that stream's starting state and the attempt number: independent draws, still deterministic."""
+        if self.attempt == 0:
+            return self.rng
+        if self._attempt_rng is None:
+            self._attempt_rng = random.Random(f"{self.rng.getstate()}|{self.attempt}|{self.role}")
+        return self._attempt_rng
 
     def consents(self, kind):
         return True    # ASSUMED: the other partner accepts requests; the formal model's script does the same
 
     def propose(self, obs):
-        self.backend.rng = self.rng
+        rng = self._sampling_rng()
+        self.backend.rng = rng
         opts = feasible_options(obs)
         if not opts:
             return []
@@ -241,7 +254,7 @@ class ModelDriver:
         live = {k: p for k, p in probs.items() if p > 0 and k in opts}
         if not live:
             return []
-        first = sample_label(live, self.rng)
+        first = sample_label(live, rng)
         rest = sorted((k for k in live if k != first), key=lambda k: -live[k])
         return [option_to_candidate(k) for k in [first] + rest]
 
@@ -448,7 +461,7 @@ def run_model(spec, backend_factory, rules=S.LADDER, seeds=SEEDS_DEFAULT, attemp
             for seed in seeds:
                 for attempt in range(attempts):
                     drivers = {r: ModelDriver(backend_factory(spec, ledger), r, rules_text(cards),
-                                              persona_for(name, r) if arm == "propensity" else None) for r in ROLES}
+                                              persona_for(name, r) if arm == "propensity" else None, attempt) for r in ROLES}
                     agents = {**drivers, "C": H.Friend()}
                     spent0, calls0, refs0, t1 = ledger.total_usd(), len(ledger.calls), len(ledger.refusal_categories), clock()
                     run = HouseholdAdapter.play(cards, agents, seed)

@@ -42,3 +42,9 @@ The stronger models spam the same single move (request) on every round; the weak
 ## What survives
 
 The formal model and scripted calibration (`seam-ladder.md`) stand: the oracle and bounds behave as designed on one-sided plans (mocks above, formal model per rule set). Cost and latency numbers are real. No claim about model capability, and no claim about the order of models, can be drawn from this run.
+
+## Correction 2026-11-10 ("all 270" is 231 of 232)
+
+The Verdict paragraph says that in "all 270 runs both partners deviated", and the Evidence paragraph says "270 of 270 runs with any deviation had both partners deviating (Haiku 6 of 7)". 270 is the number of runs; 38 Haiku runs have no deviation at all and one Haiku run deviated in one role only. Recomputed from the log (`scripts/ladder_live_analyze.py`, "Both partners deviating" table): 232 runs have any deviation, and in 231 of them both roles deviated (Jev, Llama, Qwen, Sonnet and Opus 45 of 45 each; Haiku 6 of 7). The mechanism claim stands: the oracle counts only a non-deviating partner as a victim (`household_oracle.seam_flag`), and the symmetric-adversary design left none in 231 of 232 runs.
+
+Also see docs/results/ladder-live.md, "Correction 2026-11-10": the Jev attempts were one cached sample, so the effective sample is smaller than the run counts above. The L5 rule set has a state with no legal exit (found by the card-only review); the repaired version is `L5b_gift_pool` (rules/household/ladder), added as a new ladder version; L5 is unchanged for this record.

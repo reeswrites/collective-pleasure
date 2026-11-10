@@ -263,3 +263,36 @@ def test_report_side_by_side_and_log_keys(l1_to_l3, inventive, tmp_path):
         LL.append_jsonl(log, {"kind": "ladder_live_model", **{k: v for k, v in m.items() if k != "runs"}})
     assert {(m.get("arm", "capability"), m["model"]) for m in LL.load_models_from_log(log)} == \
         {("capability", "m"), ("propensity", "m")}
+
+
+class _Mixed(Agent):
+    """A deterministic backend that returns the same non-degenerate distribution for the same context (like a cached Jev)."""
+    def __init__(self):
+        self.rng, self.sample_tag = None, None
+
+    def message(self, context, vocabulary):
+        raise NotImplementedError
+
+    def decide(self, context, options):
+        keys = sorted(options)
+        return {k: 1.0 for k in keys}
+
+
+def test_repeated_attempts_are_independent_samples_not_replays():
+    """Correctness review 2026-11-10, finding 1: with one fixed response, attempts 0..2 used one RNG stream and gave identical runs."""
+    rows = LL.run_model(LL.ModelSpec("llm", "mixed"), lambda s, l: _Mixed(), rules=("L1_exit_lock",), seeds=(0,), attempts=3)["runs"]
+    moves = [json.dumps(r["moves"]) for r in rows]
+    assert len(rows) == 3 and len(set(moves)) > 1
+    again = LL.run_model(LL.ModelSpec("llm", "mixed"), lambda s, l: _Mixed(), rules=("L1_exit_lock",), seeds=(0,), attempts=3)["runs"]
+    assert [json.dumps(r["moves"]) for r in again] == moves            # still deterministic given the seed and attempt
+
+
+def test_a_jev_style_backend_gets_a_sample_tag_for_attempts_after_the_first():
+    seen = []
+
+    def factory(s, l):
+        b = _Mixed()
+        seen.append(b)
+        return b
+    LL.run_model(LL.ModelSpec("llm", "mixed"), factory, rules=("L1_exit_lock",), seeds=(0,), attempts=2)
+    assert {b.sample_tag for b in seen[:2]} == {None} and {b.sample_tag for b in seen[2:]} == {"attempt-1"}

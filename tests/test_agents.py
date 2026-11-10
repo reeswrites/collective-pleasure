@@ -303,3 +303,20 @@ def test_ledger_budget_limit():
     led.record("m", 1, 1, 0.006)
     with pytest.raises(base.BudgetExceeded):
         led.record("m", 1, 1, 0.006)
+
+
+def test_jev_attempt_tag_makes_a_repeat_a_fresh_call_while_attempt_zero_keeps_the_old_cache_key(monkeypatch, tmp_path):
+    """Correctness review 2026-11-10, finding 1: repeated attempts must not replay one cached response."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "k-test")
+    fake = Fake([jev_reply(peaked()), jev_reply(peaked()), jev_reply(peaked())])
+    monkeypatch.setattr(http, "post_json", fake)
+    a0 = JevAgent(ledger=Ledger("jev"), cache_dir=tmp_path)
+    a0.decide("same context", OPTS)
+    a0.decide("same context", OPTS)                          # attempt 0 repeated: cached, no second call
+    assert len(fake.calls) == 1
+    a1 = JevAgent(ledger=Ledger("jev"), cache_dir=tmp_path)
+    a1.sample_tag = "attempt-1"
+    a1.decide("same context", OPTS)                          # attempt 1: a new cache entry, a real call
+    assert len(fake.calls) == 2
+    a1.decide("same context", OPTS)
+    assert len(fake.calls) == 2 and len(list(tmp_path.glob("*.json"))) == 2

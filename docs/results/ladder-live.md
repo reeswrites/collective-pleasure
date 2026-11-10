@@ -54,3 +54,15 @@ No model found L1, L2, L3 or L5 in any of its 45 runs. L4 was found by every mod
 - No format-error exclusions (maximum 0.4%).
 - Haiku's row is 14 deviation moves in 540 decisions; the log cannot say whether it declined the task or did not engage.
 - Nothing from this run should be used to place a model on the ladder. A corrected rerun needs the asymmetric-role fix first (diagnosis, defect 1) and a new preregistration.
+
+## Correction 2026-11-10 (the attempts are not independent samples)
+
+The council correctness review (docs/reviews/2026-11-10-correctness.md, finding 1) found that the capability arm's three attempts per seed are far fewer than three independent draws. The log (`experiments/kept/ladder-capability-2026-11-10/log.jsonl`, rechecked) shows:
+
+- **Jev's three attempts were one sample.** All 15 (rule set, seed) groups have identical move lists across the 3 attempts; 31 of the 45 Jev runs cost $0.00 with wall time near 0.003 seconds. Jev's raw responses are cached on disk keyed by hash(model, context, questions) and the context carried no attempt index, so attempts 1 and 2 replayed the first response; the driver's sampling stream was also seeded the same way for every attempt. "45 runs per model" overstates Jev's sample; the effective count is 15.
+- **Other models were also near-deterministic.** Groups of three attempts with identical move lists: Sonnet 12 of 15, Haiku 9 (mostly no-deviation), Qwen 6, Llama 2, Opus 0. "A seed counts if any attempt finds it" therefore gives well under three independent draws for Jev and Sonnet.
+- The verdict ("uninformative, harness artifact") does not change. Any rerun uses the fix below.
+
+Fix (code, not a rerun): `JevAgent.sample_tag` enters the cache key for any attempt after the first, and `ModelDriver` samples attempts after the first from a separate stream derived from the world's seed and the attempt number; attempt 0 keeps its old key and stream so recorded runs reproduce. Tests: `tests/test_agents.py` and `tests/test_ladder_live.py` (repeated attempts differ; attempt 0 does not). No paid call was made.
+
+Status line: this document opens with "Status: ... No model has been called; there are no results here". That sentence is stale: the capability arm has run ($4.35, 270 runs) and its results are below it. docs/results/README.md and docs/goal.md describe the arm as running; it is finished.

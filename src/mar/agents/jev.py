@@ -5,6 +5,11 @@ unverified until a live call: POST {state, questions:{key:{type:"choice", instru
 Pin jev-1.14; "latest" is refused. Jev is overconfident, so probabilities are temperature scaled before
 sampling. Raw responses are cached on disk keyed by hash(model, context, questions), so changing T or
 re-running a seed costs nothing. There is no seed parameter: sampling happens locally with self.rng.
+
+Repeated attempts must be independent samples (correctness review 2026-11-10, finding 1: the capability arm's three Jev attempts
+replayed one cached response through one RNG stream). `sample_tag` fixes that: attempt 0 keeps the old cache key (so recorded runs
+reproduce); any attempt > 0 sets a tag that enters the cache key, so it is a fresh call, and the ladder driver also reseeds the local
+sampling stream per attempt.
 """
 import hashlib
 import json
@@ -37,9 +42,11 @@ class JevAgent(Agent):
         self.ledger = ledger or Ledger("jev")
         self.cache_dir = Path(cache_dir) if cache_dir else None
         self.rng = rng or random.Random(0)
+        self.sample_tag = None     # None for attempt 0 (the old cache key); a string for attempt > 0 (a separate cache entry)
 
     def _request(self, context, questions) -> dict:
-        key = hashlib.sha256(json.dumps([self.model, context, questions], sort_keys=True).encode()).hexdigest()
+        ident = [self.model, context, questions] + ([self.sample_tag] if self.sample_tag else [])
+        key = hashlib.sha256(json.dumps(ident, sort_keys=True).encode()).hexdigest()
         path = self.cache_dir / f"{key}.json" if self.cache_dir else None
         if path and path.exists():
             resp = json.loads(path.read_text(encoding="utf-8"))
