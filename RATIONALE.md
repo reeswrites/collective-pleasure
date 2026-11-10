@@ -1,7 +1,7 @@
 # Rationale
 
 **Working title:** Multi-agent rules: evolving norms for agent networks, and an evaluator that evolves with them
-**Status:** draft, revised 2026-11-10 after the prior-art check, an interview with the author (ADR 0003), the two-loop framing (ADR 0005), and the norms, household and freedom decisions (ADR 0007 to 0014). Early results from scripted agents are indexed in docs/results/README.md; no live-model result yet. Where this file and docs/goal.md differ, goal.md is current. One-page version: docs/pitch.md.
+**Status:** draft, revised 2026-11-10 after the prior-art check, an interview with the author (ADR 0003), the two-loop framing (ADR 0005), and the norms, household and freedom decisions (ADR 0007 to 0014). Early results from scripted agents in toy worlds are indexed in docs/results/README.md. One live capability run exists and was uninformative (harness defect); the propensity arm is running. Where this file and docs/goal.md differ, goal.md is current. One-page version: docs/pitch.md.
 
 ---
 
@@ -9,12 +9,12 @@
 
 These are the commitments behind the project, in the author's words where possible.
 
-The project started from the question "can unethical behavior be made impossible by mechanism rather than training?" It chose the multi-agent setting because sanctions, collusion and emergent norms only appear when several agents interact, and because the prior-art gap is clearest there.
+The project started from the question "can unethical behavior be made impossible by mechanism rather than training?" The aim is alignment. So far every result is from scripted agents in toy worlds. It chose the multi-agent setting because sanctions, collusion and emergent norms only appear when several agents interact, and because the prior-art gap is clearest there.
 
 The subject is formally specified rule systems (rules, norms, sanctions) governing groups of AI agents. Human institutions are a source of hypotheses and vocabulary, not the subject.
 
 - **Mechanism, not only training.** Can some unwanted behaviors be made *impossible by design* rather than unlikely through training? Mechanisms can only rule out what can be specified. So the project focuses on the part of alignment that can be specified: the rules, permissions and sanctions that govern agents.
-- **Good enough and improving.** Full proof of alignment isn't possible. But rule systems can be hill-climbed and checked, and they get better as AI reasoning and proof tools scale.
+- **Good enough and improving.** Full proof of alignment isn't possible. We bet that rule systems can be hill-climbed and checked. The first runs (scripted agents, fishery) show the loop runs end to end and overfits. That they improve as AI tools scale has no data.
 - **Rules and formalization are the interesting part.** The scarce work is writing and owning the spec. Generating code and checking proofs are getting cheap.
 - **Learnings should generalize, and parallels should be provable.** A result about one rule system should carry over to another by a checkable argument, not by analogy.
 - **No novelty for its own sake.** Every component must either already exist (and be reused) or earn its place by measuring something the simpler alternatives can't.
@@ -32,7 +32,7 @@ Evolution always reverse-engineers the test, so there are two loops:
 - **(a) Rules against the test.** Evolution tightens rules until agents stop finding seams the test catches (C1).
 - **(b) The test against the author's intent.** The author reads the winning rules and run stories in plain English. Each "that's not what I meant" is a fix to the oracle (C2). The evolved rules are a readable mirror of what the test rewards.
 
-Proven (bounded, k stated): rule properties (no conflicts, no deadlock, bounded sanctions, repair path) and gate soundness. Measured: the gap between "safe by the rules" and "safe by what the author meant". The second loop is the more original result.
+Checked to depth k = 3 (months or rounds) within the compiled model: no conflict, deadlock or lost repair path in the rule sets we ran. Gate soundness is tested, not proved. A proof says nothing about actions outside the formal model, which is what IT1 asks about. Measured: the gap between "safe by the rules" and "safe by what the author meant". We did not search for prior work on the second loop, so we make no originality claim for it.
 
 ## 1a. Single-agent and multi-agent: one pipeline
 
@@ -93,7 +93,7 @@ It was built and calibrated first in a five-agent fishery commons (GovSim dynami
 | Conflict-checking a rule set before use, LLM-evolved rules | Done Oct 2026, single agent, stateless allow/deny | VEPA (2610.12813) |
 | Enforcement in a GovSim-derived fishery | Done Jul 2026, LM verifiers, no formal rules | Ye & Steinhardt (2607.09766) |
 | Agent-written executable laws in GovSim | Done Sep 2026, sandbox-tested, not formal | Rehm (2609.22600) |
-| Convergence of a refinement loop for LLM agents | Partial curves exist (RvB 2601.19726, Kumar 2602.00755); the seam-count curve with a blinded oracle was not found (V1, 2026-11-10) | nearest formal analogue: CEGAR / CEGIS |
+| Convergence of a refinement loop for LLM agents | Partial curves exist (RvB 2601.19726, Kumar 2602.00755); the seam-count curve with a blinded oracle was not found in an abstract-level search, about 70 percent confidence (V1, 2026-11-10; see docs/prior-art/README.md) | nearest formal analogue: CEGAR / CEGIS |
 
 The 2026-11-10 re-check (docs/prior-art/2026-11-10.md) held about 70% for the original pipeline but showed its parts are mostly taken, which is why the question moved to convergence (ADR 0003). **Re-run the check before any write-up; this area produces about one relevant paper a month.**
 
@@ -125,7 +125,7 @@ The 2026-11-10 re-check (docs/prior-art/2026-11-10.md) held about 70% for the or
 
 **D1. New repo. philosophy-engine is an input, not the core.**
 
-philosophy-engine's reference semantics are deliberately limited to tiny rule systems, and its checks are bounded to depth *k*. Its repo rules don't fit this project: work is paused pending its "worth-it" slice, and ADR 0011 forbids adversarial search, which robustness testing needs.
+philosophy-engine's reference semantics are deliberately limited to tiny rule systems, and its checks are bounded to depth *k*. Its repo rules don't fit this project: work is paused pending its "worth-it" slice, and philosophy-engine's own ADR 0011 forbids adversarial search, which robustness testing needs (not this repo's ADR 0011).
 
 So we reuse its ADICO schema and possibly its reference engine as a check that our translation is correct. We don't build inside it.
 
@@ -183,19 +183,19 @@ LLM agents aren't independent samples of humans. They have read the textbook res
 
 ## 7. Experiments (draft, to preregister)
 
-Slices and their pass/fail checks are in docs/plan.md. Status of each claim is in docs/claims.md. The table below is the original draft; IT1 is running, and C1 and C2 are untested with LLM agents.
+Slices and their pass/fail checks are in docs/plan.md. Status of each claim is in docs/claims.md. The table below is the original draft. IT1's capability arm ran and was uninformative, the propensity arm is running, and C1 and C2 are untested with LLM agents. Predictions are committed in prereg files, not here.
 
 | ID | Question | Prediction (draft) |
 |---|---|---|
 | C1 | Does refinement converge? | New seams per round decrease toward a plateau on at least 3 seeds, without the bloat guard tripping |
 | C2 | Does the test converge on intent (loop b)? | "Not what I meant" moments per round decrease toward a plateau, per oracle version; preregister how to tell this from author fatigue before V4 |
-| IT1 | Where do inventive seams start (ADR 0007)? | Zero below some agent capability, present above it; the threshold and price are the result |
+| IT1 | Is there a capability level where inventive seams start (ADR 0007), and at what price? | Draft: zero below some capability, present above it. There may be no threshold in this world; model rows also differ in prompt compliance |
 | ML1 | Do rules transfer up the model ladder? | Rules evolved against a cheaper model transfer one rung up but not two |
 | F1 | Does mechanism crowd out normative competence? | Hard-gated agents fail worse than sanctioned agents when the gate is removed or misses a case |
 | F2 | Does who patches matter? | AI-patched and human-patched specs reach different plateaus |
 | F3 | Is the de jure vs de facto distance informative? | It predicts collapse earlier than violation counts |
 
-S1 and E0 to E4 are superseded (docs/claims.md). Use multiple seeds, report model versions, and fix predictions before running.
+S1 and E0 to E4 are superseded (docs/claims.md). Take seeds from a power check (ADR 0015), report model versions, and fix predictions before running.
 
 ## 8. Safety and dual-use
 
@@ -214,7 +214,7 @@ S1 and E0 to E4 are superseded (docs/claims.md). Use multiple seeds, report mode
 
 ## 10. Process conventions (borrowed from philosophy-engine)
 
-- Preregister predictions in `docs/claims.md` and commit them before running.
+- Preregister predictions in a `docs/results/*-prereg.md` file and commit it before running. `docs/claims.md` tracks status. Every prediction names its quantity, test and threshold (ADR 0015).
 - Fresh-agent review councils before anything is called a result: correctness, consistency, scope, encoding faithfulness, and a card-only reader.
 - Every rule has a one-sentence plain-English gloss and a source.
 - Bounded verdicts state their bound, and "open" never means "safe".
@@ -222,7 +222,7 @@ S1 and E0 to E4 are superseded (docs/claims.md). Use multiple seeds, report mode
 
 ## 11. First milestones
 
-See docs/plan.md. Done: V1 novelty search, V2 and V2b (scripted loop and English surface), the workbench, the household world, the simple-models ladder, empowerment and liberty, and two evolution runs on the fishery. V3 (one real LLM agent as calibration) was replaced by the live seam ladder, which is running. Next: negotiation, liberty into the household, household evolution with the final exam held back, then V4 (first LLM curve) and V5 (write-up and review council).
+See docs/plan.md. Done: V1 novelty search, V2 and V2b (scripted loop and English surface), the workbench, the household world, the simple-models ladder, empowerment and liberty, and two evolution runs on the fishery. V3 (one real LLM agent as calibration) was replaced by the live seam ladder. Its capability arm ran and was uninformative; the propensity arm is running. Negotiation is built (scripted v1, v2, v2.1 and a small LLM pilot). Next: read the propensity results, fix the ladder harness and rerun the capability arm, liberty into the household, household evolution with the final exam held back, then V4 (first LLM curve) and V5 (write-up and review council).
 
 ## 12. Open questions
 

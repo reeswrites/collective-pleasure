@@ -1,23 +1,23 @@
 # multi-agent-rules
 
-Evolving alignment norms you can talk to.
+Evolving norms for agent networks, tested so far on scripted agents in toy worlds.
 
-An AI-native workbench, used through chat, for evolving norms for networks of AI agents by tweaking interpretable rules. The author talks loosely about how agents should behave. The system turns that into precise rules (ADICO cards, also English-like sentences), proves what it can, runs experiments, and answers in plain English and charts. Proof checks filter candidate rules, a patcher mutates them, and a ladder of adversaries from cheap decision models to strong LLMs tests them.
+An AI-native workbench, used through chat, for evolving norms for networks of AI agents by tweaking interpretable rules. The aim is alignment. Nothing here shows it yet. The author talks loosely about how agents should behave. The system turns that into precise rules (ADICO cards, also English-like sentences), proves what it can, runs experiments, and answers in plain English and charts. Proof checks filter candidate rules, a patcher mutates them, and a ladder of adversaries from cheap decision models to strong LLMs tests them.
 
 **Research question.** Which norms let a network of agents cooperate freely, and at what agent capability and price do agents start finding exploits the formal model did not predict? Freedom here is equal liberty minus domination (ADR 0014). The good is pleasure, with two kinds of suffering (ADR 0010). Cooperation means shared needs are met and outsiders do not pay.
 
 **Product.** An evaluator that evolves with the norms. There are two loops. Rules against the test: do new seams per round slow? The test against the author's intent: do "not what I meant" moments per round fall?
 
-**Status: early results, mostly scripted agents.** The instruments behave. Several world-level predictions missed, and the misses are recorded. A live seam ladder on six models is running. Nothing here is a finding about real people. Index of every run: [docs/results/README.md](docs/results/README.md).
+**Status: early results, scripted agents in toy worlds.** The instruments behave. Many world-level predictions missed, and the misses are recorded. The live seam ladder has run its capability arm on six models ($4.35). It was uninformative because of a harness defect, so no live-model claim stands. The propensity arm is running, prereg committed. A review council of five found no result unsound and many sound with caveats. Nothing here is a finding about real people. Index of every run: [docs/results/README.md](docs/results/README.md).
 
 ## Read first
 
 - [docs/goal.md](docs/goal.md): where we are, what we have learned, what is running
 - [docs/pitch.md](docs/pitch.md): the question on one page
 - [docs/results/README.md](docs/results/README.md): every experiment, its prereg and its verdict
-- [docs/decisions/README.md](docs/decisions/README.md): the ADRs, 0001 to 0014
+- [docs/decisions/README.md](docs/decisions/README.md): the ADRs, 0001 to 0015
 - [docs/plan.md](docs/plan.md): queue, slices and log
-- [docs/claims.md](docs/claims.md): claims register (predictions are committed before runs)
+- [docs/claims.md](docs/claims.md): claims register (status of each claim; predictions live in the prereg files)
 - [RATIONALE.md](RATIONALE.md): why this project, prior art, design decisions, kill criteria
 
 ## Layout
@@ -30,7 +30,7 @@ docs/plan.md              queue, slices, log
 docs/claims.md            claims register
 docs/decisions/           ADRs and their index
 docs/results/             preregs, results, and an index
-docs/prior-art/           prior-art checks
+docs/prior-art/           prior-art checks, with an index of their confidence
 docs/seeds/               the author's household norms, verbatim
 docs/reviews/             review-council convention and reports
 docs/surprises.md         unexpected observations
@@ -55,7 +55,7 @@ uv run mar results                 # one-line verdict per results file
 uv run mar timeline --keep         # dated snapshot of the project's history
 ```
 
-Live runs (`mar ladder`) need API keys in `.env` and a spend cap. They refuse to run without `--max-usd`. Pushes to GitHub are done by the author.
+Live runs (`mar ladder`) need API keys in `.env` and a spend cap. They refuse to run without `--max-usd`. Pushes to GitHub are done by the author (main was pushed on 2026-11-10). Claude Code auto mode blocks pushes from the original session; a narrow allow rule exists in `.claude/settings.local.json` for sessions opened in the repo.
 
 Related: [philosophy-engine](https://github.com/reeswrites/philosophy-engine) is an input (ADICO schema, reference engine), not part of this repo.
 
