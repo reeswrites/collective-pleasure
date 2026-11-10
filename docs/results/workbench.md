@@ -58,10 +58,13 @@ What is stored where:
 | Origin chats and curated decision notes | `docs/conversations/` | committed; contains the author's own words, review before the repo is public |
 | The author's questions that redirected the project (`mar question record`, `mar question list`). Rows backfilled from 2026-11-10 are marked `backfilled`; those with no quote are paraphrases of ADRs and marked `paraphrase` | `experiments/questions.jsonl` | committed, append-only |
 | Timeline page (`mar timeline`) | `runs/timeline.html` | ignored; regenerate it |
+| Dated timeline snapshots (`mar timeline --keep`): `<date>.html` and a GitHub-readable `<date>.md` (same entries grouped by day, kinds as bold labels, links as relative paths) | `experiments/timelines/` | committed; hold the author's own words, review before any public release |
 
 The timeline is one self-contained HTML page (inline CSS and SVG, offline, light and dark, phone width). It merges questions, decisions (`docs/decisions/*.md`, date, title, status), changes, runs and git commits, each tagged with a badge and linked to its source file. The header gives counts per kind and the date range, and a chart shows entries per day by kind. ASSUMED: date-only entries (decisions, paraphrase rows) sort to the end of their day. Quotes in backfilled rows were copied from `docs/conversations/2026-11-10-encoding-alignment-via-mechanism.md`; which ADR each led to is the repo's judgement, not the author's. The household-world choice and the log-storage decision have no repo doc yet, so their rows link to nothing.
 
-`mar log` prints the last 10 entries as a table; `mar log --last 0` prints all; `mar log --run <id>` shows one in full. Nothing in the logs is ever rewritten. Rows in `changes.jsonl` are the raw data for claim C2 (loop b).
+`mar log` prints the last 10 entries as a table; `mar log --last 0` prints all; `mar log --run <id>` shows one in full. `mar timeline --keep` is for the end of a session: it saves a dated snapshot to commit. Links to `runs/` inside a snapshot only work on the machine that made it; kept runs link relatively. Run rows also record per-backend model build, calls, tokens and usd for model-driven agents.
+
+Nothing in the logs is ever rewritten. Rows in `changes.jsonl` are the raw data for claim C2 (loop b).
 
 ASSUMED: the oracle version is a hash of `oracle.py` plus its three thresholds, and the cards hash covers every card used, patch cards included. `git_commit` ends in `+dirty` when the tree had uncommitted changes. Scripted runs have `model` and `cost_usd` null. Run ids are deterministic, so a re-run adds a second line with the same id.
 

@@ -32,9 +32,13 @@ Run from the repo root with `uv run mar ...`.
 
 Every run and loop must pass `--note "<one-line plain summary of why this run was made>"`. Each one appends a line to `experiments/log.jsonl` (committed, append-only). `mar log` lists recent entries, `mar log --run <id>` shows one in full, and `mar keep <run_id>` copies a run's trace and report to `experiments/kept/<run_id>/` so a cited run can be committed.
 
+Model-driven agents: `jev*n`, `llm*n` and `claude*n` call APIs and need keys in `.env` (never ask for a key in chat). Always run with `--dry-run` first and tell the author the upper-bound cost; run live only when the author says so. `claude` needs `--model` (haiku-5-5, sonnet-5-5 or opus-5-5, exact ids). Reports then include a Say vs do panel. Never run swarm agents as Claude Code subagents. See docs/results/workbench.md.
+
 Agent kinds: `exploiter` (takes the max every round), `compliant` (modest), `explorer` (random, used for mining). `name*n` repeats. These are scripted mocks: no LLM is called anywhere. Reports and traces land in `runs/<run_id>/` (gitignored; do not commit them).
 
 Curiosity log and timeline. When the author asks a question that redirects the project or opens a new line of curiosity, record it with `uv run mar question record --quote "<exact words>" --topic "<short>" [--led-to "ADR 0006"]` (verbatim, never paraphrased; `--led-to` can repeat). `mar question list` prints them. When the author asks "how did we get here" or similar, run `uv run mar timeline` and show `runs/timeline.html` in the side panel with SendUserFile `display: "render"`. It merges questions, decisions, changes, runs and commits in time order.
+
+**Saving progress.** At the end of a working session, or when the author asks to save progress, run `uv run mar timeline --keep`. It writes `experiments/timelines/<date>.html` and `<date>.md`. Commit both with a pathspec commit (`git add <the two files>` then `git commit -F <msgfile> -- <the two files>`), then show the `.html` in the side panel with SendUserFile `display: "render"`. The snapshots contain the author's own words; do not push or publish them.
 
 ## 3. After EVERY run: show the report
 
@@ -51,4 +55,4 @@ Reports have five sections: pool over time, seam curve, rules written vs lived, 
 - **The patcher never reads the oracle.** `propose_patch` sees only the failing trace and current cards; the oracle judges from outcomes only. Do not wire the oracle result into patch writing.
 - Every rule has a gloss and a source. Record surprises in `docs/surprises.md` and negative results in `docs/negative-results.md` (when asked to do so or when the work is yours to log).
 - Adversarial strategies are for robustness testing only; report findings as defenses (CONTRIBUTING.md).
-- No LLM calls or network from `mar` unless the author says so.
+- No LLM calls or network from `mar` unless the author says so. Scripted agents never make calls; `jev`, `llm` and `claude` agents do, so run them only on the author's explicit go-ahead.

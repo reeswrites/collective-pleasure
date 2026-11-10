@@ -11,7 +11,8 @@
   mar change record|list                 change log (experiments/changes.jsonl)
   mar question record|list               curiosity log (experiments/questions.jsonl)
   mar sweep --backend claude --agents claude*5 --claude-model <id> --seeds 0,1,2 [--batch]
-  mar timeline                           one HTML page of questions, decisions, changes, runs, commits
+  mar timeline [--keep]                  one HTML page of questions, decisions, changes, runs, commits;
+                                         --keep also saves experiments/timelines/<date>.html and .md
 
 Every run and loop appends one line to the experiment log (--note says why). Reports and traces go to
 runs/<run_id>/ (override with --runs-dir; logs with --experiments-dir). Scripted agents make no calls.
@@ -279,6 +280,10 @@ def cmd_timeline(a) -> int:
     p, counts = build_timeline(a.experiments_dir, a.runs_dir)
     print(f"timeline: {p}")
     print(", ".join(f"{n} {k}" for k, n in counts.items()))
+    if a.keep:
+        from .timeline import keep_snapshot
+        h, m = keep_snapshot(a.experiments_dir)
+        print(f"kept: {h}\nkept: {m}\nCommit both with a pathspec commit. They hold the author's own words.")
     return 0
 
 
@@ -364,7 +369,9 @@ def parser():
     qr.add_argument("--topic", help="short topic label")
     qr.add_argument("--led-to", action="append", default=[], help="ADR id, change row or run id (repeatable)")
     q.add_parser("list", help="print recorded questions")
-    sub.add_parser("timeline", help="build runs/timeline.html from questions, decisions, changes, runs, commits")
+    tl = sub.add_parser("timeline", help="build runs/timeline.html from questions, decisions, changes, runs, commits")
+    tl.add_argument("--keep", action="store_true", help="also write a dated, committed snapshot: "
+                    "experiments/timelines/<date>.html and .md (GitHub-readable)")
     return p
 
 

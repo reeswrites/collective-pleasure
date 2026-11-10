@@ -81,8 +81,10 @@ def collect(exp_dir, runs_dir=None, repo: Path = explog.REPO) -> list:
         ev.append({"kind": "Change", "when": _dt(r["timestamp"]), "quote": r["quote"], "title": r["kind"],
                    "text": r["reason"], "nwim": r["not_what_i_meant"], "src": exp / explog.CHANGES_NAME})
     for r in explog.read_rows(exp / explog.LOG_NAME):
+        kept = exp / "kept" / r["run_id"] / "report.html"  # a kept run is committed, so link it when it exists
+        src = kept if kept.exists() else (Path(r["report"]) if r.get("report") else exp / explog.LOG_NAME)
         ev.append({"kind": "Run", "when": _dt(r["timestamp"]), "title": r["run_id"], "text": r["verdict"],
-                   "note": r.get("note"), "src": Path(r["report"]) if r.get("report") else exp / explog.LOG_NAME})
+                   "note": r.get("note"), "src": src})
     ev += list(_commits(repo))
     ev = [e for e in ev if e["when"] is not None]
     ev.sort(key=lambda e: (e["when"], KINDS.index(e["kind"])))
@@ -153,12 +155,13 @@ def _chart(ev) -> str:
     return f'<div class="scroll">{"".join(parts)}</div>{key}{table}'
 
 
-def build_timeline(exp_dir, runs_dir="runs", repo: Path = explog.REPO):
-    ev = collect(exp_dir, runs_dir, repo)
-    out_dir = Path(runs_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+def _counts(ev) -> Counter:
     counts = Counter({k: 0 for k in KINDS})
     counts.update(e["kind"] for e in ev)
+    return counts
+
+
+def _html(ev, out_dir: Path, counts) -> str:
     span = (f"{ev[0]['when']:%Y-%m-%d} to {ev[-1]['when']:%Y-%m-%d}" if ev else "no entries")
     summ = '<div class="sum">' + "".join(
         f'<span class="k-{k}"><span class="badge">{k}</span>{counts[k]}</span>' for k in KINDS) + "</div>"
@@ -167,9 +170,66 @@ def build_timeline(exp_dir, runs_dir="runs", repo: Path = explog.REPO):
             f"sources by <code>mar timeline</code>.</p>{summ}</section>"
             f'<section><h2>Entries per day</h2>{_chart(ev)}</section>'
             f'<section><h2>Timeline</h2>{"".join(_entry(e, out_dir.resolve()) for e in ev)}</section>')
-    html = ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
+    return ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1"><title>mar timeline</title>'
             f"<style>{CSS}{EXTRA_CSS}</style></head><body><main>{body}</main></body></html>")
+
+
+def build_timeline(exp_dir, runs_dir="runs", repo: Path = explog.REPO):
+    ev = collect(exp_dir, runs_dir, repo)
+    out_dir = Path(runs_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    counts = _counts(ev)
     p = out_dir / "timeline.html"
-    p.write_text(html, encoding="utf-8")
+    p.write_text(_html(ev, out_dir.resolve(), counts), encoding="utf-8")
     return p, dict(counts)
+
+
+def _md_entry(e, out_dir: Path) -> str:
+    k = e["kind"]
+    when = e["when"].strftime("%H:%M UTC") if not e.get("date_only") else "date only"
+    flags = "".join(f" `{f}`" for f in ("backfilled", "paraphrase") if e.get(f))
+    flags += " **NOT WHAT I MEANT**" if e.get("nwim") else ""
+    lines = [f"- **{k}** {when}{flags}"]
+    if e.get("quote"):
+        lines += [f"  > {q}" if q else "  >" for q in e["quote"].splitlines()]
+    if e["title"]:
+        lines.append(f"  **{e['title']}**")
+    for key, label in (("text", ""), ("note", "Note: ")):
+        if e.get(key):
+            lines.append(f"  {label}{' '.join(e[key].split())}")
+    if e.get("led_to"):
+        lines.append(f"  Led to: {', '.join(e['led_to'])}")
+    src = e.get("src")
+    if src:
+        src = Path(src) if Path(src).is_absolute() else Path.cwd() / src
+        lines.append(f"  Source: [{src.name}]({os.path.relpath(src, out_dir).replace(os.sep, '/')})")
+    else:
+        lines.append(f"  Source: git commit `{e['text']}`")
+    return "\n".join(lines)
+
+
+def markdown(ev, out_dir: Path, snapshot_date: str) -> str:
+    counts = _counts(ev)
+    span = f"{ev[0]['when']:%Y-%m-%d} to {ev[-1]['when']:%Y-%m-%d}" if ev else "no entries"
+    out = [f"# How we got here (snapshot {snapshot_date})", "",
+           f"{span}. " + " | ".join(f"**{k}** {counts[k]}" for k in KINDS), "",
+           "Questions, decisions, changes, runs and commits in time order, grouped by day. Built by `mar timeline --keep`. "
+           "Contains the author's own words: review before any public release.", ""]
+    days = sorted({e["when"].strftime("%Y-%m-%d") for e in ev})
+    for d in days:
+        out += [f"## {d}", ""]
+        out += [_md_entry(e, out_dir) + "\n" for e in ev if e["when"].strftime("%Y-%m-%d") == d]
+    return "\n".join(out).rstrip("\n") + "\n"
+
+
+def keep_snapshot(exp_dir, repo: Path = explog.REPO, today=None):
+    """Write experiments/timelines/<YYYY-MM-DD>.html and .md (committed). Links are relative to that folder."""
+    day = (today or datetime.now(timezone.utc)).strftime("%Y-%m-%d")
+    out_dir = (Path(exp_dir) / "timelines").resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    ev = collect(exp_dir, None, repo)
+    h, m = out_dir / f"{day}.html", out_dir / f"{day}.md"
+    h.write_text(_html(ev, out_dir, _counts(ev)), encoding="utf-8")
+    m.write_text(markdown(ev, out_dir, day), encoding="utf-8")
+    return h, m

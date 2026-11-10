@@ -31,10 +31,10 @@ def test_record_and_list_append_only(capsys, tmp_path):
 def test_backfill_quotes_are_verbatim_and_paraphrases_marked():
     rows = explog.read_rows(EXP / "questions.jsonl")
     conv = CONV.read_text()
-    quotes = [r for r in rows if r["quote"] is not None]
+    quotes = [r for r in rows if r["quote"] is not None and r["backfilled"]]  # live-recorded rows are not in the archive
     paras = [r for r in rows if r["quote"] is None]
     assert len(quotes) >= 5 and len(paras) >= 5
-    assert all(r["backfilled"] and r["quote"] in conv for r in quotes)
+    assert all(r["quote"] in conv for r in quotes)
     assert all(r["paraphrase"] and r["backfilled"] and r["text"] for r in paras)
 
 
