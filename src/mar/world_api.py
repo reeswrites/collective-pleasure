@@ -186,7 +186,7 @@ def spec_key(spec) -> tuple:
 # ---------------------------------------------------------------- the patcher adapter (never sees the oracle)
 
 def fishery_patch(trace_rows, cards, rng) -> list:
-    """Propose new cards from a failing trace's rows and the current cards ONLY. No oracle access."""
+    """Propose new cards from a failing trace's rows and the current cards ONLY."""
     if rng.random() < 1 / 3:
         got = _scripted_patch(trace_rows, cards)
         if got:
