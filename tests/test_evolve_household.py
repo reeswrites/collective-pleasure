@@ -65,7 +65,7 @@ def test_no_exam_condition_value_in_evolution_code():
     starts = [r"-0\.3" + "0", r"\+0\.3" + "0"]
     pats = [rf"\b{t}\b" for t in seeds + horizon] + [re.escape(t) for t in shock] + starts
     marker = "# Household world for the evolution loop"
-    texts = {"world_api.py": (ROOT / "src/mar/world_api.py").read_text().split(marker, 1)[1],
+    texts = {"household_world_api.py": (ROOT / "src/mar/household_world_api.py").read_text().split(marker, 1)[1],
              "evolve.py": (ROOT / "src/mar/evolve.py").read_text().split("# Household evolution (first household run", 1)[1],
              "household_evolve_run.py": (ROOT / "scripts/household_evolve_run.py").read_text()}
     for name, txt in texts.items():

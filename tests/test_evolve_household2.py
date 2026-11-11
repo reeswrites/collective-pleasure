@@ -42,7 +42,7 @@ def test_no_exam2_condition_value_in_run2_evolution_code():
     seeds = [str(9100 + i) for i in (1, 2)]
     shock = [f"{0.087 * 2.5:.3f}", f"{0.087 * 4:.3f}", f"{0.12 * 4:.2f}", f"{0.08 * 4:.2f}"]
     pats = [rf"\b{t}\b" for t in seeds + [str(52 * 4)]] + [re.escape(t) for t in shock] + [r"[-+]0\.2" + "0"]
-    texts = {"world_api": (ROOT / "src/mar/world_api.py").read_text().split("# Household world for the evolution loop", 1)[1],
+    texts = {"household_world_api": (ROOT / "src/mar/household_world_api.py").read_text().split("# Household world for the evolution loop", 1)[1],
              "evolve": (ROOT / "src/mar/evolve.py").read_text().split("# Household evolution (first household run", 1)[1],
              "run2": (ROOT / "scripts/household_evolve2_run.py").read_text()}
     for name, t in texts.items():

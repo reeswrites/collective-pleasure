@@ -173,7 +173,7 @@ def grep_check():
     pats = {"seed": rf"\b({'|'.join(map(str, cfg['seeds']))})\b", "horizon": rf"\b{cfg['weeks']}\b",
             "shock": r"(?<![\d.])(" + "|".join(re.escape(x) for x in sorted(cfg["shock_text"])) + r")(?!\d)",
             "start": "|".join(rf"(?<![\d.]){re.escape(x)}(?!\d)" for x in cfg["start_text"])}
-    files = [ROOT / "src/mar/evolve.py", ROOT / "src/mar/world_api.py", ROOT / "src/mar/loss_report.py", ROOT / "scripts/household_evolve2_run.py",
+    files = [ROOT / "src/mar/evolve.py", ROOT / "src/mar/world_api.py", ROOT / "src/mar/household_world_api.py", ROOT / "src/mar/loss_report.py", ROOT / "scripts/household_evolve2_run.py",
              ROOT / "tests/test_evolve_household2.py"]
     files += sorted(ELITES.rglob("*")) + sorted((ROOT / "runs/household-evolve-2").glob("*"))
     lines = ["Recorded isolation check (exam-2 prereg section 4), run before the exam by scripts/household_exam2_run.py --grep.",

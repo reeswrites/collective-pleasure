@@ -229,7 +229,7 @@ def grep_check(write=True):
     pats = {"seed": rf"\b({'|'.join(map(str, cfg['seeds']))})\b", "horizon": rf"\b{cfg['weeks']}\b",
             "shock": r"(?<![\d.])(" + "|".join(re.escape(x) for x in sorted(cfg["shock_text"])) + r")(?!\d)",
             "start": "|".join(rf"(?<![\d.]){re.escape(x)}(?!\d)" for x in cfg["start_text"])}
-    files = [ROOT / "src/mar/evolve.py", ROOT / "src/mar/world_api.py", ROOT / "scripts/household_evolve_run.py",
+    files = [ROOT / "src/mar/evolve.py", ROOT / "src/mar/world_api.py", ROOT / "src/mar/household_world_api.py", ROOT / "scripts/household_evolve_run.py",
              ROOT / "scripts/household_liberty_check.py", ROOT / "tests/test_evolve_household.py"]
     files += sorted((ROOT / "docs/results/household-evolve-elites").rglob("*"))
     files += sorted((ROOT / "runs/household-evolve").glob("*"))
