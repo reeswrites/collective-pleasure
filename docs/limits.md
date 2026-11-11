@@ -52,6 +52,10 @@ Fix: a calibrated economy and housing regimes in the many-agent world (H40; [not
 Results cannot be about amatonormativity or monogamy.
 Fix: H38b in the many-agent world. See [results/h38-pairing-norms.md](results/h38-pairing-norms.md).
 
+**13. Agents choose on one yardstick and are scored on another.** The agents' action utilities agree with the hedonic model's own answer only loosely (rank correlation 0.43 over a week, 0.19 over a year), through bugs (needs read before the week's drift, half-scale terms, missing together pleasure, sanctions priced at a fifteenth) and one open modeling choice (bills the pot pays silently).
+Results cannot be about how agents spend their weeks, or about effects that run through that (makers, pot dynamics, formation rollouts), without this caveat.
+Fix: recalibrate the utilities to the one-week known answers, decide bills, then rerun H39b and the formation check. See [results/value-consistency.md](results/value-consistency.md).
+
 ## What results here CAN be about
 
 - What a rule system does to scripted agents in a stated toy world.
