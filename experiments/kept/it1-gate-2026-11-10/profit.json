@@ -1,0 +1,778 @@
+{
+ "C-in-0": {
+  "0": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "1": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "2": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "3": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "4": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "5": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "6": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "7": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "8": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "9": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "10": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "11": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  }
+ },
+ "C-in-1": {
+  "0": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "1": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "2": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "3": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "4": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "5": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "6": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "7": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "8": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "9": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "10": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "11": {
+   "class": "predicted",
+   "mech": "fm_core",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:request:stay_home",
+    "m0s1:work",
+    "m0s2:work",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  }
+ },
+ "C-out-0": {
+  "0": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "1": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "2": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "3": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "4": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "5": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "6": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "7": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "8": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "9": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "10": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  },
+  "11": {
+   "class": "none",
+   "mech": null,
+   "holdings": 82,
+   "wellbeing": 7,
+   "victim_in": true,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:refuse_request",
+    "m1s0:work",
+    "m1s1:refuse_request",
+    "m1s2:work"
+   ],
+   "paid_seam": false
+  }
+ },
+ "C-out-1": {
+  "0": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "1": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "2": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "3": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "4": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "5": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "6": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "7": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "8": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "9": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "10": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  },
+  "11": {
+   "class": "inventive",
+   "mech": "outside_fm:gift_pooled+late_request",
+   "holdings": 127,
+   "wellbeing": 7,
+   "victim_in": false,
+   "seq": [
+    "m0s0:work",
+    "m0s1:work",
+    "m0s2:gift_pooled",
+    "m1s0:request:no_contact",
+    "m1s1:work",
+    "m1s2:work"
+   ],
+   "paid_seam": true
+  }
+ }
+}

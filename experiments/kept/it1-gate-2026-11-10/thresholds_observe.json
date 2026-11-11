@@ -1,0 +1,58 @@
+{
+ "C-in-0": {
+  "0": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 86
+  },
+  "1": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 86
+  },
+  "2": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 86
+  }
+ },
+ "C-in-1": {
+  "0": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 129
+  },
+  "1": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 129
+  },
+  "2": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 129
+  }
+ },
+ "C-out-0": {
+  "0": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 86
+  },
+  "1": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 86
+  },
+  "2": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 86
+  }
+ },
+ "C-out-1": {
+  "0": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 121
+  },
+  "1": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 121
+  },
+  "2": {
+   "best_unflagged_victim_in": 86,
+   "best_unflagged_all": 121
+  }
+ }
+}

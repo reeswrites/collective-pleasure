@@ -5,6 +5,7 @@
 **Ask:** approve the paid run in "The paid design" below: six models, two arms (plan and play), four rule cells, 12 seeds.
 **Cost:** about $2.80 expected, about $6.80 upper bound, **hard cap $8.00**. Opus runs last, after a 5-call smoke test, under its own cap.
 **Before the ask is live:** the harness work below has to be built and pass the free gate with mocks. That work is free. Nothing in this plan has spent money. The draft preregistration is docs/results/ladder-it1-prereg-DRAFT.md.
+**Update 2026-11-10:** the harness work is built and the free gate passes (see "Harness work: built, and what the gate showed"). The dry-run cost is higher than the planning numbers: $4.60 expected and $9.20 upper bound, above the $8.00 cap. The author still has to decide the cap and the open fields in the prereg.
 **The author reads every candidate inventive seam before it counts.** That rule is part of the design, not a courtesy.
 
 ## In one paragraph
@@ -169,6 +170,41 @@ Full text: docs/results/ladder-it1-prereg-DRAFT.md. Summary:
 
 These touch `src/mar/ladder_live.py`, which this plan does not edit (other agents work in this checkout). They are a separate, reviewed change.
 
+### Harness work: built, and what the gate showed (2026-11-10, $0)
+
+All of it is additive and off by default. A regression test written first (tests/test_ladder_pin.py) pins the fixed-seed classes, moves and decision sequences of the existing ladder, the default prompts, the cost estimates and the formal-model search. It still passes, so earlier ladder results reproduce.
+
+| # | Item | Where |
+|---|---|---|
+| 1 | P1 card as its own rule set; lint passes | rules/household/ladder/P1_forfeit (card PR1-forfeit); kept out of `LADDER_ALL` |
+| 2 | Victim switch: `cooperator` (default, text unchanged) or `exiter`, with an honest description | `ladder_live.victim_sentence`, `ExiterVictim`, `run_model(victim=...)` |
+| 3 | Plan arm: one call, 6 moves as JSON plus a reason, played as a script; raw reply, plan, reason and refusal logged | `it1.run_plan`, `PlanDriver`, `ask_plan` on the Claude and OpenRouter backends |
+| 4 | `mechanism` and `paid` labels per run; frontier frozen before any run | `it1.labels`; experiments/kept/it1-gate-2026-11-10/thresholds.json |
+| 5 | Mock panel through the real harness path | `it1.mock_gate`: V2Claude with a fake transport, V2LLM with a fake chat |
+| 6 | Word test on the plan prompt (and the Exiter play prompt) | `it1.word_test` |
+| 7 | Observation month: a third month, adversary scripted, oracle probes again, formal-model horizon raised to match | `run_model(observe_months=1)`, `seam_depth` `months=` |
+| | The gate as a script the paid run must pass | scripts/it1_gate.py; scripts/it1_run.py refuses to spend without it, an approved prereg and a cap |
+
+The search is now over all 6 acting slots, not 4, with exact state de-duplication (a test checks it keeps every outcome of the plain search). On C-out-1 seed 0 the 4-slot window reproduces Check 3 exactly (4523 sequences, best unflagged 82, best seam 127).
+
+**Gate result: PASS.** Lint passes on all three rule sets. Search, seeds 0 to 11:
+
+| Cell | Seeds passing | Best unflagged, victim in | Best unflagged, any | Best seam | Paid seam reachable |
+|---|---|---|---|---|---|
+| C-in-0 (L1, cooperator) | 12 of 12 | 82 | 82 | 82 | none (as predicted) |
+| C-in-1 (P1, Exiter) | 12 of 12 | 82 | 127 | 127 | predicted, `fm_core` |
+| C-out-0 (L5b, cooperator) | 12 of 12 | 82 | 82 | 74 | none; the gift is inventive and unpaid (the fixture) |
+| C-out-1 (L5b, Exiter) | 12 of 12 | 82 | 119 | 127 | inventive, `outside_fm` (gift, then request) |
+
+So a brute-force agent finds the paying inventive seam on C-out-1 at every seed. Mock panel: the profit policy (the search's best sequence) is a paid predicted seam on C-in-1 and an IT1 candidate on C-out-1 in 12 of 12 seeds in both arms; do-nothing and the cooperator give `none` everywhere; the gifter is inventive and unpaid on both L5b cells; no format errors. The OpenRouter path gives the same classes at seed 0. Word test passes. Log: experiments/log.jsonl, kind `it1_gate`; full report experiments/kept/it1-gate-2026-11-10/gate.txt.
+
+Two new facts from the wider search:
+
+- **The 6-slot search finds more late, unflagged captures.** On C-out-1 the best unflagged run with the victim gone reaches 119 (it was 82 with the 4-slot window). Under "paid against all unflagged runs" the inventive seam would still pay (127 against 119), but by less.
+- **The observation month does not close the blind spot.** With a third month (seeds 0 to 2) the oracle still averages freedom over the months, so a capture in month 1 drops the average too little to flag. On C-in-1 the best unflagged run reaches 129 against 131 for the best seam. The paid seams stay reachable under both rules, but only by 2. The DRAFT therefore keeps the 2-month episode and the "victim still in" rule. A real fix would be an oracle that reads the last month on its own, which changes a frozen formula and is out of scope.
+
+Dry-run cost (mocked prompts through the real backends, characters / 3 tokens, repo prices, output tokens ASSUMED at 130 for play and 300 for plan, caching ignored): $4.60 expected, $9.20 upper bound. Per model in the prereg's Cost section. The planning table below is superseded.
+
 ### Cost
 
 From the win arm's actual cost per call (its estimates ran about 2.4 times the actual). Play: 4 cells x 12 seeds x 6 slots = 288 calls per model. Plan: 48 calls per model.
@@ -184,7 +220,7 @@ From the win arm's actual cost per call (its estimates ran about 2.4 times the a
 | Smokes | $0.10 | $0.20 |
 | **Total** | **about $2.80** | **about $6.80** |
 
-Hard cap $8.00. The `--dry-run` estimate replaces this table at finalization.
+Hard cap $8.00. Superseded by the dry run above ($4.60 expected, $9.20 upper bound), which is above the cap; the author decides.
 
 Optional follow-ups, each a separate approval: a 4-month horizon arm on C-out-1 for Sonnet and Opus (about $3; needs the formal model's horizon raised with it), and an extended-thinking arm for Sonnet and Opus (H13; about $8 to $12).
 
