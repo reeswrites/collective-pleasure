@@ -110,3 +110,9 @@ Three paid framings (capability v2, propensity, win; about $10 in all) reported 
 - `H32 P9 (2026-11-11): MISSED on the T 13 clause. End-game deviation is one week (D 0.038, 0.019, 0.010 at T 26, 52, 104) and absent at T 13 by the parity of the alternation.`
 - `H32 P10 (2026-11-11): MISSED on monotonicity. Exit-driven convergence cells by partner sight w = 1, 0.75, 0.5, 0.25, 0: 1, 0, 1, 1, 0. Gone at any exit noise of 0.05 or more.`
 - `H32 overall (2026-11-11): not supported as stated. Free exit made the egoist converge on the utilitarian in 1 of 30 cells; amplification (alpha >= 1.5) and giving (g >= 0.75, or with amplification) do it without exit.`
+
+## 2026-11-11: H32b (docs/results/h32b.md)
+
+- `H32b B5 (2026-11-11): MISSED. Predicted renegotiation would have the largest mean rung Shapley on policy distance; it had the most negative (-0.016). Withdrawal was the only positive rung (+0.002 mean; +0.058 at alpha 1, o_B 0.6). Prereg docs/results/h32b-prereg.md.`
+- `H32b B6 (2026-11-11): MISSED on one clause. At partner sight w 0.75 the full ladder gave 1 voice-driven cell against 0 at w 1.`
+- `H32b overall (2026-11-11): the full voice ladder made the egoist converge in 0 of 30 cells (cliff exit 1). Null for "voice helps" as built.`

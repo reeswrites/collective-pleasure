@@ -85,3 +85,46 @@ def test_shapley_is_exact_and_efficient():
     phi = C.shapley(vals)
     assert sum(phi.values()) == vals[(True, True, True)] - vals[(False, False, False)]
     assert phi["exit"] == 1 and phi["amp"] == phi["give"] == Fr(5, 4)
+
+
+# ---------------------------------------------------------------- H32b voice ladder (docs/results/h32b-prereg.md)
+
+def test_h32b_ladder_off_reproduces_committed_h32_defaults():
+    import json
+    from pathlib import Path
+    kept = json.loads((Path(__file__).parent.parent / "experiments/kept/h32-2026-11-11/results.json").read_text())["default"]
+    assert C.ConvParams().ladder == ()
+    for a in C.ARMS:
+        c = C.compare(C.arm(C.ConvParams(), *a))
+        k = kept[C.arm_name(a)]
+        assert abs(float(c["D"]) - k["D"]) < 1e-12 and abs(float(c["R"]) - k["R"]) < 1e-12, a
+
+
+def test_h32b_empty_ladder_is_cliff_and_ladder_changes_nothing_without_exit():
+    p = C.ConvParams(menu=TOY, T=8, o_B=Fr(2, 5))
+    for a in C.ARMS:
+        x = C.compare(C.arm(p, *a), exact=True)
+        if not a[0]:   # exit off: the ladder is never consulted
+            y = C.compare(C.arm(replace(p, ladder=C.RUNGS), *a), exact=True)
+            assert (x["D"], x["R"], x["E"]["total"]) == (y["D"], y["R"], y["E"]["total"])
+
+
+def test_h32b_ladder_mechanics():
+    p = C.ConvParams(ladder=C.RUNGS, o_B=Fr(3, 5))
+    s = (5, Fr(1, 2), True, 0)
+    # e falls well below every threshold, but the level rises only one step a week, and nobody exits from level 0
+    (pr, s2), = C.transitions(p, s, (0, "solo"), Fr(0))
+    assert pr == 1 and s2[2] and s2[3] == 1
+    # on the renegotiation rung, a week the partner does not like jumps it to withdrawal
+    (pr, s3), = C.transitions(p, (5, Fr(1, 2), True, 2), (0, "shared"), Fr(1, 2))
+    assert s3[3] == 3
+    # renegotiation as the last rung: breaking the demand means exit
+    q = replace(p, ladder=("renegotiate",))
+    assert C.transitions(q, (5, Fr(1), True, 1), (0, "shared"), Fr(1))[0][1][2] is False
+    # withdrawal halves the amplification bonus
+    own_w = C.rewards(p, 99, True, (3, "shared"), 3)[0]
+    own = C.rewards(p, 99, True, (3, "shared"), 0)[0]
+    assert own - own_w == p.menu[3].lA * (C.mult(p, p.menu[3]) - 1) / 2
+    # exit only from the top level when e < o_B
+    leave = C.transitions(p, (5, Fr(1, 2), True, 3), (0, "solo"), Fr(0))
+    assert leave[0][1][2] is False

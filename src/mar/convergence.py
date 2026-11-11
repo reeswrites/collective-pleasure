@@ -75,6 +75,24 @@ class ConvParams:
     exit_on: bool = True
     amp_on: bool = True
     give_on: bool = True
+    # H32b voice ladder (additive; off by default so every H32 number reproduces). Only used when exit_on is True.
+    ladder: tuple = ()          # enabled rungs, a subset of RUNGS in this order; () = H32's cliff exit. ASSUMED
+    rung_gap: Fr = Fr(1, 10)    # rung thresholds: check-in below o_B + 3 gap, renegotiate below o_B + 2 gap, withdraw below o_B + gap. ASSUMED
+    withdraw: Fr = Fr(1, 2)     # share of the amplification bonus lost while the partner withdraws. ASSUMED
+
+
+RUNGS = ("checkin", "renegotiate", "withdraw")
+RUNG_STEPS = {"checkin": 3, "renegotiate": 2, "withdraw": 1}   # threshold = o_B + steps x rung_gap
+
+
+def _level_name(p: ConvParams, level: int) -> str | None:
+    """Rung the partner is on at this level (0 = content)."""
+    return p.ladder[level - 1] if 0 < level <= len(p.ladder) else None
+
+
+def favored(p: ConvParams, a: tuple[int, str]) -> bool:
+    """What a renegotiating partner demands: a shared week of an activity it likes at least as much as the actor does."""
+    return a[1] == "shared" and p.menu[a[0]].lB >= p.menu[a[0]].lA
 
 
 def arm(p: ConvParams, exit_on: bool, amp_on: bool, give_on: bool) -> ConvParams:
@@ -99,8 +117,8 @@ def actions(p: ConvParams, together: bool) -> list[tuple[int, str]]:
     return [(k, "apart") for k in range(n)]
 
 
-def rewards(p: ConvParams, last: int, together: bool, a: tuple[int, str]) -> tuple[Fr, Fr, Fr]:
-    """-> (actor's own experience, actor's vicarious pleasure, partner's pleasure) this week."""
+def rewards(p: ConvParams, last: int, together: bool, a: tuple[int, str], level: int = 0) -> tuple[Fr, Fr, Fr]:
+    """-> (actor's own experience, actor's vicarious pleasure, partner's pleasure) this week. level: H32b rung level."""
     k, mode = a
     act = p.menu[k]
     f = (1 - p.delta) if k == last else Fr(1)
@@ -108,6 +126,8 @@ def rewards(p: ConvParams, last: int, together: bool, a: tuple[int, str]) -> tup
         return act.lA * f, Fr(0), p.o_B
     if mode == "shared":
         M = mult(p, act)
+        if _level_name(p, level) == "withdraw":
+            M = 1 + (1 - p.withdraw) * (M - 1)
         own, pb = act.lA * f * M - p.kappa, act.lB * f * M - p.kappa
     else:
         own, pb = act.lA * f - p.kappa, p.sB - p.kappa
@@ -121,7 +141,9 @@ def _round_grid(p: ConvParams, x: Fr) -> Fr:
 
 def transitions(p: ConvParams, s: tuple, a: tuple[int, str], pb: Fr) -> list[tuple[Fr, tuple]]:
     """-> [(prob, next state)] with state (last, e, together)."""
-    last, e, together = s
+    if p.ladder and p.exit_on:
+        return _ladder_transitions(p, s, a, pb)
+    last, e, together = s[:3]
     k = a[0]
     if not together:
         return [(Fr(1), (k, None, False))]
@@ -138,8 +160,45 @@ def transitions(p: ConvParams, s: tuple, a: tuple[int, str], pb: Fr) -> list[tup
     return out
 
 
+def _ladder_transitions(p: ConvParams, s: tuple, a: tuple[int, str], pb: Fr) -> list[tuple[Fr, tuple]]:
+    """H32b. State (last, e, together, level). The partner updates e from what happened (actions, not words), exactly as in
+    H32. Its rung level moves one step per week toward the number of enabled rungs whose threshold e is below, up or down.
+    A week that breaks a renegotiation demand jumps the level to the rung after renegotiation (withdrawal if enabled,
+    else exit). Exit only from the top level, when e < o_B (noise eps as in H32). A check-in changes nothing but the
+    level: the actor already sees e (full information), so its only effect is time."""
+    last, e, together, level = s
+    k = a[0]
+    if not together:
+        return [(Fr(1), (k, None, False, 0))]
+    m = len(p.ladder)
+    target = p.w * pb + (1 - p.w) * p.prior
+    e2 = _round_grid(p, (1 - p.lam) * e + p.lam * target)
+    want = sum(1 for r in p.ladder if e2 < p.o_B + RUNG_STEPS[r] * p.rung_gap)
+    lv = level + (1 if want > level else -1 if want < level else 0)
+    breach_exit = False
+    if _level_name(p, level) == "renegotiate" and not favored(p, a):
+        if level < m:
+            lv = max(lv, level + 1)       # straight to the next rung (withdrawal)
+        else:
+            breach_exit = True            # renegotiation was the last rung: the demand was the condition for staying
+    if breach_exit:
+        leave = 1 - p.eps
+    elif level == m and e2 < p.o_B:
+        leave = 1 - p.eps
+    else:
+        leave = p.eps
+    out = []
+    if leave < 1:
+        out.append((1 - leave, (k, e2, True, lv)))
+    if leave > 0:
+        out.append((leave, (k, None, False, 0)))
+    return out
+
+
 def start_state(p: ConvParams, solitary: bool = False) -> tuple:
     n = len(p.menu)
+    if p.ladder and p.exit_on:
+        return (n, None, False, 0) if solitary else (n, p.e0, True, 0)
     return (n, None, False) if solitary else (n, p.e0, True)
 
 
@@ -174,7 +233,7 @@ def solve(p: ConvParams, objective: str, tie: str = "kind", solitary: bool = Fal
 
     @lru_cache(maxsize=None)
     def step(s: tuple, a: tuple):
-        own, vic, pb = rewards(p, s[0], s[2], a)
+        own, vic, pb = rewards(p, s[0], s[2], a, s[3] if len(s) > 3 else 0)
         r = _key(objective, num(own), num(vic), num(pb), tie)
         return r, tuple((num(pr), s2) for pr, s2 in transitions(p, s, a, pb))
 
@@ -217,7 +276,7 @@ def evaluate(p: ConvParams, pol: dict, solitary: bool = False, other: dict | Non
         nd: dict = {}
         for s, pr in dist.items():
             a = pol[(t, s)]
-            o, v, b = rewards(p, s[0], s[2], a)
+            o, v, b = rewards(p, s[0], s[2], a, s[3] if len(s) > 3 else 0)
             own += pr * o
             vic += pr * v
             pb += pr * b

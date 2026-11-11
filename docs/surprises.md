@@ -96,3 +96,7 @@ The line above that says L4 was "found by every model" is wrong. In the capabili
 - `2026-11-11 H32: free exit alone closed most of the pleasure gap (R 0.231 to 0.083) without changing the egoist's policy at all (D stays 1). The partner leaves and is better off apart; the egoist never attends to it.`
 - `2026-11-11 H32: exit can widen the gap. At alpha 0.5 the egoist prefers living alone to a weakly amplified pair and neglects the partner until it leaves (R 0.304 with exit against 0.184 without, at outside option 0.25).`
 - `2026-11-11 H32: without amplification and with an outside option of 0.4 or more, the utilitarian also ends the bond, so the two objectives "agree" by both choosing to split.`
+
+## 2026-11-11: H32b (docs/results/h32b.md)
+
+- `2026-11-11 H32b: withdrawal alone (no check-in, no renegotiation) made the egoist converge with the pair kept at alpha 1, o_B 0.6 (D 0.02) and 0.8 (D 0.00); the full ladder left D 0.50 and 0.17. Adding renegotiation undid it: the egoist meets a one-week demand with a week it had planned anyway, the partner calms down, and the egoist goes back to its own passion.`

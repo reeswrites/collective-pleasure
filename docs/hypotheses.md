@@ -690,6 +690,8 @@ Needs the smallest biased persona first.
 
 **Result (2026-11-11).** Not supported as stated. Exact dynamic programming over a two-agent model with exit, amplification and giving as switches (8 arms x 2 objectives, a 30-cell grid, and sweeps). 7 of 11 predictions held. The all-off control shows a large gap (pleasure gap 0.231, policy distance 1). Free exit made the egoist converge in 1 of 30 cells, and that cell vanished under 5 percent exit noise or a partner a quarter blind to its own pleasure. Amplification alone converges at alpha 1.5 or more; with giving, at 0.5 or more. Exit alone shrinks the pleasure gap by ending the bond, not by changing the egoist. The solitary persona beats the paired egoist only when nothing amplifies or gives. Docs: docs/results/h32-prereg.md, docs/results/h32.md. Exact, $0.
 
+**Follow-up H32b (2026-11-11).** A graded voice ladder (check-in, renegotiate, withdraw, then exit) in place of the cliff converged in 0 of 30 cells (cliff 1). Withdrawal alone converged in 2 cells with the pair kept; renegotiation undid it, because the egoist meets a one-week demand and goes back to its own passion. Docs: docs/results/h32b-prereg.md, docs/results/h32b.md.
+
 **Motivation.**
 - experiments/questions.jsonl: Q6 answer 2026-11-11 and the author's essay thesis that egoistic hedonists and hedonistic utilitarians alike must attend to others' pleasure
 - docs/theory.md: relationships as hedonic technology
