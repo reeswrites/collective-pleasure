@@ -10,6 +10,7 @@ Scripted persona agents, no model calls. Wording rule: agents feel nothing; "ple
   uv run python scripts/h39b_makers_rerun.py --analyze    prereg vs actual plus the H39b measures; runs/h39b-makers/analysis.json
   uv run python scripts/h39b_makers_rerun.py --observe    observer sample: 20 pairings, seed 0, M0 / Z / BP
   uv run python scripts/h39b_makers_rerun.py --stories    the five H39 story picks, under H39b
+  add --v2 to --run / --analyze: Amendment 2, the recalibrated agents and bills that hurt (rows in runs/h39b-makers-v2/)
 """
 import argparse
 import json
@@ -250,7 +251,14 @@ def main():
     ap.add_argument("--arms", default=",".join(H39.ARMS))
     ap.add_argument("--seeds", type=int, default=4)
     ap.add_argument("--stories", nargs="?", const=STORIES, default="")
+    ap.add_argument("--v2", action="store_true", help="Amendment 2: agent_values v2 and bills_hurt; runs/h39b-makers-v2/")
     a = ap.parse_args()
+    global OUT
+    fix = None
+    if a.v2:
+        OUT = ROOT / "runs" / "h39b-makers-v2"
+        H39.OUT = OUT
+        fix = {"agent_values": "v2", "bills_hurt": True}
     OUT.mkdir(parents=True, exist_ok=True)
     if a.fidelity:
         fidelity()
@@ -261,9 +269,9 @@ def main():
     if a.reach:
         reach()
     if a.run:
-        H39.run(a.arms.split(","), H38.pairings(H38.CONFIRM), tuple(range(a.seeds)), OUT / "rows.jsonl", overrides=OVR)
+        H39.run(a.arms.split(","), H38.pairings(H38.CONFIRM), tuple(range(a.seeds)), OUT / "rows.jsonl", overrides=OVR, fix=fix)
     if a.analyze:
-        res = analyze(H38.load(OUT / "rows.jsonl"))
+        res = analyze(H38.load(OUT / "rows.jsonl"), path=OUT / "analysis.json")
         print(json.dumps(res["verdicts"], indent=1))
     if a.observe:
         observe()

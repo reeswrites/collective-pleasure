@@ -180,3 +180,17 @@ What I saw, plainly: at every version, makers on sits well below makers off, mai
 Seeds stay 0 to 3 (fixed by the comparison with H39). **So the H39 verdict and the H20a verdict are DESCRIPTIVE again.**
 
 **Can every verdict happen?** (`--reach`, `runs/h39b-makers/reach.json`, on H39b pilot rows.) Reached: H39 supported, not supported and inconclusive; P1b disagreeing; P5b missing (H and P swapped; the pilot itself is weak); P6 and H20a supported (synthetic) and failing (BP-PN = BP); nobody agreeing to protect (trust threshold 2: 0 agreed); P5 failing when extractive = safe (extractive share 0.48 under H, 0.56 under P). H39b measures on the 300 pilot maker runs: 115 made nothing, the most made was 2.4 blocks per partner-week; trap share 0 in 180 runs and above 0 in 120 (never without an extractive partner); lost liking 0 in 117 and above 0 in 183. Metric sees the mechanism: traced as in the prereg table.
+
+### Amendment 2 (2026-11-11): rerun under the recalibrated agents and bills that hurt
+
+Committed before the run. Follows [agent-recalibration-prereg.md](agent-recalibration-prereg.md) and the author's decision (experiments/changes.jsonl, 2026-11-11T21:53:50Z): rerun H39b before citing it again.
+
+**What changes.** Every world, rollouts included, runs with `FixConfig(agent_values="v2", bills_hurt=True)`: agents value an action by its change to this week's close in the hedonic model's own arithmetic, so the making choice's time cost (`opportunity`) is in the same units as the block values; unfunded bills cost a late fee, security and stress. **Nothing else changes**: 13 arms, 120 pairings × seeds 0 to 3, the opportunity choice, enjoyment {−1, 0, +1}, the decision rules, the analysis code, every prediction, threshold, test and verdict rule. Power and the DESCRIPTIVE labels stand as in Amendment 1 (no new pilot). Rows in runs/h39b-makers-v2/ (`--v2 --run`, `--v2 --analyze`).
+
+**Which H39b findings survive** (rule fixed now, the same rule H39b used for H39): an H39b estimate whose 95% interval excluded 0 survives if the rerun's has the same sign and also excludes 0, reverses if the rerun's excludes 0 with the opposite sign, and otherwise does not survive. An H39b null survives if the rerun's interval also includes 0. Applied to every row of h39b-makers-rerun.md's "Which H39 findings survive" table, to Z − M0 on pleasure, formation and weeks together, to P2 (blocks), P7 (formation under the suffering weight), and to the wanting-trap share. H39b's rows are on disk, so the arm means are also compared paired by pairing (v2 − v1), descriptive.
+
+**What I expect, no verdict weight.** The time cost of a block rises from 0.002 (agent units) toward the model's +0.013 an idle unit is worth over one week, so fewer blocks (H39b Z: 1.87 per partner-week). Then the harm from makers (Z − M0, −0.022) should shrink. Formation moves through the rollouts in both directions, with no prediction.
+
+**Can every verdict happen?** The analysis and its free checks are unchanged (Amendment 1's `--reach`). New known answers for the agents: `tests/test_agent_values.py`.
+
+**Story spot-check.** One BP run and one M0 run read week by week, reported in the results.

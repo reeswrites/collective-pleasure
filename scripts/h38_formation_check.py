@@ -6,6 +6,8 @@ Wording rule: agents feel nothing; "pleasure" is a gloss for a modeled hedonic s
   uv run python scripts/h38_formation_check.py --diagnose   the rule inputs under each yardstick vs the realized lives (L0, old rule)
   uv run python scripts/h38_formation_check.py --run        the confirmatory arms under the corrected rule (at most 3 workers)
   uv run python scripts/h38_formation_check.py --analyze    prereg vs actual; writes runs/h38-formation/analysis.json
+  add --v2 to --run / --analyze: Amendment 1, the recalibrated agents and bills that hurt. The G arms and the old-rule arms O-L0, O-L4,
+  O-W4 (H38's L0, L4, W4) all rerun under them; rows in runs/h38-formation-v2/.
 """
 import argparse
 import dataclasses
@@ -39,17 +41,25 @@ RULES = {"good": GOOD, "pl26": {"decide_on": "pleasure", "decide_weeks": 26}, "n
 # and window-alone rules are compared at week-0 formation only, in --diagnose.)
 ARMS = {"G-L0": (PR.dial(0), "good"), "G-L4": (PR.dial(4), "good"), "G-W4": (PR.dial(4, parts=("withdraw",)), "good"),
         "G-L1": (PR.dial(1), "good")}
+OLD_ARMS = {"O-L0": "L0", "O-L4": "L4", "O-W4": "W4"}    # Amendment 1 (v2): H38's own arms, old rule, rerun under the new agents
+V2 = {"agent_values": "v2", "bills_hurt": True}
 FORCED = "F-L0"     # descriptive: old rule, formation forced at week 0 (decline=False), for the diagnosis
 MARGIN = 0.007      # prereg: the L4 gain "falls to within the margin" if G-L4 minus G-L0 is below this (a third of H38's +0.021)
 
 
 def task(args):
-    arm, a, b, seeds = args
+    arm, a, b, seeds = args[:4]
+    fix = args[4] if len(args) > 4 else None
     t0 = time.time()
     out = []
     for s in seeds:
         if arm == FORCED:
             run, lived, rd = H38.play(PR.dial(0), a, b, s, stay=False, decline=False)
+        elif arm in OLD_ARMS:
+            run, lived, rd = H38.play(H38.ARMS[OLD_ARMS[arm]], a, b, s, stay=True, rule=fix)
+        elif fix:
+            pc, rule = ARMS[arm]
+            run, lived, rd = H38.play(pc, a, b, s, stay=True, rule={**RULES[rule], **fix})
         else:
             pc, rule = ARMS[arm]
             run, lived, rd = H38.play(pc, a, b, s, stay=True, rule=RULES[rule])
@@ -57,13 +67,13 @@ def task(args):
     return out, time.time() - t0
 
 
-def run(arms, f, workers=WORKERS):
+def run(arms, f, workers=WORKERS, fix=None):
     workers = min(workers, 3)
     OUT.mkdir(parents=True, exist_ok=True)
     done = set()
     if f.exists():
         done = {(r["arm"], r["a"], r["b"]) for r in H38.load(f)}
-    tasks = [(arm, a, b, H38.CONFIRM["seeds"]) for (a, b) in H38.pairings(H38.CONFIRM) for arm in arms if (arm, a, b) not in done]
+    tasks = [(arm, a, b, H38.CONFIRM["seeds"], fix) for (a, b) in H38.pairings(H38.CONFIRM) for arm in arms if (arm, a, b) not in done]
     print(f"{len(tasks)} tasks, {workers} workers -> {f}", flush=True)
     t0 = time.time()
     with Pool(workers) as pool, f.open("a") as fh:
@@ -144,12 +154,14 @@ def diag_report():
 
 # ---- analysis ------------------------------------------------------------------------------------------------------------------
 
-def analyze(new=None, write=True):
+def analyze(new=None, write=True, old=None):
+    """old: rows for the old-rule arms L0, L1, L4, W4 (default: H38's own rows). Amendment 1 passes the v2 reruns, relabelled."""
     new = H38.load(OUT / "rows.jsonl") if new is None else new
-    old = [r for r in H38.load(OLD_ROWS) if r["arm"] in ("L0", "L1", "L4", "W4")]
+    old = [r for r in H38.load(OLD_ROWS) if r["arm"] in ("L0", "L1", "L4", "W4")] if old is None else old
     rows = new + old
     K = H38.KEYS
-    res = {"table": H38.table(rows, ["L0", "L1", "L4", "W4", *ARMS]), "diffs": {}}
+    have = {r["arm"] for r in rows}
+    res = {"table": H38.table(rows, [x for x in ["L0", "L1", "L4", "W4", *ARMS] if x in have]), "diffs": {}}
 
     def diff(hi, lo, key="pleasure", alt=None):
         d, ks = H38.paired(rows, hi, lo, K[key])
@@ -160,6 +172,8 @@ def analyze(new=None, write=True):
     for name, hi, lo, alt in (("C1 G-L4 - G-L0", "G-L4", "G-L0", "greater"), ("C2 G-W4 - G-L0", "G-W4", "G-L0", "less"),
                               ("C3 G-L0 - L0", "G-L0", "L0", "greater"), ("old L4 - L0", "L4", "L0", None),
                               ("old W4 - L0", "W4", "L0", None), ("G-L1 - G-L0", "G-L1", "G-L0", None)):
+        if hi not in have or lo not in have:
+            continue
         res["diffs"][name] = {k: diff(hi, lo, k, alt if k == "pleasure" else None)
                               for k in ("pleasure", "net", "together_share", "formed0", "pleasure_wo_direct", "p_raw")}
     # C1's gain relative to the old L4 gain, paired by pairing (difference in differences)
@@ -222,7 +236,19 @@ def main():
     ap.add_argument("--run", action="store_true")
     ap.add_argument("--analyze", action="store_true")
     ap.add_argument("--reach", action="store_true")
+    ap.add_argument("--v2", action="store_true", help="Amendment 1: agent_values v2 and bills_hurt; runs/h38-formation-v2/")
     a = ap.parse_args()
+    global OUT
+    if a.v2:
+        OUT = ROOT / "runs" / "h38-formation-v2"
+        if a.run:
+            run([*ARMS, *OLD_ARMS], OUT / "rows.jsonl", fix=V2)
+        if a.analyze:
+            rows = H38.load(OUT / "rows.jsonl")
+            new = [r for r in rows if r["arm"] in ARMS]
+            old = [{**r, "arm": OLD_ARMS[r["arm"]]} for r in rows if r["arm"] in OLD_ARMS]
+            analyze(new, old=old)
+        return
     if a.reach:
         reach()
     if a.diagnose:

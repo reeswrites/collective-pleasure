@@ -48,8 +48,11 @@ def arm_setup(arm, overrides=None):
     return cfg, rule
 
 
-def play(arm, a, b, seed, overrides=None, weeks=None, recorder=None):
+def play(arm, a, b, seed, overrides=None, weeks=None, recorder=None, fix=None):
+    """fix: extra FixConfig fields (agent recalibration: {"agent_values": "v2", "bills_hurt": True}); None is the run as preregistered."""
     cfg, rule = arm_setup(arm, overrides)
+    if fix:
+        rule = {**(rule or {}), **fix}
     with MK.use_makers(cfg):
         kw = {"weeks": weeks} if weeks else {}
         run, lived, rd = H38.play(PR.dial(0), a, b, seed, stay=False, rule=rule, **kw)
@@ -101,22 +104,23 @@ def record(run, lived, arm, a, b, seed):
 
 
 def task(args):
-    arm, a, b, seeds, overrides = args
+    arm, a, b, seeds, overrides = args[:5]
+    fix = args[5] if len(args) > 5 else None
     t0 = time.time()
     out = []
     for s in seeds:
-        run, lived, _ = play(arm, a, b, s, overrides)
+        run, lived, _ = play(arm, a, b, s, overrides, fix=fix)
         out.append(record(run, lived, arm, a, b, s))
     return out, time.time() - t0
 
 
-def run(arms, pairs, seeds, f, workers=WORKERS, overrides=None):
+def run(arms, pairs, seeds, f, workers=WORKERS, overrides=None, fix=None):
     workers = min(workers, 3)
     OUT.mkdir(parents=True, exist_ok=True)
     done = set()
     if f.exists():
         done = {(r["arm"], r["a"], r["b"]) for r in H38.load(f)}
-    tasks = [(arm, a, b, seeds, overrides) for (a, b) in pairs for arm in arms if (arm, a, b) not in done]
+    tasks = [(arm, a, b, seeds, overrides, fix) for (a, b) in pairs for arm in arms if (arm, a, b) not in done]
     print(f"{len(tasks)} tasks, {workers} workers -> {f}", flush=True)
     t0 = time.time()
     with Pool(workers) as pool, f.open("a") as fh:

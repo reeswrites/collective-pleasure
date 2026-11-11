@@ -117,3 +117,17 @@ Every outcome of C1, C2 and C3 is reachable through the analysis code. In the mo
 ## Limits
 
 One alternative rule point. Leaving on distress still ignores the yardstick. The pleasure cap binds on most person-weeks, and the corrected rule decides on clipped pleasure, so it too is blind above the cap. Labor and care are not tracked.
+
+## Amendments
+
+### Amendment 1 (2026-11-11): rerun under the recalibrated agents and bills that hurt
+
+Committed before the run. Follows [agent-recalibration-prereg.md](agent-recalibration-prereg.md) and the author's decision (experiments/changes.jsonl, 2026-11-11T21:53:50Z): rerun the formation check before citing it again.
+
+**What changes.** Every world, rollouts included, runs with `FixConfig(agent_values="v2", bills_hurt=True)`. The old-rule arms can no longer be reused from H38's rows (they were played by the old agents), so H38's L0, L4 and W4 rerun under the new agents too, as arms O-L0, O-L4, O-W4 (`--v2 --run`; rows in runs/h38-formation-v2/). G-L1 reruns as before; the old L1 does not (it only feeds a descriptive row). **Nothing else changes**: pairings, seeds 0 to 3, world, the corrected rule, C1 to C3, the margin 0.007, the tests and Holm.
+
+**Which findings survive** (fixed now): C1 "within margin" survives if the rerun's C1 estimate is again below 0.007; C2 and C3 "hold" survive if they hold again by their own rules. H38's own gain under the old rule (old L4 − L0, +0.021 [+0.013, +0.028]) and withdrawal under the old rule (old W4 − L0, −0.011) survive by the H39b rule (same sign, interval excluding 0). The pleasure-without-the-direct-terms line for G-L4 − G-L0 (−0.010 [−0.015, −0.005]) is compared the same way, descriptive.
+
+**What I expect, no verdict weight.** None strongly. Bills that hurt make living together cost more when the pot runs dry, and agents that value rest and friends at full levels may spend weeks differently in the rollouts, so formation shares under both rules may move.
+
+**Can every verdict happen?** Unchanged: the same analysis code, and `--reach` above.
