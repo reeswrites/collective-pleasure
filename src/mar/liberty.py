@@ -313,6 +313,7 @@ def partner_stays(s, i):
 
 HH_K = 2                       # the household liberty horizon in passes (k = 3 is the plain-empowerment horizon; ASSUMED cheaper here)
 HH_SNAPSHOTS = (0, 52)         # weeks at which liberty is measured in a run (ASSUMED)
+_HH_MEMO = {}                  # id(gate) -> (gate, {measurement key: result}); a pure cache, values are identical to a fresh call
 
 
 def household_liberty(world, gate, state, scripts, k=HH_K, w=W_DEFAULT, cap=E.HH_CAP, version=2):
@@ -335,9 +336,15 @@ def household_run_liberty(cards, personas, seed=0, weeks=E.HH.WEEKS, snapshots=H
     hw = E.HouseholdWorld(tuple(E.consent_for(p) for p in personas))
     snaps = []
 
+    memo = _HH_MEMO.setdefault(id(gate), (gate, {}))[1]      # same state, scripts, consents, k: same answer (the gate is kept alive here)
+
     def hook(world, wk_):
         if wk_ in snapshots and wk_ < weeks:
-            res = household_liberty(hw, gate, hw.snapshot(world, wk_), scripts, k, w, cap, version)
+            state = hw.snapshot(world, wk_)
+            mk = (state, scripts, hw.consents, k, w, cap, version)
+            if mk not in memo:
+                memo[mk] = household_liberty(hw, gate, state, scripts, k, w, cap, version)
+            res = memo[mk]
             snaps.append({"week": wk_, "liberty": [r["liberty"] for r in res], "bits": [r["bits"] for r in res],
                           "c": [r["c"] for r in res], "ado": [r.get("ado", 0) for r in res], "d": [r["d"] for r in res],
                           "open": any(r["open"] for r in res)})

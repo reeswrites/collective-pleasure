@@ -219,3 +219,23 @@ def test_household_run_liberty_smoke(tmp_path):
     r = L.household_run_liberty(HH.load_variant("baseline"), (ps["p-anchor"], ps["p-wanderer"]), 0, weeks=26, snapshots=(0, 13))
     assert len(r["snaps"]) == 2 and r["liberty_min"] is not None
     assert r["bits_min"] >= r["liberty_min"] - 1e-9
+
+
+def test_household_run_liberty_memo_returns_identical_values():
+    from mar import personas as P
+    ps = {p.id: p for p in P.load_dir(ROOT / "personas")}
+    gate = HH.PyGate(HH.load_variant("baseline"))
+    a = L.household_run_liberty(gate, (ps["p-anchor"], ps["p-wanderer"]), 0, weeks=20, snapshots=(0, 10))
+    b = L.household_run_liberty(gate, (ps["p-anchor"], ps["p-wanderer"]), 0, weeks=20, snapshots=(0, 10))      # second call hits the memo
+    fresh = L.household_run_liberty(HH.load_variant("baseline"), (ps["p-anchor"], ps["p-wanderer"]), 0, weeks=20, snapshots=(0, 10))
+    assert a["snaps"] == b["snaps"] == fresh["snaps"]
+
+
+def test_household_run_bits_accepts_cfg_and_k():
+    from dataclasses import replace
+    from mar import hedonic as HD
+    from mar import personas as P
+    ps = {p.id: p for p in P.load_dir(ROOT / "personas")}
+    r = E.household_run_bits(HH.load_variant("baseline"), (ps["p-anchor"], ps["p-wanderer"]), 0, weeks=14, snapshot_weeks=(0, 7), k=2,
+                             cfg=replace(HD.DEFAULT, start=0.05))
+    assert len(r["bits"]) == 2 and r["open"] == 0

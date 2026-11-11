@@ -1,0 +1,11 @@
+id: N5a-exit-proportional
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: pooled, op: gt, value: 0}
+- {expr: take, op: lt, value: 100}
+or_else: null
+gloss: A member who leaves carries what they put into the pot (at most what it holds)
+  and leaves the rest in it. A floor may top this up (card FLOOR-exit-floor).
+source: negotiated, week 0, members imposed

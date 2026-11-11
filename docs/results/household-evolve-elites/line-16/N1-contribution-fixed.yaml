@@ -1,0 +1,11 @@
+id: N1-contribution-fixed
+attribute: partner
+deontic: must_not
+aim: spend_self
+conditions:
+- {expr: need_gap, op: gt, value: 0}
+or_else: {kind: warn, duration_months: 1, sanctioner: household}
+gloss: While this month's shared need is unfunded, a member should not spend on themselves;
+  breaking this earns a one-month warning. (No fixed amount is set; the rule only
+  restricts self-spending.)
+source: negotiated, week 0, members imposed

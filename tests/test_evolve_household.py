@@ -166,3 +166,27 @@ def test_nondominated_selection_and_bloat_tiebreak_for_household():
     c = mk(3, {"pleasure": .7, "no_fail": .9, "liberty": 1.0, "cooperation": .7})      # dominated
     keep = EV._hsurvive(WORLD, [a, c, b], 2)
     assert keep[0] is b and c not in keep
+
+
+def _script():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("household_evolve_run", ROOT / "scripts" / "household_evolve_run.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_every_prereg_verdict_can_happen_on_synthetic_fronts():
+    """Free check that P1 and P4 can both pass and fail (docs/results/household-evolve.md, 'Can every verdict happen')."""
+    R = _script()
+    seed = {"pleasure": .80, "no_fail": .90, "liberty": 1.0, "cooperation": .80}
+    better = {"pleasure": .80, "no_fail": .90, "liberty": 1.5, "cooperation": .80}            # +0.5 bits, nothing lost
+    worse = {"pleasure": .70, "no_fail": .90, "liberty": 3.0, "cooperation": .80}             # gains liberty but loses pleasure by more than the margin
+    assert R.p1_line([{"val": better}], seed) is True
+    assert R.p1_line([{"val": seed}], seed) is False                                          # the seed itself is not better than the seed
+    assert R.p1_line([{"val": worse}], seed) is False                                         # a loss beyond the margin blocks it
+    a = {"pleasure": .9, "no_fail": .8, "liberty": 3.0, "cooperation": .8}
+    b = {"pleasure": .8, "no_fail": .8, "liberty": 4.8, "cooperation": .8}                    # a beats b on pleasure, b beats a on liberty / 6 by 0.3
+    assert R.p4_line([{"train": a}, {"train": b}]) is True
+    assert R.p4_line([{"train": a}, {"train": dict(a, liberty=3.1)}]) is False                # near-ties are not a trade-off
+    assert R.p4_line([{"train": a}]) is False

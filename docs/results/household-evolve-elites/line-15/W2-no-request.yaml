@@ -1,0 +1,9 @@
+id: W2-no-request
+attribute: partner
+deontic: must_not
+aim: request
+conditions:
+- {expr: pooled, op: gt, value: 78}
+or_else: null
+gloss: When the pooled share is more than 78, a partner must not request.
+source: evolved (add_condition) from W2-no-request

@@ -1,0 +1,9 @@
+id: S2-may-leave
+attribute: partner
+deontic: may
+aim: leave
+conditions: []
+or_else: null
+gloss: A partner may leave whenever they like.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, the author''s own words:
+  "leaving should be whenever". Encoded as a permission.'

@@ -1,0 +1,11 @@
+id: N5a-exit-equal_split
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: pooled, op: gt, value: 0}
+- {expr: take, op: lt, value: 50}
+or_else: null
+gloss: A member who leaves carries half of the whole pot and leaves the other half
+  in it.
+source: negotiated, week 0, members imposed

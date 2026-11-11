@@ -1,0 +1,12 @@
+id: E1-at-most-half
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: pooled, op: gt, value: 0}
+- {expr: take, op: gt, value: 50}
+- {expr: need_gap, op: ge, value: 2}
+or_else: null
+gloss: When the pooled share is more than 0 and the share taken is more than 50 and
+  the unfunded need is at least 2, a partner must not leave.
+source: evolved (add_condition) from E1-at-most-half

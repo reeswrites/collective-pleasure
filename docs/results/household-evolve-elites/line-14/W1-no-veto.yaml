@@ -1,0 +1,8 @@
+id: W1-no-veto
+attribute: partner
+deontic: must_not
+aim: veto
+conditions: []
+or_else: {kind: suspend, duration_months: 3, sanctioner: household}
+gloss: A partner must never veto. Breaking it brings a suspend for 3 month(s).
+source: evolved (sanction) from W1-no-veto

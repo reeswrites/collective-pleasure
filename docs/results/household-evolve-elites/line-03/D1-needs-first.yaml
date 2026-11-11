@@ -1,0 +1,10 @@
+id: D1-needs-first
+attribute: partner
+deontic: must
+aim: spend_self
+conditions:
+- {expr: need_gap, op: gt, value: 0}
+or_else: {kind: warn, duration_months: 2, sanctioner: household}
+gloss: A partner must spend self only when the unfunded need is more than 0. Breaking
+  it brings a warn for 2 month(s).
+source: evolved (flip) from D1-needs-first

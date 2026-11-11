@@ -479,12 +479,12 @@ def household_bits(world, spec, state, scripts, k=K_DEFAULT, cap=HH_CAP):
 
 
 def household_run_bits(spec_cards, personas, seed, weeks=HH.WEEKS, press=True, snapshot_weeks=HH_SNAPSHOT_WEEKS, cap=HH_CAP,
-                       agent_factory=None):
+                       agent_factory=None, cfg=None, k=K_DEFAULT):
     """Run one weekly world and take empowerment snapshots of both partners at the start of the given weeks.
     -> {"bits": [[b0, b1] per exact snapshot], "open": n open snapshots, "run": Run}. press=False is the twin (the
     persona scripts are all cooperators too)."""
     gate = spec_cards if isinstance(spec_cards, HH.PyGate) else HH.PyGate(spec_cards)
-    w = HH.WeeklyWorld(gate, personas, seed, weeks)
+    w = HH.WeeklyWorld(gate, personas, seed, weeks) if cfg is None else HH.WeeklyWorld(gate, personas, seed, weeks, cfg)
     if not press:
         for r in "AB":
             if hasattr(w.agents[r], "press"):
@@ -495,7 +495,7 @@ def household_run_bits(spec_cards, personas, seed, weeks=HH.WEEKS, press=True, s
 
     def hook(world, wk):
         if wk in snapshot_weeks:
-            r = household_bits(hw, gate, hw.snapshot(world, wk), scripts, cap=cap)
+            r = household_bits(hw, gate, hw.snapshot(world, wk), scripts, k=k, cap=cap)
             if r["open"]:
                 out["open"] += 1
             else:

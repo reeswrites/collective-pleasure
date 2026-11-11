@@ -165,6 +165,35 @@ def analyze():
     return R
 
 
+def report():
+    """Plain-English rendering of every line's elite, its difference from the author's seed, and the per-generation summary."""
+    R = json.loads((OUT / "results.json").read_text())
+    w = W.HouseholdEvolveWorld()
+    seed_spec = w.load_spec(AUTHOR)
+    sv = R["seeds_val"]
+    print("SEED VALIDATION SCORES")
+    for n, sc in sv.items():
+        print(f"  {n}: " + ", ".join(f"{o} {sc[o]:.3f}" for o in OBJ))
+    for l in R["lines"]:
+        e = next(m for m in l["front"] if m["elite"])
+        spec = cards_from(e["cards"])
+        d = {o: e["val"][o] - sv[AUTHOR][o] for o in OBJ}
+        print(f"\nLINE {l['line']}: {len(spec)} cards, front {len(l['front'])}, protections {e['protections']}, redundant {e['redundant']}")
+        print("  train " + ", ".join(f"{o} {e['train'][o]:.3f}" for o in OBJ))
+        print("  val   " + ", ".join(f"{o} {e['val'][o]:.3f}" for o in OBJ) + "  | vs seed " + ", ".join(f"{o} {d[o]:+.3f}" for o in OBJ))
+        for c in spec:
+            print("   - " + c.id + ": " + W.card_plain_english(c))
+        for x in W.spec_diff_plain(seed_spec, spec):
+            print("   * " + x)
+    print("\nPER GENERATION (mean over lines)")
+    G = max(len(l["log"]) for l in R["lines"])
+    for g in range(G):
+        rows = [l["log"][g] for l in R["lines"] if len(l["log"]) > g]
+        print(g, "proposed", np.mean([r["proposed"] for r in rows]), "rejected", np.mean([r["filter_rejected"] for r in rows]),
+              "front", np.mean([r["front_size"] for r in rows]), "hv", round(float(np.mean([r["hv"] for r in rows])), 3),
+              "rules", round(float(np.mean([r["pop_rules_mean"] for r in rows])), 2))
+
+
 def freeze():
     R = json.loads((OUT / "results.json").read_text())
     ELITES.mkdir(parents=True, exist_ok=True)
@@ -179,7 +208,12 @@ def freeze():
         for c in cards_from(e["cards"]):
             (d / f"{c.id}.yaml").write_text(c.to_yaml())
         man["lines"][f"line-{l['line']:02d}"] = {"cards": [c["id"] for c in e["cards"]], "train": e["train"], "val": e["val"]}
+    man["seeds_val"] = R["seeds_val"]
+    man["cfg"] = R["cfg"]
     (ELITES / "manifest.json").write_text(json.dumps(man, indent=1))
+    keep = ("gen", "proposed", "duplicates", "oversize", "inapplicable", "filter_rejected", "accepted", "rejected_by_reason", "proposed_by_op",
+            "rejected_by_op", "accepted_by_op", "front_size", "hv", "front_distinct", "pop_rules_mean", "elite")
+    (ELITES / "generation-log.json").write_text(json.dumps({f"line-{l['line']:02d}": [{k: g[k] for k in keep} for g in l["log"]] for l in R["lines"]}))
     print(f"froze {len(R['lines'])} elites to {ELITES}")
 
 
@@ -189,6 +223,7 @@ if __name__ == "__main__":
     ap.add_argument("--run", action="store_true")
     ap.add_argument("--analyze", action="store_true")
     ap.add_argument("--freeze", action="store_true")
+    ap.add_argument("--report", action="store_true")
     ap.add_argument("--lines", type=int, default=LINES)
     a = ap.parse_args()
     if a.pilot:
@@ -197,5 +232,7 @@ if __name__ == "__main__":
         run(a.lines)
     if a.analyze:
         analyze()
+    if a.report:
+        report()
     if a.freeze:
         freeze()
