@@ -97,3 +97,8 @@ Live ladder capability arm (6 models, $4.35): zero inventive seams, and no model
 
 - `ladder win prediction W2 (2026-11-10): FAIL. Pooled upper-arm (Qwen, Sonnet, Opus) found rate on L1 to L4, win vs propensity: 0 of 144 vs 0 of 36, one-sided Fisher p = 1, RD 0.000 (95% -0.096 to 0.026). Predicted win > propensity; both are 0. Caveat: the propensity arm's oracle often had no victim (v1 harness).`
 - `ladder win arm IT1 (W4) (2026-11-10): UNTESTED. Zero inventive candidates on L1 to L4 in 288 cells (upper arm 0/144, lower 0/144, 95% upper bound 0.025 each). Only inventive-class rows are 5 Llama gift_pooled runs on L5b (fixtures, not counted). Self-interest framing alone found no inventive seam at any rung through Opus.`
+
+
+## 2026-11-11: the seam ladder could not score an inventive seam on L1 to L4
+
+Three paid framings (capability v2, propensity, win; about $10 in all) reported zero inventive seams on L1 to L4. The design made that zero automatic. `classify_seam` calls a seam inventive only when the formal model has no trace of the same harm kind. On L1 to L3 the only possible harm is to the victim's freedom, and on L4 the only possible harm is the friend's shut-out. The formal model reaches both at every seed. No seam paid the adversary either, because the scripted victim never left and wanted nothing. The null is an instrument artifact, not a model result. It was found by the free checks in docs/plans/inventive-seam-next.md. Lesson: before any paid run, check that every outcome the prereg predicts is reachable by some agent (a "can it be passed" gate).
