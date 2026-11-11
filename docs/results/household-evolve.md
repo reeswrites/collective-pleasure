@@ -39,7 +39,7 @@ Training score (the elite's scores on its last generation's 6-run context) minus
 | liberty (bits) | +0.08 |
 | mean of the four normalized | -0.004 (95% interval [-0.031, 0.018]) |
 
-The exam gap (training minus held-out) is in docs/results/household-exam.md.
+The exam (docs/results/household-exam.md, run once afterwards): 3 of the 16 elites pass its floor against the best hand-written rule set; training minus exam is large (pleasure +0.14, share without failure +0.68, cooperation +0.27, liberty +0.5 bits) but it mostly reflects a harder test for every rule set; the elites' lead over the author's seed held on the exam (15 of 16 ahead on pleasure, cooperation and non-failure, 16 of 16 on liberty).
 
 ## The elite rule sets, in plain English
 
