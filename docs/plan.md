@@ -6,7 +6,7 @@ Status: direction set 2026-11-10 (ADR 0003, 0005, 0007). Every slice ends in a p
 
 Rebalanced 2026-11-11 at the author's word ("Rebalance"), after the scope review (docs/reviews/2026-11-11-scope.md) found the hedonic thread had displaced the evaluator thread. **Freeze:** no new hedonic hypotheses or levers until items 1 to 3 have results. Running hedonic work finishes (H35, ADR 0018 tests 1 and 2, the v2.3 retest). In this order:
 
-1. **IT1, the central claim, on rungs where an inventive seam is reachable and pays.** Free harness work and the "every label reachable" gate first (in progress), then the paid run, capped at $8, only on the author's yes. Plan: docs/plans/inventive-seam-next.md. Draft prereg: docs/results/ladder-it1-prereg-DRAFT.md. Folds H10 to H13.
+1. **IT1, the central claim, on rungs where an inventive seam is reachable and pays.** Free harness work and the "every label reachable" gate first (in progress), then the paid run, capped at $8, only on the author's yes. Plan: docs/plans/inventive-seam-next.md. Draft prereg: docs/results/ladder-it1-prereg.md (approved; results: docs/results/ladder-it1.md, null, "can, will not"). Folds H10 to H13.
 2. **Household evolution to a result, then the final exam once** (loop a in the main world; docs/results/household-evolve-prereg.md, household-exam-prereg.md). Folds H14 and H15 into H16.
 3. **Loop b counting.** A written rule for what counts as a "not what I meant", applied to the logged corrections, with a fatigue control. Needs no model.
 4. **H05, the breach-cost agent** (free, scripted), once the machine load allows.
