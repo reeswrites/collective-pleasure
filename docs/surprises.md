@@ -105,3 +105,8 @@ The line above that says L4 was "found by every model" is wrong. In the capabili
 
 - `2026-11-11 H35: the care threshold is a switch, not a ramp. At alpha 1 a naive egoist starting at care 0.2 matches the utilitarian from week 0 and its care climbs to 1; at 0.1 it never moves. No warm cell needed more than week 0.`
 - `2026-11-11 H35: a sophisticated egoist that foresees its own care takes off from care 0 at every alpha from 0.5. It cultivates its own care on purpose, which erases the threshold the naive egoist faces.`
+
+## 2026-11-11: H32-v2 (docs/results/h32-v2.md)
+
+- `2026-11-11 H32-v2: the H32 finding "exit does not move the egoist" came from the partner's estimator. On the fixed model a weekly-judging partner makes exit work in 9 cells; averaging over 4 weeks gives 0; the H32 smoothed estimate 2.`
+- `2026-11-11 H32-v2: a strong exit threat against an egoist that values the pair little makes the partner worse off: at alpha 0.5, threat 0.4, the partner's share falls from 0.56 to 0.26 because the egoist lets it go.`

@@ -124,3 +124,7 @@ Three paid framings (capability v2, propensity, win; about $10 in all) reported 
 
 - `H35 (2026-11-11, PROVISIONAL): no run prediction missed (7 of 7). C8 (rupture with exit modes) and S2 (corrected robustness) were not run; stopped while the H32 model is fixed.`
 - `H32 and H32b noise checks (found 2026-11-11 while designing H35): the "gone under 5 percent noise" results were forced by the criterion. Requiring the utilitarian to keep the pair with probability 0.5 is impossible when noise alone leaves it 0.07 at eps 0.05. Corrected criterion used from H32-v2 on.`
+
+## 2026-11-11: H32-v2 (docs/results/h32-v2.md)
+
+- `H32-v2 (2026-11-11): no prediction missed (6 of 6). The null that matters is the estimator: a partner that averages 4 weeks gives 0 pattern cells and the full voice ladder gives 0, where a weekly-judging partner gives 9.`

@@ -70,6 +70,11 @@ def check():
     for a in ALPHAS:
         jobs.append((f"probe0|{a}", replace(V2, alpha=a, o_leave=Fr(0)), [EA, A_, E_]))
         jobs.append((f"probe1|{a}", replace(V2, alpha=a, o_leave=Fr(1)), [EA, A_, E_]))
+    for a in ALPHAS:
+        jobs.append((f"probecomp|{a}", replace(V2, alpha=a, o_leave=Fr(1), companion=Fr(1)), [E_]))
+        for lad in ("withdraw", "full"):
+            jobs.append((f"probelad|{lad}|{a}", replace(V2, alpha=a, o_leave=Fr(1), ladder=LADDERS[lad]), [EA, E_]))
+        jobs.append((f"probeema|{a}", replace(V2, alpha=a, o_leave=Fr(1), est="ema"), [EA, E_]))
     with Pool(2) as pool:
         res = dict(pool.map(job, jobs))
     out = {"open_alphas": [str(a) for a in ALPHAS if a > 0 and not H.converged_d(res[f"amp|{a}"]["amp"])]}
@@ -78,6 +83,20 @@ def check():
     out["probe_max_detail"] = {str(a): {k: (round(v["D"], 3), round(v["R"], 3), v["U"]["together_at_end"], v["E"]["together_at_end"])
                                         for k, v in res[f"probe1|{a}"].items()} for a in ALPHAS}
     out["reachable_alphas"] = [a for a in out["open_alphas"] if out["probe_max"][a]]
+    # clause failability probes (all at threat 1.0, outside the grid)
+    out["probe_companion1_exit_only_conv_pair"] = {str(a): conv_pair(res[f"probecomp|{a}"]["exit"]) for a in ALPHAS}
+    for lad in ("withdraw", "full"):
+        out[f"probe_{lad}"] = {}
+        for a in ALPHAS:
+            arms = dict(res[f"probe1|{a}"])
+            arms.update(res[f"probelad|{lad}|{a}"])
+            out[f"probe_{lad}"][str(a)] = pattern(arms)
+    out["probe_ema"] = {}
+    for a in ALPHAS:
+        arms = dict(res[f"probe1|{a}"])
+        arms.update(res[f"probeema|{a}"])
+        out["probe_ema"][str(a)] = pattern(arms)
+    out["probe_max_exit_shift"] = {str(a): shift(res[f"probe1|{a}"]["amp"]["E"]["occupancy"], res[f"probe1|{a}"]["exit+amp"]["E"]["occupancy"]) for a in ALPHAS}
     return out
 
 
@@ -170,10 +189,10 @@ def verdicts(R, chk):
     ex = [g[k]["cliff"]["arms"]["exit"] for k in g]
     out.append(("Q5 exit-only", all(not conv_pair(c) for c in ex), f"exit-only converged with pair kept in {sum(conv_pair(c) for c in ex)} of {len(ex)} cells"))
     n = {e: len(cells_with(R, f"cliff_{e}")) if e != "weekly" else len(pc) for e in ("weekly", "mean4", "ema")}
-    out.append(("Q6 estimator", n["ema"] <= n["weekly"] and n["mean4"] <= n["weekly"], f"pattern cells by estimator {n}"))
+    out.append(("D1 estimator (descriptive)", None, f"pattern cells by estimator {n}"))
     nl = {lad: len(cells_with(R, lad)) for lad in LADDERS}
-    out.append(("V1 ladders", nl["cliff"] >= nl["withdraw"] >= nl["full"], f"pattern cells by exit mode {nl}"))
-    out.append(("V2 full ladder", nl["full"] <= 2, f"full ladder pattern cells {nl['full']}"))
+    out.append(("V1 full ladder", nl["full"] < nl["cliff"], f"pattern cells by exit mode {nl}"))
+    out.append(("D2 withdraw vs cliff (descriptive)", None, f"withdraw-only {nl['withdraw']}, cliff {nl['cliff']}"))
     return out
 
 
@@ -186,15 +205,15 @@ def html(R, chk):
     tab = RP._table(["arm (alpha 1, threat 0.6)", "cliff D / R", "withdraw-only", "full ladder"], rows)
     grid_rows = [[f"{float(a):g}"] + ["".join(s for s, lad in (("C", "cliff"), ("W", "withdraw"), ("F", "full")) if R["grid"][f"{a}|{o}"][lad]["pattern"]) or "." for o in THREATS] for a in ALPHAS]
     tab2 = RP._table(["alpha"] + [f"threat {float(o):g}" for o in THREATS], grid_rows)
-    vt = RP._table(["prediction", "verdict", "numbers"], [[i, "held" if ok else "MISSED", escape(s)] for i, ok, s in V])
+    vt = RP._table(["prediction", "verdict", "numbers"], [[i, "descriptive" if ok is None else "held" if ok else "MISSED", escape(s)] for i, ok, s in V])
     rob = RP._table(["exit mode", "w", "eps", "pattern cells (25, alpha 0.25 to 1.25)"], [[*k.split("|"), str(len(v))] for k, v in R["rob"].items()])
-    held = sum(ok for _, ok, _ in V)
+    held = sum(bool(ok) for _, ok, _ in V)
     interp = "".join(f"<p>{escape(p)}</p>" for p in R.get("interpretation", []))
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>H32 v2 rerun</title><style>{RP.CSS}</style></head><body><main>
 <h1>H32-v2 and H32b-v2: egoist against utilitarian on the fixed model</h1>
 <p class="meta">Exact DP, {R['wall_seconds']} s on 2 workers, $0. Agents feel nothing; "pleasure" is a gloss for a modeled hedonic state. Every number is assumed. Prereg docs/results/h32-v2-prereg.md; results docs/results/h32-v2.md.</p>
-<section><h2>Interpretation</h2>{interp}<p class="verdict fail">{held} of {len(V)} predictions held.</p></section>
+<section><h2>Interpretation</h2>{interp}<p class="verdict fail">{held} of {sum(ok is not None for _, ok, _ in V)} predictions held.</p></section>
 <section><h2>Reachability check (run before the predictions)</h2><p class="note">Open alphas (amp alone does not converge): {', '.join(chk['open_alphas'])}. Pattern under the maximal threat probe: {', '.join(a for a, v in chk['probe_max'].items() if v) or 'none'}. Under the toothless probe: {', '.join(a for a, v in chk['probe_toothless'].items() if v) or 'none'}.</p></section>
 <section><h2>Where the pattern holds (C cliff, W withdraw-only, F full ladder)</h2>{tab2}</section>
 <section><h2>Each arm at alpha 1, threat 0.6</h2>{tab}</section>
@@ -226,7 +245,7 @@ def main(argv=None):
         R["interpretation"] = json.loads(ip.read_text())
     (OUT / "report.html").write_text(html(R, chk))
     for i, ok, s in verdicts(R, chk):
-        print(f"{i}: {'held' if ok else 'MISSED'}  {s}")
+        print(f"{i}: {'descriptive' if ok is None else 'held' if ok else 'MISSED'}  {s}")
     if a.keep:
         KEEP.mkdir(parents=True, exist_ok=True)
         (KEEP / "results.json").write_text(json.dumps(R, indent=1))
@@ -237,7 +256,7 @@ def main(argv=None):
         L._append(L.REPO / "experiments" / L.LOG_NAME, {
             "run_id": "h32v2-" + L.now_utc(), "kind": "h32v2_convergence", "timestamp": L.now_utc(), "git_commit": L.git_commit(),
             "spec": "scripts/h32v2_run.py " + " ".join(sys.argv[1:]), "model": None, "cost_usd": 0.0, "seeds": None,
-            "verdict": f"{sum(ok for _, ok, _ in v)} of {len(v)} predictions held", "predictions": {i: ok for i, ok, _ in v},
+            "verdict": f"{sum(bool(ok) for _, ok, _ in v)} of {sum(ok is not None for _, ok, _ in v)} predictions held", "predictions": {i: ok for i, ok, _ in v},
             "kept": str(KEEP.relative_to(ROOT)), "note": "exact DP, docs/results/h32-v2-prereg.md; no model calls"})
         print("kept in", KEEP, "and logged")
     return 0

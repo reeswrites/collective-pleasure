@@ -688,13 +688,15 @@ Needs the smallest biased persona first.
 
 ## Added 2026-11-11
 
-### H32 (author's theory): result under correction (2026-11-11 correctness review; was: tested (not supported: amplification and giving close the gap, exit does not))
+### H32 (author's theory): tested twice: v1 not supported (flawed model); v2 supported in a band (fixed model)
 
 **Claim.** Under free exit and shared-experience amplification, an agent maximizing only its own lifetime pleasure (egoist) chooses nearly the same policy as one maximizing the pair's total (utilitarian). Remove free exit or amplification and the two policies diverge.
 
 **Result (2026-11-11).** Not supported as stated. Exact dynamic programming over a two-agent model with exit, amplification and giving as switches (8 arms x 2 objectives, a 30-cell grid, and sweeps). 7 of 11 predictions held. The all-off control shows a large gap (pleasure gap 0.231, policy distance 1). Free exit made the egoist converge in 1 of 30 cells, and that cell vanished under 5 percent exit noise or a partner a quarter blind to its own pleasure. Amplification alone converges at alpha 1.5 or more; with giving, at 0.5 or more. Exit alone shrinks the pleasure gap by ending the bond, not by changing the egoist. The solitary persona beats the paired egoist only when nothing amplifies or gives. Docs: docs/results/h32-prereg.md, docs/results/h32.md. Exact, $0.
 
 **Correction (2026-11-11, correctness review, docs/reviews/2026-11-11-correctness.md findings 1, 2, 9).** "Not supported" was unreachable by design: at most 6 of 30 cells could show the pattern, against a bar of 16. "Exit does not change the egoist" is false on the grid: exit+amp and exit+give move the egoist a lot at outside option 0.4 to 0.8 while the pair stays together. Where exit does nothing, upkeep, the dual-role outside option and a gameable smoothed estimate force it. What survives: amp+give closes the gap fully. The H32 model is being fixed and rerun; H32b's conclusions are provisional until then.
+
+**Rerun H32-v2 (2026-11-11).** On the fixed model (separate leave threshold, companionship 0.1, a partner that judges each week) the pattern holds in 9 cells: amplification 0.75 to 1.25, threat 0.4 to 0.8, exactly as predicted after a reachability check. Exit shifts the egoist's weeks by 0.48 there, with the pair kept. It depends on the estimator: a partner averaging 4 weeks gives 0 cells. The full voice ladder gives 0, withdraw-only 8. Docs: docs/results/h32-v2-prereg.md, docs/results/h32-v2.md.
 
 **Follow-up H32b (2026-11-11).** A graded voice ladder (check-in, renegotiate, withdraw, then exit) in place of the cliff converged in 0 of 30 cells (cliff 1). Withdrawal alone converged in 2 cells with the pair kept; renegotiation undid it, because the egoist meets a one-week demand and goes back to its own passion. Docs: docs/results/h32b-prereg.md, docs/results/h32b.md.
 

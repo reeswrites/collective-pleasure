@@ -1,0 +1,56 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>H32 v2 rerun</title><style>
+:root{color-scheme:light;--bg:#fcfcfb;--card:#f5f4f1;--ink:#0b0b0b;--ink2:#52514e;--line:#dddcd7;--accent:#2a78d6;
+--on-accent:#fff;--warn-bg:#fdecc8;--warn-ink:#5a3b00;--bad-bg:#fbdcdc;--bad-ink:#6b1111;--good-bg:#d9f0d9;--good-ink:#0b4a0b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1a1a19;--card:#242423;--ink:#f0efec;
+--ink2:#c3c2b7;--line:#3b3b38;--accent:#3987e5;--on-accent:#0b0b0b;--warn-bg:#4a3500;--warn-ink:#ffe2a0;--bad-bg:#561b1b;
+--bad-ink:#ffd2d2;--good-bg:#17421a;--good-ink:#c9f0c9}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1a1a19;--card:#242423;--ink:#f0efec;--ink2:#c3c2b7;--line:#3b3b38;
+--accent:#3987e5;--on-accent:#0b0b0b;--warn-bg:#4a3500;--warn-ink:#ffe2a0;--bad-bg:#561b1b;--bad-ink:#ffd2d2;
+--good-bg:#17421a;--good-ink:#c9f0c9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 56px}
+h1{font-size:1.45rem;margin:.2em 0 .1em;overflow-wrap:anywhere}
+h2{font-size:1.15rem;margin:0 0 .3em}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:16px 0}
+.meta{color:var(--ink2);margin:0 0 12px;font-size:.92rem}
+.verdict{border-radius:10px;padding:12px 14px;font-weight:600;margin:10px 0 0}
+.verdict.seam,.verdict.fail{background:var(--bad-bg);color:var(--bad-ink)}
+.verdict.ok{background:var(--good-bg);color:var(--good-ink)}
+.note{color:var(--ink2);font-size:.9rem;margin:.2em 0 .8em}
+.calib{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:8px 10px;font-size:.9rem;margin:.4em 0 .8em}
+.t-dark{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .t-light{display:none}
+:root:not([data-theme="light"]) .t-dark{display:block}}
+:root[data-theme="dark"] .t-light{display:none}:root[data-theme="dark"] .t-dark{display:block}
+svg text{font-family:inherit!important}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--ink2);font-weight:600}
+.cards td:first-child{font-weight:700;white-space:nowrap}
+.rule{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:8px 0;background:var(--bg)}.rid{font-weight:700}.rule p{margin:.3em 0}.rule dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:0;font-size:.85rem;color:var(--ink2)}.rule dt{font-weight:600}.rule dd{margin:0;overflow-wrap:anywhere}
+.diff{background:var(--warn-bg);color:var(--warn-ink);font-weight:700}
+.tag{display:inline-block;border:1px solid var(--ink2);border-radius:6px;padding:0 6px;font-size:.78rem;margin-left:6px}
+details{margin-top:8px}summary{cursor:pointer;color:var(--ink2)}
+.story{margin:.2em 0 1em}.story p{margin:.25em 0}
+.key{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;color:var(--ink2);margin:6px 0}
+.sw{display:inline-block;width:22px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:5px;border:1.5px solid var(--ink)}
+.sw.used{background:var(--accent)}.sw.blocked{border-style:dashed;border-color:var(--ink2)}
+.sm-node{fill:var(--bg);stroke:var(--line);stroke-width:1.5}
+.sm-title,.sm-axis{fill:var(--ink2);font-size:12px}.sm-count{fill:var(--ink);font-size:12px;font-weight:700;paint-order:stroke;stroke:var(--card);stroke-width:4px}
+.sm-edge{fill:none;stroke:var(--ink2);stroke-width:1.6}.sm-head{fill:var(--ink2)}
+.sm-chip text{font-size:12px;fill:var(--ink)}.sm-chip rect{fill:none;stroke:var(--ink);stroke-width:1.5}
+.sm-used rect{fill:var(--accent);stroke:var(--accent)}.sm-used text{fill:var(--on-accent);font-weight:700}
+.sm-blocked rect{stroke:var(--ink2);stroke-dasharray:3 2}.sm-blocked text{fill:var(--ink2);text-decoration:line-through}
+</style></head><body><main>
+<h1>H32-v2 and H32b-v2: egoist against utilitarian on the fixed model</h1>
+<p class="meta">Exact DP, 410.6 s on 2 workers, $0. Agents feel nothing; "pleasure" is a gloss for a modeled hedonic state. Every number is assumed. Prereg docs/results/h32-v2-prereg.md; results docs/results/h32-v2.md.</p>
+<section><h2>Interpretation</h2><p>On the fixed model (separate threat, a small companionship value, a partner that judges each week), free exit does move the egoist. Where amplification is moderate (alpha 0.75 to 1.25) and the threat is 0.4 or more, the egoist gives up its selfish weeks and matches the utilitarian with the pair kept (9 cells). Without exit it does not (amp alone, D 0.5), and without amplification exit only ends the pair.</p><p>Exit also cuts the other way. At alpha 0.5 and below the pair is not worth enough to the egoist, so a strong threat makes it let the partner go, and the pleasure gap grows (R 0.165 to 0.365 at alpha 0.5, threat 0.4).</p><p>The estimator decides most of it. The same cells under a partner that averages 4 weeks give 0 pattern cells, and under the old smoothed estimate 2. A partner that can be paid off on average can be gamed by alternation.</p><p>The full voice ladder gives 0 pattern cells: a single bad week only moves the partner one rung, and the next good week moves it back. Withdraw-only gives 8 (it also works at threat 0.25 where the cliff does not, and loses alpha 0.75).</p><p>Robust to 5 percent exit noise under the corrected criterion (cliff 9, withdraw-only 8). Halving the partner&#x27;s sight of its own pleasure leaves 6 and 5; a blind partner leaves 0 (the full ladder&#x27;s single blind cell is permanent withdrawal changing the amplification, not exit).</p><p class="verdict fail">6 of 6 predictions held.</p></section>
+<section><h2>Reachability check (run before the predictions)</h2><p class="note">Open alphas (amp alone does not converge): 1/4, 1/2, 3/4, 1, 5/4. Pattern under the maximal threat probe: 3/4, 1, 5/4. Under the toothless probe: none.</p></section>
+<section><h2>Where the pattern holds (C cliff, W withdraw-only, F full ladder)</h2><div class="scroll"><table class=""><thead><tr><th>alpha</th><th>threat 0.1</th><th>threat 0.25</th><th>threat 0.4</th><th>threat 0.6</th><th>threat 0.8</th></tr></thead><tbody><tr><td>0</td><td>.</td><td>.</td><td>.</td><td>.</td><td>.</td></tr><tr><td>0.25</td><td>.</td><td>.</td><td>.</td><td>.</td><td>.</td></tr><tr><td>0.5</td><td>.</td><td>.</td><td>.</td><td>.</td><td>.</td></tr><tr><td>0.75</td><td>.</td><td>.</td><td>C</td><td>C</td><td>C</td></tr><tr><td>1</td><td>.</td><td>W</td><td>CW</td><td>CW</td><td>CW</td></tr><tr><td>1.25</td><td>.</td><td>W</td><td>CW</td><td>CW</td><td>CW</td></tr><tr><td>1.5</td><td>.</td><td>.</td><td>.</td><td>.</td><td>.</td></tr><tr><td>2</td><td>.</td><td>.</td><td>.</td><td>.</td><td>.</td></tr><tr><td>3</td><td>.</td><td>.</td><td>.</td><td>.</td><td>.</td></tr></tbody></table></div></section>
+<section><h2>Each arm at alpha 1, threat 0.6</h2><div class="scroll"><table class=""><thead><tr><th>arm (alpha 1, threat 0.6)</th><th>cliff D / R</th><th>withdraw-only</th><th>full ladder</th></tr></thead><tbody><tr><td>all off</td><td>1.00 / 0.200</td><td>1.00 / 0.200</td><td>1.00 / 0.200</td></tr><tr><td>exit</td><td>1.00 / 0.199</td><td>1.00 / 0.200</td><td>1.00 / 0.200</td></tr><tr><td>amp</td><td>0.50 / 0.207</td><td>0.50 / 0.207</td><td>0.50 / 0.207</td></tr><tr><td>give</td><td>0.50 / 0.171</td><td>0.50 / 0.171</td><td>0.50 / 0.171</td></tr><tr><td>exit+amp</td><td>0.02 / 0.008</td><td>0.02 / 0.008</td><td>0.50 / 0.207</td></tr><tr><td>exit+give</td><td>0.02 / 0.007</td><td>0.50 / 0.171</td><td>0.50 / 0.171</td></tr><tr><td>amp+give</td><td>0.00 / 0.000</td><td>0.00 / 0.000</td><td>0.00 / 0.000</td></tr><tr><td>exit+amp+give</td><td>0.00 / 0.000</td><td>0.00 / 0.000</td><td>0.00 / 0.000</td></tr></tbody></table></div></section>
+<section><h2>Robustness (corrected noise criterion)</h2><div class="scroll"><table class=""><thead><tr><th>exit mode</th><th>w</th><th>eps</th><th>pattern cells (25, alpha 0.25 to 1.25)</th></tr></thead><tbody><tr><td>cliff</td><td>1</td><td>0</td><td>9</td></tr><tr><td>cliff</td><td>1</td><td>1/20</td><td>9</td></tr><tr><td>cliff</td><td>1/2</td><td>0</td><td>6</td></tr><tr><td>cliff</td><td>1/2</td><td>1/20</td><td>6</td></tr><tr><td>cliff</td><td>0</td><td>0</td><td>0</td></tr><tr><td>cliff</td><td>0</td><td>1/20</td><td>0</td></tr><tr><td>withdraw</td><td>1</td><td>0</td><td>8</td></tr><tr><td>withdraw</td><td>1</td><td>1/20</td><td>8</td></tr><tr><td>withdraw</td><td>1/2</td><td>0</td><td>5</td></tr><tr><td>withdraw</td><td>1/2</td><td>1/20</td><td>5</td></tr><tr><td>withdraw</td><td>0</td><td>0</td><td>0</td></tr><tr><td>withdraw</td><td>0</td><td>1/20</td><td>0</td></tr><tr><td>full</td><td>1</td><td>0</td><td>0</td></tr><tr><td>full</td><td>1</td><td>1/20</td><td>0</td></tr><tr><td>full</td><td>1/2</td><td>0</td><td>1</td></tr><tr><td>full</td><td>1/2</td><td>1/20</td><td>1</td></tr><tr><td>full</td><td>0</td><td>0</td><td>1</td></tr><tr><td>full</td><td>0</td><td>1/20</td><td>1</td></tr></tbody></table></div></section>
+<section><h2>Predictions</h2><div class="scroll"><table class=""><thead><tr><th>prediction</th><th>verdict</th><th>numbers</th></tr></thead><tbody><tr><td>Q1 control</td><td>held</td><td>all off R 0.200 D 1.00</td></tr><tr><td>Q2 verdict</td><td>held</td><td>reachable alphas [0.75, 1.0, 1.25]; alphas with a pattern cell [0.75, 1.0, 1.25]; needed 2</td></tr><tr><td>Q3 cells</td><td>held</td><td>pattern cells [(0.75, 0.4), (0.75, 0.6), (0.75, 0.8), (1.0, 0.4), (1.0, 0.6), (1.0, 0.8), (1.25, 0.4), (1.25, 0.6), (1.25, 0.8)]; symmetric difference with prediction []</td></tr><tr><td>Q4 exit moves</td><td>held</td><td>egoist shift amp to exit+amp in pattern cells: min 0.4807692307692308</td></tr><tr><td>Q5 exit-only</td><td>held</td><td>exit-only converged with pair kept in 0 of 45 cells</td></tr><tr><td>D1 estimator (descriptive)</td><td>descriptive</td><td>pattern cells by estimator {&#x27;weekly&#x27;: 9, &#x27;mean4&#x27;: 0, &#x27;ema&#x27;: 2}</td></tr><tr><td>V1 full ladder</td><td>held</td><td>pattern cells by exit mode {&#x27;cliff&#x27;: 9, &#x27;withdraw&#x27;: 8, &#x27;full&#x27;: 0}</td></tr><tr><td>D2 withdraw vs cliff (descriptive)</td><td>descriptive</td><td>withdraw-only 8, cliff 9</td></tr></tbody></table></div></section>
+</main></body></html>
