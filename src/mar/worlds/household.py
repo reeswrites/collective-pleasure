@@ -1546,7 +1546,7 @@ class WeeklyWorld:
                 continue
             if dec == "breach":
                 row["breach"] = True
-                cand = self.breach(r, a, w, cand)
+                cand = dict(self.breach(r, a, w, cand), breach=True)     # so `apply` logs the exit as a breach (exit_log)
                 row["take"] = cand.get("take", 0)
             self.run.trace.append(row)
             self.apply(r, cand, w, sanc)
