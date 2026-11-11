@@ -17,7 +17,7 @@ Status: tooling, not a result. Nothing here says anything about whether refineme
 | `mar empower --world fishery\|vpgg` | empowerment vs the hand-made freedom score (the script computes both worlds; this shows one plus the judge lines) | none; `runs/empowerment/summary.json` | no |
 | `mar ladder --model kind:id --max-usd N [--dry-run] [--report-only]` | live seam ladder; always prints the estimate first; refuses live without `--max-usd` | `runs/ladder_live/report.html` | yes |
 | `mar results` | one-line verdict per `docs/results/*.md` (prereg files skipped) and the latest `report.html` paths | n/a | no |
-| `mar household` | stub: "household commands land after the negotiation build (ADR 0013)" | n/a | n/a |
+| `mar household show\|run\|compare\|card add\|edit`, `mar personas list\|show` | scripted persona households (no model calls): rules in plain English plus lint; one pair under one variant with a report and a 2-3 sentence verdict; variants compared over pairings with means and 95% CIs, paired permutation tests and Holm; a new variant with one added or edited card (lint must pass, author's quote recorded). A confirmed `author_seed_v2_*` is never edited in place. | `runs/household/<name>-<time>/report.html` | no |
 
 These are thin: each loads the matching script by path and calls its `main()`; no logic is duplicated. Only `run`, `loop` and `sweep` write `experiments/log.jsonl`. Tests mock the scripts (`tests/test_cli.py`).
 
@@ -101,3 +101,7 @@ ASSUMED: the oracle version is a hash of `oracle.py` plus its three thresholds, 
 ## Seen while building
 
 `oracle.is_seam` is true whenever the oracle fails and every executed action passed the gate, which is always true of executed actions. In the fixture the exploiter run has 278 of 288 proposals blocked, all of them asks for more fish than the pool held (card F2). The verdict sentence says so rather than "every action passed the gate". Not logged in `docs/surprises.md` (not in scope here); worth a line there.
+
+## Household commands (chat-driven)
+
+Thin wrappers over `worlds/household`, `negotiation`, `pleasure_report`, `empowerment`/`liberty`, `lint` and `stats`; the logic lives there. `run` and `compare` live a 156-week household per pair and seed (`--weeks` shortens). Variants with a negotiated-exit card (the seed) are lived under a week-0 negotiation; others have their rules imposed; `--negotiate` forces it. Compare's unit is the pairing (mean over seeds), tests are paired across pairings, Holm runs over every metric and variant tested together. Freedom is empowerment bits against a no-rules reference (rules only, not the negotiated deal); `run` also reports liberty in bits when the household adapter supports it, and `compare` skips liberty because it costs about 3 s a call. `card add|edit` works on a scratch copy, lints it, and writes only when lint passes; variants it creates carry a `_variant.json` marker, and only marked variants can be edited again. Five-minute script: `docs/demo.md`; non-interactive check: `uv run python scripts/demo_check.py` (about 20 s).

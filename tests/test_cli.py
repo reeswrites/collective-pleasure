@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from mar import cli
 from mar.cli import main
 
 RULES = str(Path(__file__).parent.parent / "rules" / "fishery")
@@ -166,6 +167,143 @@ def test_results_lists_verdicts_and_reports(capsys, tmp_path):
     assert "-prereg.md:" not in out
 
 
-def test_household_stub(capsys, tmp_path):
-    code, out = run(capsys, tmp_path, "household")
-    assert code == 0 and "household commands land after the seed v2 run" in out
+# ---- household commands: parsing, dispatch and the guards (the heavy run functions are mocked) ----
+
+HH = Path(__file__).parent.parent / "rules" / "household"
+
+
+def hh_root(tmp_path):
+    import shutil
+    root = tmp_path / "hh"
+    root.mkdir()
+    for v in ("author_seed_v2_bindable", "baseline"):
+        shutil.copytree(HH / v, root / v)
+    return root
+
+
+def runh(capsys, tmp_path, root, *args):
+    code = main(["--runs-dir", str(tmp_path), "--experiments-dir", str(tmp_path / "exp"), "--household-rules", str(root), *args])
+    cap = capsys.readouterr()
+    return code, cap.out, cap.err
+
+
+def test_household_requires_a_subcommand(tmp_path):
+    import pytest
+    with pytest.raises(SystemExit):
+        main(["--runs-dir", str(tmp_path), "household"])
+
+
+def test_household_show_is_plain_english_with_lint(capsys, tmp_path):
+    code, out, _ = runh(capsys, tmp_path, hh_root(tmp_path), "household", "show", "--variant", "baseline")
+    assert code == 0 and "In plain words:" in out and "Lint: PASS" in out and "A partner may always see the friend" in out
+
+
+def test_household_show_confirmed_seed_warns_and_unknown_variant_errors(capsys, tmp_path):
+    root = hh_root(tmp_path)
+    _, out, _ = runh(capsys, tmp_path, root, "household", "show", "--variant", "author_seed_v2_bindable")
+    assert "confirmed seed" in out
+    code, _, err = runh(capsys, tmp_path, root, "household", "show", "--variant", "nope")
+    assert code == 2 and "no household variant 'nope'" in err
+
+
+def test_personas_list_and_show(capsys, tmp_path):
+    code, out = run(capsys, tmp_path, "personas", "list")
+    assert code == 0 and "anchor" in out and "pressing" in out
+    code, out = run(capsys, tmp_path, "personas", "show", "wanderer")
+    assert code == 0 and "Wanderer" in out
+    code, _ = run(capsys, tmp_path, "personas", "show", "nobody")
+    assert code == 2
+
+
+def test_pair_parsing():
+    ps = cli._personas()
+    (a, b), = cli._pairs(ps, "anchor,The Wanderer")
+    assert (a.id, b.id) == ("p-anchor", "p-wanderer")
+    assert len(cli._pairs(ps, "hand")) == 15 and len(cli._pairs(ps, "pressing")) == 42 and len(cli._pairs(ps, "all")) == 57
+    import pytest
+    with pytest.raises(ValueError):
+        cli._pairs(ps, "anchor")
+
+
+def test_household_run_dispatches_and_writes_report(capsys, tmp_path, monkeypatch):
+    seen = []
+    rec = {"arm": "v22_baseline", "a": "p-anchor", "b": "p-wanderer", "seed": 0, "up": "up", "pleasure": 0.9, "s_off": 0.1, "s_non": 0.0,
+           "trust_mean": 0.7, "together_weeks": 156, "weeks": 156, "pairing_up": True}
+    monkeypatch.setattr(cli, "_hh_run_one", lambda v, d, pa, pb, seed, weeks, neg: seen.append((v, pa.id, pb.id, seed, weeks, neg)) or (rec, []))
+    monkeypatch.setattr(cli, "_hh_freedom", lambda *a, **k: {"freedom": 0.9, "open": 0, "liberty": None})
+    monkeypatch.setattr(cli, "_hh_page", lambda *a: "<html>fake</html>")
+    code, out, _ = runh(capsys, tmp_path, hh_root(tmp_path), "household", "run", "--variant", "baseline", "--pair", "anchor,wanderer",
+                        "--seeds", "2", "--weeks", "20")
+    assert code == 0 and [s[3] for s in seen] == [0, 1] and seen[0][4:] == (20, False)
+    assert Path(out.split("report: ")[1].splitlines()[0]).read_text() == "<html>fake</html>"
+    assert "upward spiral" in out and "offsettable" in out and "liberty is not available" in out
+
+
+def test_household_run_auto_negotiates_seed_variants(tmp_path):
+    root = hh_root(tmp_path)
+    a = cli.parser().parse_args(["--household-rules", str(root), "household", "run", "--variant", "x", "--pair", "a,b"])
+    assert cli._negotiated(a, "author_seed_v2_bindable", False) and not cli._negotiated(a, "baseline", False)
+    assert cli._negotiated(a, "baseline", True)
+
+
+def test_household_compare_dispatch_and_stats(capsys, tmp_path, monkeypatch):
+    def fake(a, variants, pairs, seeds, weeks, neg):
+        keys = [f"{x.id}+{y.id}" for x, y in pairs]
+        base = {k: 0.5 + 0.01 * i for i, k in enumerate(keys)}
+        up = {"baseline": base, "other": {k: v + 0.1 + 0.001 * i for i, (k, v) in enumerate(base.items())}}
+        data = {v: {m: dict(up[v]) for m, _ in cli.HH_METRICS} for v in variants}
+        return data, {v: False for v in variants}
+    monkeypatch.setattr(cli, "_hh_compare_data", fake)
+    code, out, _ = runh(capsys, tmp_path, hh_root(tmp_path), "household", "compare", "--variants", "baseline,other", "--pairs", "hand")
+    assert code == 0 and "Holm" in out and "95% bootstrap CIs" in out and "holds up after Holm" in out
+    assert Path(out.split("report: ")[1].splitlines()[0]).exists()
+
+
+def test_household_compare_needs_two_variants(capsys, tmp_path):
+    code, _, err = runh(capsys, tmp_path, hh_root(tmp_path), "household", "compare", "--variants", "baseline")
+    assert code == 2 and "at least two" in err
+
+
+CARD = ["--attribute", "partner", "--deontic", "must_not", "--aim", "take_shared", "--cond", "consented:eq:0",
+        "--gloss", "The pot is for shared needs unless both agree.", "--source", "author, chat", "--quote", "shared pot unless both agree"]
+
+
+def test_card_add_copies_base_lints_and_records_quote(capsys, tmp_path):
+    root = hh_root(tmp_path)
+    code, out, _ = runh(capsys, tmp_path, root, "household", "card", "add", "--variant", "newv", "--id", "R9-x", *CARD)
+    assert code == 0 and "lint passes" in out and "In plain English" in out
+    assert (root / "newv" / "R9-x.yaml").exists() and (root / "newv" / "R6-no-veto.yaml").exists()
+    assert not (root / "author_seed_v2_bindable" / "R9-x.yaml").exists()
+    rows = [json.loads(x) for x in (tmp_path / "exp" / "changes.jsonl").read_text().splitlines()]
+    assert rows[-1]["quote"] == "shared pot unless both agree" and rows[-1]["kind"] == "rule"
+    code, out, _ = runh(capsys, tmp_path, root, "household", "card", "edit", "--variant", "newv", "--id", "R9-x", "--gloss", "New gloss.", "--quote", "tweak")
+    assert code == 0 and "New gloss." in (root / "newv" / "R9-x.yaml").read_text()
+    assert len((tmp_path / "exp" / "changes.jsonl").read_text().splitlines()) == 2
+
+
+def test_card_never_touches_confirmed_seed_or_foreign_variants(capsys, tmp_path):
+    root = hh_root(tmp_path)
+    before = (root / "author_seed_v2_bindable" / "R6-no-veto.yaml").read_text()
+    code, _, err = runh(capsys, tmp_path, root, "household", "card", "edit", "--variant", "author_seed_v2_bindable", "--id", "R6-no-veto", "--gloss", "x", "--quote", "q")
+    assert code == 2 and "never edited in place" in err
+    assert (root / "author_seed_v2_bindable" / "R6-no-veto.yaml").read_text() == before
+    code, _, err = runh(capsys, tmp_path, root, "household", "card", "edit", "--variant", "baseline", "--id", "B4-may-see", "--gloss", "x", "--quote", "q")
+    assert code == 2 and "not made by this command" in err
+    assert not (tmp_path / "exp" / "changes.jsonl").exists()
+
+
+def test_card_refused_when_lint_fails_and_writes_nothing(capsys, tmp_path):
+    root = hh_root(tmp_path)
+    bad = ["--attribute", "partner", "--deontic", "must_not", "--aim", "leave", "--gloss", "Nobody may ever leave.", "--source", "t", "--quote", "no leaving"]
+    code, _, err = runh(capsys, tmp_path, root, "household", "card", "add", "--variant", "badv", "--id", "R9-bad", *bad)
+    assert code == 1 and "refused" in err
+    assert not (root / "badv").exists() and not (tmp_path / "exp" / "changes.jsonl").exists()
+
+
+def test_card_needs_quote_and_valid_cond(capsys, tmp_path):
+    import pytest
+    root = hh_root(tmp_path)
+    with pytest.raises(SystemExit):
+        main(["household", "card", "add", "--variant", "v", "--id", "R9"])
+    code, _, err = runh(capsys, tmp_path, root, "household", "card", "add", "--variant", "v", "--id", "R9", *CARD[:6], "--cond", "bad", *CARD[8:])
+    assert code == 2 and "expr:op:value" in err

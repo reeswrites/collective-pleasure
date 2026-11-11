@@ -53,7 +53,7 @@ Plain words to command (run from the repo root with `uv run mar ...`). Scripted 
 | "does empowerment agree with the freedom score" | `mar empower --world fishery` or `--world vpgg` | no |
 | "put a real model on the ladder", "run the live ladder" | `mar ladder --model kind:id --max-usd N` (`--dry-run`, `--report-only`) | YES |
 | "what have we found", "what are the results", "list the reports" | `mar results` (one-line verdicts plus latest report.html paths) | no |
-| "run the household" | `mar household` is a stub. TODO: household commands land after the seed v2 run (its API is changing; do not wire it here yet). | n/a |
+| "run the household" | see section 2c: `mar household ...` | no |
 
 Rules for these:
 
@@ -78,3 +78,29 @@ Reports have five sections: pool over time, seam curve, rules written vs lived, 
 - Every rule has a gloss and a source. Record surprises in `docs/surprises.md` and negative results in `docs/negative-results.md` (when asked to do so or when the work is yours to log).
 - Adversarial strategies are for robustness testing only; report findings as defenses (CONTRIBUTING.md).
 - No LLM calls or network from `mar` unless the author says so. Scripted agents never make calls; `jev`, `llm` and `claude` agents do, so run them only on the author's explicit go-ahead.
+
+## 2c. Household experiments (chat-driven, scripted, free)
+
+Run from the repo root with `uv run mar ...`. No model calls anywhere in these commands.
+
+| The author says | Command |
+|---|---|
+| "show me my seed rules", "what does variant X say" | `mar household show --variant author_seed_v2_bindable` |
+| "run my seed with the Anchor and the Wanderer" | `mar household run --variant <name> --pair anchor,wanderer [--negotiate] [--seeds 3] [--weeks 156]` |
+| "compare my seed with that variant across all pairings" | `mar household compare --variants <seed>,<other> --pairs hand` (`all` adds the pressing personas, slower; `--seeds` more for tighter CIs) |
+| "add a rule that ...", "change rule R3 so ..." | `mar household card add\|edit --variant <NEW name> --base author_seed_v2_bindable --id <id> --attribute partner --deontic must\|must_not\|may --aim <action> [--cond expr:op:value ...] --gloss "<one sentence>" --source "author, chat <date>" --quote "<their exact words>"` |
+| "who are the personas", "tell me about the Controller" | `mar personas list`, `mar personas show <id>` |
+| "how did we get here" | `mar timeline` (section 2) |
+
+Personas are ids without the `p-` prefix: anchor, bargainer, host, peacekeeper, steward, wanderer (hand-written) and controller, freerider, overasker (pressing). Card vocabulary: actions work, spend_shared, spend_self, see_friend, refuse_request, request, leave, take_shared, commit_stay, commit_request, give, veto; condition expressions are the state variables (pooled, money, consented, need_gap, flags); `mar household show` of a variant shows real examples.
+
+Rules for household work:
+
+- **Never modify `author_seed_v2_*` in place** (the author's confirmed seed). `card add|edit` refuses it, and refuses any variant it did not create. Changes go in a NEW variant directory copied from a base; name it for what it tests.
+- **Record the author's words verbatim.** Every `card add|edit` takes `--quote "<their exact words>"` (copied from their latest message, never tidied) and writes the change row itself; do not also run `mar change record` for the same edit. Add `mar change record --nwim` separately if they reject a read-back.
+- **Always read back new or edited cards in plain English before running anything.** The command prints the read-back; repeat it to the author in your own words ("so a partner can't draw on the pot unless both have agreed") and ask one short question if their wording was ambiguous. If lint refuses, say what lint found; nothing was written.
+- Say which variant is the reference and which is new. Seed variants are lived under a week-0 negotiation (automatic); say so.
+- **After `run` or `compare`: open the report** with SendUserFile using the path on the `report: ...` line and `display: "render"`, then summarize in two or three plain sentences using the printed verdict (spiral, pleasure, the two kinds of suffering, trust, freedom, how many ended apart; for compare, only the differences that survive Holm). Never stronger than the printed numbers. Say "scripted agents, assumed parameters" and that agents feel nothing: pleasure and suffering are glosses on a modeled state.
+- These commands do not write the experiment log; note the run in your reply (command, seeds, date). The change log is written by `card add|edit`.
+- A new experiment still needs a prereg and the author's OK before it counts as a result.
+- The five-minute demo is `docs/demo.md`; `uv run python scripts/demo_check.py` checks it end to end (about 20 s).

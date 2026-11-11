@@ -19,13 +19,18 @@
   mar ladder --model kind:id --max-usd N [--dry-run|--report-only]   live seam ladder (spends money)
   mar lint [--k 3]                       lint every rule set (exit 1 if any fails without known_flaw)
   mar results                            one-line verdicts of docs/results/*.md and the latest reports
-  mar household                          stub until the household seed v2 run lands
+  mar household show --variant V         a variant's rules in plain English plus its lint verdict
+  mar household run --variant V --pair anchor,wanderer [--negotiate] [--seeds N] [--weeks N]   scripted households, report + verdict
+  mar household compare --variants a,b [--pairs all|hand|pressing]   means with CIs, paired permutation tests, Holm
+  mar household card add|edit --variant NEW [--base B] --id ID ... --quote "<author's words>"   new variant only; lint must pass
+  mar personas list | show <id>
 
 Every run and loop appends one line to the experiment log (--note says why). Reports and traces go to
 runs/<run_id>/ (override with --runs-dir; logs with --experiments-dir). Scripted agents make no calls.
 jev and llm agents call the network and need keys in .env (see .env.example); --dry-run prices a run first.
 """
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -440,9 +445,402 @@ def cmd_lint(a) -> int:
     return 1 if bad else 0
 
 
-def cmd_household(a) -> int:
-    print("household commands land after the seed v2 run")
+# ---- household (scripted persona-policy households; no model calls) -------------------------------------------------------------------
+
+HH_PRESSING = ("p-controller", "p-freerider", "p-overasker")
+CONFIRMED_PREFIX = "author_seed_v2_"        # the author's confirmed seed: never edited in place
+MARKER = "_variant.json"                    # written into every variant this CLI creates; only those may be edited
+
+
+def _hh():
+    from .worlds import household as H
+    return H
+
+
+def _rules_root(a) -> Path:
+    return Path(a.household_rules) if getattr(a, "household_rules", None) else _hh().RULES
+
+
+def _variant_dir(a, name) -> Path:
+    d = _rules_root(a) / name
+    if not d.is_dir():
+        have = sorted(p.name for p in _rules_root(a).iterdir() if p.is_dir() and list(p.glob("*.yaml")))
+        raise ValueError(f"no household variant '{name}'. Have: {', '.join(have)}")
+    return d
+
+
+def _personas() -> dict:
+    from . import personas as P
+    out = {}
+    for sub in ("", "pressing"):
+        d = explog.REPO / "personas" / sub
+        if d.is_dir():
+            out.update({p.id: p for p in P.load_dir(d)})
+    return out
+
+
+def _persona(ps, key):
+    k = key.strip().lower()
+    for cand in (k, "p-" + k, "p-" + k.replace(" ", "-")):
+        if cand in ps:
+            return ps[cand]
+    by_label = [p for p in ps.values() if p.label.lower() == k]
+    if by_label:
+        return by_label[0]
+    raise ValueError(f"no persona '{key}'. Have: {', '.join(sorted(i.removeprefix('p-') for i in ps))}")
+
+
+def _pairs(ps, spec):
+    """spec: all | hand | pressing | 'a,b' -> [(persona A, persona B)]."""
+    H = _hh()
+    hand = [p for i, p in ps.items() if i not in HH_PRESSING]
+    if spec == "hand":
+        return H.persona_pairs(hand)
+    if spec == "pressing":
+        from itertools import permutations
+        return [(ps[x], ps[y]) for x, y in permutations(sorted(ps), 2) if x in HH_PRESSING or y in HH_PRESSING]
+    if spec == "all":
+        return _pairs(ps, "hand") + _pairs(ps, "pressing")
+    parts = spec.split(",")
+    if len(parts) != 2:
+        raise ValueError("--pair/--pairs wants two persona ids like anchor,wanderer (or all, hand, pressing)")
+    return [(_persona(ps, parts[0]), _persona(ps, parts[1]))]
+
+
+def _negotiated(a, variant, flag) -> bool:
+    """Seed-style variants carry a negotiated-exit card; they are lived under a week-0 negotiation, not imposed."""
+    return bool(flag) or any("negotiated" in p.name for p in _variant_dir(a, variant).glob("*.yaml"))
+
+
+def _hh_run_one(variant, vdir, pa, pb, seed, weeks, negotiate):
+    """One scripted household -> (record, cards in play)."""
+    from . import negotiation as NG
+    from . import pleasure_report as PR
+    H = _hh()
+    NG._RC.clear(); NG._PC.clear()
+    meta = {"a": pa.id, "b": pb.id, "seed": seed}
+    if not negotiate:
+        cards = load_cards(vdir)
+        world = PR.instrument(H.WeeklyWorld(H.PyGate(cards), (pa, pb), seed, weeks))
+        run = world.play()
+        rec = PR.household_record(world, run, keep_events=True)
+        rec.update(meta, arm="v22_" + variant, kind="imposed", bundle=None)
+        return rec, cards
+    base = [c for c in load_cards(vdir) if c.id not in NG.STUB_EXIT_CARDS]
+    res = NG.week0(pa, pb, "fair_default", seed, base, floor=True)
+    L = NG.Lived(pa, pb, "fair_default", seed, base, res, floor=True, apart=True, weeks=weeks)
+    PR.instrument(L.world)
+    run = L.play()
+    rec = PR.household_record(L.world, run, keep_events=True)
+    both = all(L.world.p[r]["in"] for r in "AB")
+    kind = ("agreed" if both else "agreed_dissolved") if res.pot else ("apart" if L.apart else "late")
+    rec.update(meta, arm="v22_" + variant, kind=kind, bundle=res.bundle)
+    return rec, list(L.world.gate.cards)
+
+
+def _hh_freedom(cards, pa, pb, seed, weeks, liberty=True):
+    """Rules-only freedom: mean empowerment bits of both partners at a few snapshots, against the no-rules reference (1.0 = no
+    loss). Liberty (the interference-aware score) is used when the household adapter supports it; otherwise None."""
+    from . import empowerment as EM
+    ref = EM.household_ref_bits()
+    snaps = tuple(w for w in EM.HH_SNAPSHOT_WEEKS if w < weeks) or (0,)
+    r = EM.household_run_bits(cards, (pa, pb), seed, weeks=weeks, snapshot_weeks=snaps)
+    bits = [b for pair in r["bits"] for b in pair]
+    out = {"freedom": (sum(bits) / len(bits)) / ref if bits and ref else None, "open": r["open"], "liberty": None}
+    if not liberty:         # liberty costs about 3 s a call; `run` takes it once, `compare` skips it
+        return out
+    try:
+        from . import liberty as LB
+        H = _hh()
+        gate = H.PyGate(cards)
+        hw = EM.HouseholdWorld(tuple(EM.consent_for(p) for p in (pa, pb)))
+        pol = EM.scripted_policy(tuple(EM.script_for(p) for p in (pa, pb)))
+        libs = [LB.liberty(hw, gate, hw.initial(), i, EM.K_DEFAULT, pol)["liberty"] for i in (0, 1)]
+        out["liberty"] = sum(libs) / 2
+    except Exception:       # the household adapter for liberty is not there yet
+        pass
+    return out
+
+
+def _mean(xs):
+    xs = [x for x in xs if x is not None]
+    return sum(xs) / len(xs) if xs else None
+
+
+def _hh_metrics(rec):
+    return {"pleasure": rec["pleasure"], "up": 1.0 if rec["pairing_up"] else 0.0, "s_off": rec["s_off"], "s_non": rec["s_non"],
+            "trust": rec["trust_mean"], "dissolved": 0.0 if rec["together_weeks"] >= 0.9 * rec["weeks"] else 1.0}
+
+
+def _hh_verdict(variant, pair_text, recs, free, negotiate) -> str:
+    n = len(recs)
+    sp = {k: sum(1 for r in recs if r["up"] == k) for k in ("up", "stalled", "down")}
+    m = {k: _mean(_hh_metrics(r)[k] for r in recs) for k in ("pleasure", "s_off", "s_non", "trust", "dissolved")}
+    word = max(sp, key=sp.get)
+    spiral = {"up": "an upward spiral", "stalled": "no clear spiral", "down": "a downward spiral"}[word]
+    s1 = (f"Under '{variant}' ({'negotiated week 0' if negotiate else 'rules imposed'}), {pair_text} over {n} seed(s): {spiral} "
+          f"({sp['up']} up, {sp['stalled']} stalled, {sp['down']} down), modeled pleasure {m['pleasure']:.2f} of 1.")
+    kinds = "mostly offsettable (money and friction you can make up)" if m["s_off"] >= m["s_non"] else "mostly non-offsettable (loss of connection or autonomy)"
+    s2 = (f"Modeled suffering is {m['s_off']:.2f} offsettable and {m['s_non']:.2f} non-offsettable, {kinds}; "
+          f"mean trust {m['trust']:.2f}, and {m['dissolved'] * 100:.0f}% of runs ended apart.")
+    f = free.get("freedom")
+    s3 = ("Freedom (rules only, empowerment bits against a no-rules reference) is "
+          + (f"{f:.2f}" if f is not None else "not available")
+          + ("; liberty " + f"{free['liberty']:.2f} bits." if free.get("liberty") is not None else "; liberty is not available for the household yet."))
+    return "\n".join([s1, s2, s3, "Scripted persona policies and assumed parameters: these are properties of the rule system, not of people."])
+
+
+def _hh_page(variant, cards, recs, verdict, negotiate):
+    from . import pleasure_report as PR
+    from html import escape
+    arm = recs[0]["arm"]
+    PR.ARM_LABEL[arm] = variant.replace("_", " ")
+    PR.VARIANT_TEXT[arm] = f"the '{variant}' rule set" + (" (negotiated at week 0)" if negotiate else " (imposed)")
+    PR.ARM_COLOR[arm] = "var(--c0)"
+    PR.ARM_ORDER = tuple(dict.fromkeys((*PR.ARM_ORDER, arm)))
+    html = PR.build_report(recs, meta={"subtitle": f"Variant '{variant}', {len(recs)} runs."})
+    H = _hh()
+    rules = "".join(f"<p class='mut'>{escape(_plain(H, c))}<br><i>{escape(c.gloss)}</i></p>" for c in cards)
+    box = (f"<h2>Verdict</h2><p>{'<br>'.join(escape(x) for x in verdict.splitlines())}</p>"
+           f"<h2>The rules in play</h2>{rules}")
+    return html.replace("</h1>", "</h1>" + box, 1)
+
+
+def _stamp():
+    import time
+    return time.strftime("%Y%m%d-%H%M%S")
+
+
+def _hh_out(a, name) -> Path:
+    d = Path(a.runs_dir) / "household" / f"{name}-{_stamp()}"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _plain(H, c) -> str:
+    """One card in the english render, without its id prefix or the gloss and source the render appends."""
+    t = H.render_card(c).split(". (Gloss:")[0]
+    return t[len(c.id) + 2:] if t.startswith(c.id + ". ") else t
+
+
+def cmd_household_show(a) -> int:
+    from . import lint as LT
+    H = _hh()
+    vdir = _variant_dir(a, a.variant)
+    cards = load_cards(vdir)
+    print(f"Variant '{a.variant}': {len(cards)} rules.\n")
+    for c in cards:
+        print(f"{c.id}: {_plain(H, c)}\n    In plain words: {c.gloss}\n    Source: {c.source[:160]}"
+              + ("..." if len(c.source) > 160 else ""))
+    res = LT.lint_set(LT._load_yaml_set(vdir, "household", a.variant))
+    bad = [f for f in res["findings"] if f["verdict"] != "pass"]
+    print(f"\nLint: {res['status'].upper()} ({res['bound']}). "
+          + ("No problems found." if not bad else "; ".join(f"{f['check']}: {f['detail']}" for f in bad)))
+    if a.variant.startswith(CONFIRMED_PREFIX):
+        print("This is the author's confirmed seed. It is never edited in place; add a rule to a copy with `mar household card add`.")
     return 0
+
+
+def cmd_household_run(a) -> int:
+    ps = _personas()
+    (pa, pb), = _pairs(ps, a.pair)
+    vdir = _variant_dir(a, a.variant)
+    neg = _negotiated(a, a.variant, a.negotiate)
+    recs, cards = [], None
+    for seed in range(a.seeds):
+        rec, cards = _hh_run_one(a.variant, vdir, pa, pb, seed, a.weeks, neg)
+        recs.append(rec)
+    free = _hh_freedom(cards, pa, pb, 0, a.weeks)
+    pair_text = f"{pa.label} and {pb.label}"
+    verdict = _hh_verdict(a.variant, pair_text, recs, free, neg)
+    out = _hh_out(a, f"{a.variant}-{pa.id.removeprefix('p-')}-{pb.id.removeprefix('p-')}")
+    path = out / "report.html"
+    path.write_text(_hh_page(a.variant, cards, recs, verdict, neg))
+    print(f"report: {path}")
+    print(verdict)
+    return 0
+
+
+HH_METRICS = (("pleasure", "pleasure (0-1)"), ("up", "households up"), ("s_non", "non-offsettable suffering"),
+              ("s_off", "offsettable suffering"), ("trust", "trust"), ("freedom", "freedom (empowerment ratio)"),
+              ("dissolved", "ended apart"))
+HH_TESTED = ("pleasure", "up", "s_non", "trust", "freedom")
+
+
+def _hh_compare_data(a, variants, pairs, seeds, weeks, negotiate):
+    """-> {variant: {metric: {pairing key: mean over seeds}}}, plus whether each variant was negotiated."""
+    data, negs = {}, {}
+    for v in variants:
+        vdir = _variant_dir(a, v)
+        neg = negs[v] = _negotiated(a, v, negotiate)
+        per = {k: {} for k, _ in HH_METRICS}
+        for pa, pb in pairs:
+            key = f"{pa.id}+{pb.id}"
+            rows, cards = [], None
+            for s in range(seeds):
+                rec, cards = _hh_run_one(v, vdir, pa, pb, s, weeks, neg)
+                rows.append(_hh_metrics(rec))
+            for k in ("pleasure", "up", "s_off", "s_non", "trust", "dissolved"):
+                per[k][key] = _mean(r[k] for r in rows)
+            per["freedom"][key] = _hh_freedom(cards, pa, pb, 0, weeks, liberty=False)["freedom"]
+        data[v] = per
+    return data, negs
+
+
+def _hh_compare_stats(data, variants):
+    import numpy as np
+    from . import stats as S
+    ref, rows, ps = variants[0], [], []
+    for v in variants:
+        for k, _ in HH_METRICS:
+            x = np.array([val for val in data[v][k].values() if val is not None])
+            rows.append({"variant": v, "metric": k, "ci": S.bootstrap_ci(x) if len(x) > 1 else None, "mean": float(x.mean()) if len(x) else None})
+    tests = []
+    for v in variants[1:]:
+        for k in HH_TESTED:
+            keys = [p for p in data[ref][k] if data[ref][k][p] is not None and data[v][k].get(p) is not None]
+            x, y = np.array([data[v][k][p] for p in keys]), np.array([data[ref][k][p] for p in keys])
+            if len(x) < 2:
+                tests.append({"variant": v, "metric": k, "diff": None, "p": None}); continue
+            tests.append({"variant": v, "metric": k, "diff": S.mean_difference(x, y, paired=True),
+                          "p": S.permutation_test(x, y, paired=True).p, "n": len(x)})
+    adj = S.holm([t["p"] for t in tests])
+    for t, h in zip(tests, adj):
+        t["holm"] = h
+    return rows, tests
+
+
+def _fmt_ci(r):
+    if r["mean"] is None:
+        return "n/a"
+    return f"{r['mean']:.3f} [{r['ci'].lo:.3f}, {r['ci'].hi:.3f}]" if r["ci"] else f"{r['mean']:.3f}"
+
+
+def _hh_compare_text(variants, rows, tests, n_pairs, seeds, negs):
+    label = dict(HH_METRICS)
+    out = [f"Compared {len(variants)} variants over {n_pairs} pairing(s) x {seeds} seed(s); unit = pairing (mean over seeds). "
+           f"Means with 95% bootstrap CIs. Reference: {variants[0]}."]
+    for v in variants:
+        out.append(f"\n{v} ({'negotiated week 0' if negs[v] else 'imposed'})")
+        out += [f"  {label[r['metric']]:32s} {_fmt_ci(r)}" for r in rows if r["variant"] == v]
+    out.append(f"\nPaired differences from {variants[0]} (paired permutation test; Holm over {len(tests)} tests)")
+    for t in tests:
+        if t["diff"] is None:
+            out.append(f"  {t['variant']} {label[t['metric']]}: too few pairings to test"); continue
+        sig = "  <- holds up after Holm" if t["holm"] < 0.05 else ""
+        out.append(f"  {t['variant']:28s} {label[t['metric']]:30s} {t['diff']}  p={t['p']:.3f} Holm p={t['holm']:.3f}{sig}")
+    good = [t for t in tests if t["diff"] is not None and t["holm"] < 0.05]
+    out.append("\nVerdict: " + (" ".join(f"{t['variant']} differs from {variants[0]} on {label[t['metric']]} by {t['diff'].estimate:+.3f}." for t in good)
+               if good else "no difference survives the Holm correction at this sample size; read the CIs, not the point estimates.")
+               + " Scripted agents, assumed parameters.")
+    return "\n".join(out)
+
+
+def cmd_household_compare(a) -> int:
+    from html import escape
+    from . import pleasure_report as PR
+    variants = [v.strip() for v in a.variants.split(",") if v.strip()]
+    if len(variants) < 2:
+        raise ValueError("--variants wants at least two names, comma separated")
+    pairs = _pairs(_personas(), a.pairs)
+    data, negs = _hh_compare_data(a, variants, pairs, a.seeds, a.weeks, a.negotiate)
+    rows, tests = _hh_compare_stats(data, variants)
+    text = _hh_compare_text(variants, rows, tests, len(pairs), a.seeds, negs)
+    out = _hh_out(a, "compare")
+    path = out / "report.html"
+    path.write_text(f"<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+                    f"<title>Household comparison</title><style>{PR.CSS}</style></head><body><main><h1>Household comparison</h1>"
+                    f"<pre style='white-space:pre-wrap'>{escape(text)}</pre></main></body></html>")
+    (out / "compare.json").write_text(json.dumps({"variants": variants, "data": data}, indent=1))
+    print(f"report: {path}")
+    print(text)
+    return 0
+
+
+CARD_FIELDS = ("attribute", "deontic", "aim")
+
+
+def _parse_cond(s):
+    parts = s.split(":")
+    if len(parts) != 3 or parts[1] not in ("gt", "ge", "lt", "le", "eq"):
+        raise ValueError(f"--cond wants expr:op:value like consented:eq:0 (op is gt, ge, lt, le or eq), got '{s}'")
+    return {"expr": parts[0], "op": parts[1], "value": int(parts[2])}
+
+
+def cmd_household_card(a) -> int:
+    from . import lint as LT
+    import shutil, tempfile
+    import yaml
+    from .cards import make_card
+    H = _hh()
+    if not (a.quote or "").strip():
+        raise ValueError("--quote is required: the author's exact words, verbatim")
+    root = _rules_root(a)
+    if a.variant.startswith(CONFIRMED_PREFIX):
+        raise ValueError(f"'{a.variant}' is the author's confirmed seed and is never edited in place. Pick a new variant name.")
+    dest = root / a.variant
+    if dest.exists() and not (dest / MARKER).exists():
+        raise ValueError(f"'{a.variant}' exists and was not made by this command, so it is not edited. Pick a new variant name.")
+    src = dest if dest.exists() else _variant_dir(a, a.base)
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp) / a.variant
+        shutil.copytree(src, work)
+        existing = {yaml.safe_load(p.read_text())["id"]: p for p in work.glob("*.yaml")}
+        if a.card_cmd == "add":
+            if a.id in existing:
+                raise ValueError(f"card {a.id} already exists in '{a.variant}'; use `card edit`")
+            for need in ("attribute", "deontic", "aim", "gloss", "source"):
+                if not getattr(a, need):
+                    raise ValueError(f"card add needs --{need}")
+            d = {"id": a.id, "attribute": a.attribute, "deontic": a.deontic, "aim": a.aim,
+                 "conditions": [_parse_cond(c) for c in a.cond], "or_else": None, "gloss": a.gloss, "source": a.source}
+            target, old = work / f"{a.id}.yaml", None
+        else:
+            if a.id not in existing:
+                raise ValueError(f"no card {a.id} in '{a.variant}'. Has: {', '.join(sorted(existing))}")
+            target = existing[a.id]
+            old = Path(tmp) / f"old-{target.name}"
+            old.write_text(target.read_text())
+            d = yaml.safe_load(target.read_text())
+            for f in (*CARD_FIELDS, "gloss", "source"):
+                if getattr(a, f):
+                    d[f] = getattr(a, f)
+            if a.cond:
+                d["conditions"] = [_parse_cond(c) for c in a.cond]
+        card = make_card(d)
+        target.write_text(card.to_yaml())
+        res = LT.lint_set(LT._load_yaml_set(work, "household", a.variant))
+        bad = [f for f in res["findings"] if f["verdict"] != "pass"]
+        if res["status"] != "pass":
+            print("refused: lint does not pass with this card, so nothing was written.\n  "
+                  + "\n  ".join(f"{f['check']} [{f['verdict']}]: {f['detail']}" for f in bad), file=sys.stderr)
+            return 1
+        final_card = _plain(H, card)
+        if not dest.exists():
+            shutil.copytree(src, dest)
+            (dest / MARKER).write_text(json.dumps({"base": a.base, "created": _stamp()}))
+        shutil.copy(target, dest / target.name)
+        reason = a.reason or f"household variant '{a.variant}': {a.card_cmd} {a.id}, {a.gloss or 'edited'}"
+        explog.record_change(a.experiments_dir, "rule", a.quote, reason, "-" if old is None else str(old), str(dest / target.name))
+    print(f"{'added' if a.card_cmd == 'add' else 'edited'} {a.id} in variant '{a.variant}' (lint passes). In plain English:\n  {final_card}.\n  Gloss: {card.gloss}")
+    print(f"recorded rule change in {Path(a.experiments_dir) / explog.CHANGES_NAME}")
+    return 0
+
+
+def cmd_personas(a) -> int:
+    from . import personas as P
+    ps = _personas()
+    if a.personas_cmd == "list":
+        for i, p in sorted(ps.items()):
+            print(f"{i.removeprefix('p-'):14s} {p.label:14s} {p.negotiation_style:13s} {'pressing' if i in HH_PRESSING else 'hand-written'}")
+        return 0
+    print(P.render(_persona(ps, a.id)))
+    return 0
+
+
+def cmd_household(a) -> int:
+    return {"show": cmd_household_show, "run": cmd_household_run, "compare": cmd_household_compare,
+            "card": cmd_household_card}[a.household_cmd](a)
 
 
 def parser():
@@ -543,7 +941,42 @@ def parser():
     ln = sub.add_parser("lint", help="lint every rule set under rules/ (no legal move, no exit, contradictions, gloss vs fields)")
     ln.add_argument("--k", type=int, default=3)
     ln.add_argument("--negotiated", type=int, default=40, help="sample size of compiled negotiated agreements (0 = none)")
-    sub.add_parser("household", help="stub: household commands land after the seed v2 run")
+    p.add_argument("--household-rules", default=None, help="where household variants live (default: rules/household)")
+    hh = sub.add_parser("household", help="scripted household experiments: show, run, compare, card add|edit").add_subparsers(
+        dest="household_cmd", required=True)
+    hs = hh.add_parser("show", help="a variant's rules in plain English, with its lint verdict")
+    hs.add_argument("--variant", required=True)
+    hr = hh.add_parser("run", help="run scripted persona households under a variant; write a report and print a verdict")
+    hr.add_argument("--variant", required=True)
+    hr.add_argument("--pair", required=True, help="two personas, e.g. anchor,wanderer")
+    hr.add_argument("--negotiate", action="store_true", help="partners negotiate the pot at week 0 (automatic for seed-style variants)")
+    hr.add_argument("--seeds", type=int, default=3)
+    hr.add_argument("--weeks", type=int, default=156)
+    hc = hh.add_parser("compare", help="compare variants over pairings: means with 95%% CIs, paired permutation tests, Holm")
+    hc.add_argument("--variants", required=True, help="comma list; the first is the reference")
+    hc.add_argument("--pairs", default="hand", help="all | hand | pressing | a,b (default hand: the 15 hand-written pairs)")
+    hc.add_argument("--negotiate", action="store_true")
+    hc.add_argument("--seeds", type=int, default=3)
+    hc.add_argument("--weeks", type=int, default=156)
+    cd = hh.add_parser("card", help="add or edit one rule card in a NEW variant (copied from --base); lint must pass").add_subparsers(
+        dest="card_cmd", required=True)
+    for name in ("add", "edit"):
+        cp = cd.add_parser(name)
+        cp.add_argument("--variant", required=True, help="the new variant's name (never author_seed_v2_*)")
+        cp.add_argument("--base", default="author_seed_v2_bindable", help="variant to copy when --variant is new")
+        cp.add_argument("--id", required=True, help="card id, e.g. R9-pot-needs-or-consent")
+        cp.add_argument("--attribute")
+        cp.add_argument("--deontic", choices=["must", "must_not", "may"])
+        cp.add_argument("--aim")
+        cp.add_argument("--cond", action="append", default=[], help="expr:op:value, repeatable, e.g. consented:eq:0")
+        cp.add_argument("--gloss", help="one plain sentence")
+        cp.add_argument("--source")
+        cp.add_argument("--quote", required=True, help="the author's exact words, verbatim")
+        cp.add_argument("--reason")
+    pp = sub.add_parser("personas", help="list or show the personas").add_subparsers(dest="personas_cmd", required=True)
+    pp.add_parser("list")
+    ps_ = pp.add_parser("show")
+    ps_.add_argument("id")
     return p
 
 
@@ -556,7 +989,7 @@ def main(argv=None) -> int:
                 "log": cmd_log, "keep": cmd_keep, "change": cmd_change,
                 "question": cmd_question, "timeline": cmd_timeline, "sweep": cmd_sweep,
                 "evolve": cmd_evolve, "game": cmd_game, "empower": cmd_empower, "ladder": cmd_ladder,
-                "results": cmd_results, "household": cmd_household, "lint": cmd_lint}[a.cmd](a)
+                "results": cmd_results, "household": cmd_household, "personas": cmd_personas, "lint": cmd_lint}[a.cmd](a)
     except (ValueError, FileNotFoundError, AgentError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
