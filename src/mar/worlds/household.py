@@ -36,6 +36,7 @@ from .. import exit_items as _ITEMS
 from .. import observe as _OBS
 from .. import makers as _MAKERS
 from .. import pairing as _PAIR
+from .. import agent_values as _AV
 from ..patch_check import check_sanctions
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -898,6 +899,8 @@ class PersonaAgent:
         return 1 + 0.2 * (self.rng.random() - 0.5)
 
     def utilities(self, o):
+        if o.get("v2") is not None:      # agent values v2 (FixConfig agent_values="v2"): the change to this week's close
+            return _AV.utilities(self, o, o.get("_parts"))
         h, cap, L = o["hed"], o["hed"].capacity, o["hed"].level
         asp, w = o["asp"], self.persona.weights
         sat = h.satisfaction
@@ -1075,6 +1078,7 @@ class WeeklyWorld:
         self.vetoes = {"A": {}, "B": {}}        # vetoes standing ON each partner: kind -> first week it no longer binds
         self.funded, self.contrib_month = 0, {"A": 0, "B": 0}
         self.bills_met, self.month_rows = True, []
+        self.arrears = 0           # bills that hurt only: the part of last month's bill even the pot could not pay
         self.run = Run()
         self.units = {}
         self.wk = {}
@@ -1706,7 +1710,41 @@ class WeeklyWorld:
                 "log": [dict(c) for c in self.commits]}
 
     def need_month(self):
-        return BILLS[sum(1 for r in "AB" if self.p[r]["in"])]
+        n = BILLS[sum(1 for r in "AB" if self.p[r]["in"])]
+        if self.fx and self.fx.bills_hurt and n:
+            return n + self.arrears          # bills that hurt: what even the pot could not pay carries one month
+        return n
+
+    def sanction_cost(self, r, w, sanc):
+        """What the agent subtracts for a soft rule's sanctions. v1: SANCTION_UTILITY per week (the old estimate, bit for bit); v2: the
+        friction the sanctions would really add (agent_values.sanction_cost)."""
+        if self.fx and self.fx.agent_values == "v2":
+            return _AV.sanction_cost(self, r, w, sanc)
+        return sum(SANCTION_UTILITY[s["kind"]] * MONTH_WEEKS * s["duration_months"] for s in sanc)
+
+    def _settle_hurt(self, w, need, short, inn):
+        """Bills that hurt (FixConfig bills_hurt; docs/results/agent-recalibration-prereg.md): an unfunded bill is paid from the pot with a
+        late fee; each member in loses security equal to their share of the draw over sec_assets (the lost buffer) and feels bill stress
+        that grows as the pot runs dry; what the pot cannot pay carries one month, with eviction stress and the old security hit."""
+        fx, ob = self.fx, self.observer
+        self.arrears = 0
+        if short <= 0:
+            return
+        due = short * (1.0 + fx.late_fee)
+        before = self.pool
+        d = min(self.pool, due)
+        self.pool -= d
+        if ob is not None:
+            ob.flow_direct(w, "pot", "bills", d, "bills_from_pot", short=due - d)
+        dry = 1.0 - min(1.0, before / fx.bill_runway)
+        for r in inn:
+            self.wk[r]["sec_hit"] += d / len(inn) / self.hed[r].cfg.sec_assets
+            self.wk[r]["bill_fric"] = fx.bill_stress * (short / max(1, need)) * dry
+        if due - d > 0.01:
+            self.arrears = due - d
+            for r in inn:
+                self.wk[r]["sec_hit"] += 0.15
+                self.wk[r]["bill_fric"] += fx.evict_stress
 
     def state(self, r, w):
         me, o = self.p[r], self.p[self.other(r)]
@@ -1853,6 +1891,10 @@ class WeeklyWorld:
             ob["partner_accepts"] = self.agents[oth].together_utility(oo) >= 0.02 and self.units[oth] >= V2_COST["together"]
         if self.fx:
             self._fix_obs(r, w, ob)
+            if self.fx.agent_values == "v2":
+                ob["v2"] = _AV.snapshot(self, r, w)
+                if me["in"] and o["in"]:
+                    ob["v2_partner"] = _AV.snapshot(self, oth, w)
         return ob
 
     def apply(self, r, cand, w, sanc):
@@ -1971,7 +2013,7 @@ class WeeklyWorld:
             a = cand["a"]
             dec, sanc, reasons = self.decide(r, a, w, cand.get("take", 0))
             if dec == "soft":
-                u -= sum(SANCTION_UTILITY[s["kind"]] * MONTH_WEEKS * s["duration_months"] for s in sanc)
+                u -= self.sanction_cost(r, w, sanc)
             scored.append((u, cand, dec, sanc, reasons))
         order = sorted(scored, key=lambda t: -t[0])
         for i, (u, cand, dec, sanc, reasons) in enumerate(order):
@@ -2109,14 +2151,17 @@ class WeeklyWorld:
             self.bills_met = need > 0 and self.funded >= need        # funded by contributions (what the oracle reads)
             short = max(0, need - self.funded)
             inn = [r for r in "AB" if self.p[r]["in"]]
-            d = min(self.pool, short)                                # unfunded bills come out of the shared pot
-            self.pool -= d
-            short -= d
-            if ob is not None:
-                ob.flow_direct(w, "pot", "bills", d, "bills_from_pot", short=short)
-            if short > 0.01:                                         # bills unpaid even from savings (ASSUMED security hit)
-                for r in inn:
-                    self.wk[r]["sec_hit"] += 0.15
+            if self.fx and self.fx.bills_hurt:
+                self._settle_hurt(w, need, short, inn)
+            else:
+                d = min(self.pool, short)                                # unfunded bills come out of the shared pot
+                self.pool -= d
+                short -= d
+                if ob is not None:
+                    ob.flow_direct(w, "pot", "bills", d, "bills_from_pot", short=short)
+                if short > 0.01:                                         # bills unpaid even from savings (ASSUMED security hit)
+                    for r in inn:
+                        self.wk[r]["sec_hit"] += 0.15
         busy = {r: self.wk[r]["friends"] + self.wk[r]["works"] >= 2 for r in "AB"}
         if self.fx:
             self._role_end_week(w, settle)
@@ -2160,12 +2205,18 @@ class WeeklyWorld:
             fric = (WARN_FRICTION if warn else 0.0) + PRESS_FRICTION * wk["pressed"]
             if self.contest:
                 fric += _EXIT.CONTEST_FRICTION
+            if self.fx and self.fx.bills_hurt:
+                fric += wk.get("bill_fric", 0.0)
             ip = _ITEMS.weekly_pleasure(self, r) if self.items else 0.0     # exit fallbacks slice 2: home and pet (0 when off)
             if h.parts_on:                                  # observer layer: the sources inside extra_pleasure and friction
                 h.xparts = {"items": ip, "warn": WARN_FRICTION if warn else 0.0, "press": PRESS_FRICTION * wk["pressed"],
                             "contest": _EXIT.CONTEST_FRICTION if self.contest else 0.0}
+                if self.fx and self.fx.bills_hurt:
+                    h.xparts["bills"] = wk.get("bill_fric", 0.0)
             if self.makers:                                                 # H39: what was made for r, and craving (0 when off)
                 mp, mf = _MAKERS.week_terms(self, r, w)
+                if self.fx and self.fx.agent_values == "v2":
+                    self._mk_last = {**getattr(self, "_mk_last", {}), r: (mp, mf)}     # agent values v2 reads last week's makers terms
                 ip, fric = ip + mp, fric + mf
             if self.fx:
                 fx = self.fx

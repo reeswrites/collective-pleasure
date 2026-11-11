@@ -94,7 +94,7 @@ class _Tap:
             rule = {}
             for kk in self.menu["feasible"]:     # the rule check step_agent makes: a soft rule costs its estimated sanction (pure here)
                 dec, sanc, _ = self.world.decide(self.r, kk[0], self.w, kk[2])
-                pen = sum(H.SANCTION_UTILITY[x["kind"]] * H.MONTH_WEEKS * x["duration_months"] for x in sanc) if dec == "soft" else 0.0
+                pen = self.world.sanction_cost(self.r, self.w, sanc) if dec == "soft" else 0.0
                 rule[kk] = (dec, pen)
             self.menu["rule"] = rule
             self.trace_at = len(self.world.run.trace)

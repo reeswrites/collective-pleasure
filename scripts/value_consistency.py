@@ -13,6 +13,10 @@ the same in every copy, so the difference is one unit of that action against idl
   uv run python scripts/value_consistency.py --first        a smaller sample at the week's first call (the rest of the week re-plans)
   uv run python scripts/value_consistency.py --analyze      runs/value-consistency/analysis.json and the tables for the write-up
 
+Agent recalibration (docs/results/agent-recalibration-prereg.md): add --v2 to run the same check with FixConfig(agent_values="v2",
+bills_hurt=True); rows and analysis go to runs/value-consistency-v2/. --passtest prints the preregistered T1-T6 verdict for the rows in
+the chosen directory; --reach the free checks that every verdict can happen (on the v1 rows).
+
 Wording rule: agents feel nothing; "pleasure" is a gloss for a modeled hedonic state.
 """
 import argparse
@@ -54,8 +58,11 @@ def sample_weeks(a, b, seed, n):
     return sorted(rng.sample(range(1, LAST_START + 1), n))
 
 
-def _ctx():
-    fx = dataclasses.replace(RT.FIXES_ON, pairing=PR.dial(0), **RULE)
+V2 = {"agent_values": "v2", "bills_hurt": True}              # the recalibrated agents and bills that hurt (off by default)
+
+
+def _ctx(extra=None):
+    fx = dataclasses.replace(RT.FIXES_ON, pairing=PR.dial(0), **RULE, **(extra or {}))
     return fx
 
 
@@ -69,14 +76,14 @@ def _lived_snapshot(lived):
         world.run, world.hook = run, hook
 
 
-def run_pair(a, b, seed, n_weeks, k, harness):
+def run_pair(a, b, seed, n_weeks, k, harness, extra=None):
     """Play one makers-off life as H39b's M0 arm does and measure the sampled decisions. -> list of decision records."""
     ps = RT.personas()
     for c in (NG._RC, NG._PC, NG._BC):
         c.clear()
     weeks = set(sample_weeks(a, b, seed, n_weeks))
     out = []
-    with HD.use_levers(RT.LEVERS), HD.use_fixes(_ctx()), EF.use_exit_fallback("F4", strip_split=True), EI.use_items(EI.GRID[H38.CELL]):
+    with HD.use_levers(RT.LEVERS), HD.use_fixes(_ctx(extra)), EF.use_exit_fallback("F4", strip_split=True), EI.use_items(EI.GRID[H38.CELL]):
         lived = NG.BaselineLived(ps[a], ps[b], seed, H.load_variant("baseline"), weeks=H.WEEKS, decline=True)
         world = lived.world
         last = {"busy": {"A": False, "B": False}}
@@ -102,20 +109,20 @@ def run_pair(a, b, seed, n_weeks, k, harness):
 
 
 def task(args):
-    a, b, seed, n_weeks, k, harness = args
+    a, b, seed, n_weeks, k, harness, extra = args
     t0 = time.time()
-    recs = run_pair(a, b, seed, n_weeks, k, harness)
+    recs = run_pair(a, b, seed, n_weeks, k, harness, extra)
     return recs, time.time() - t0
 
 
-def collect(cfg, f, workers=WORKERS):
+def collect(cfg, f, workers=WORKERS, extra=None):
     workers = min(workers, 3)
     OUT.mkdir(parents=True, exist_ok=True)
     pairs = H38.pairings(H38.CONFIRM)[::cfg["pairs_every"]]
     done = set()
     if f.exists():
         done = {(r["a"], r["b"], r["seed"]) for r in load(f)}
-    tasks = [(a, b, s, cfg["weeks"], cfg["k"], cfg["harness"]) for (a, b) in pairs for s in cfg["seeds"] if (a, b, s) not in done]
+    tasks = [(a, b, s, cfg["weeks"], cfg["k"], cfg["harness"], extra) for (a, b) in pairs for s in cfg["seeds"] if (a, b, s) not in done]
     print(f"{len(tasks)} tasks, {workers} workers -> {f}", flush=True)
     t0 = time.time()
     with Pool(workers) as pool, f.open("a") as fh:
@@ -141,7 +148,8 @@ def items(recs, applied=True):
         for it in d["items"]:
             if applied and not it["applied"]:
                 continue
-            out.append({"dk": dk, "run": (d["a"], d["b"], d["seed"]), "a": it["a"], "kind": it.get("kind"),
+            out.append({"dk": dk, "run": (d["a"], d["b"], d["seed"]), "a": it["a"], "kind": it.get("kind"), "rule": it.get("rule", "ok"),
+                        "persona": d.get("persona"),
                         "p": it["perceived"], "listed": it.get("listed", True), "in": d["ctx"]["in_hh"] and d["ctx"]["other_in"],
                         "act": {int(h): v for h, v in it["actual"].items()}, "g": {int(h): v for h, v in it["groups"].items()},
                         "levels": d["ctx"]["levels"]})
@@ -285,6 +293,86 @@ def analyze(recs, horizons=VC.HORIZONS, measures=("net", "pl", "raw", "wnet")):
     return res
 
 
+# ---- the preregistered pass test (docs/results/agent-recalibration-prereg.md) ---------------------------------------------------
+
+PASS_ACTIONS = ("work", "rest", "see_friend", "together", "spend_shared", "spend_self")
+T_BARS = {"T1": 0.70, "T2": 0.60, "T3": 0.60, "T4": 0.60, "T5": (0.8, 1.25)}
+
+
+def _prosocial():
+    from mar.worlds.household import PersonaAgent
+    return {pid: PersonaAgent(p).prosocial for pid, p in RT.personas().items()}
+
+
+def target_fn(kind="net"):
+    """The 'actual' a row is held to. net: own net (the main line). social: own + prosocial x partner net (the utility's own
+    definition). unclipped: own unclipped pleasure - suffering."""
+    if kind == "net":
+        return lambda r, h: act_of(r, h)
+    if kind == "unclipped":
+        return lambda r, h: r["act"][h]["own"]["raw"] - (r["act"][h]["own"]["pl"] - r["act"][h]["own"]["net"])
+    pro = _prosocial()
+    return lambda r, h: act_of(r, h) + pro.get(r["persona"], 0.0) * act_of(r, h, "net", "partner")
+
+
+def passtest(recs, kind="net", perceived=None):
+    """T1-T6 at the 1-week horizon. perceived: optional f(row) replacing the agent's number (the --reach checks)."""
+    rows = items(recs)
+    tf = target_fn(kind)
+    P = perceived or (lambda r: r["p"])
+    pv = np.array([P(r) for r in rows])
+    av = np.array([tf(r, 13 if r["rule"] == "soft" else 1) for r in rows])     # Amendment 1: a soft-rule row is held to 13 weeks throughout
+    byd = {}
+    for r, p_, a_ in zip(rows, pv, av):
+        byd.setdefault(r["dk"], []).append((r, p_, a_))
+    within = [spearman([x[1] for x in v], [x[2] for x in v]) for v in byd.values() if len(v) >= 3]
+    within = [x for x in within if x is not None]
+    top = n = 0
+    sw = []
+    for v in byd.values():
+        if len(v) < 2:
+            continue
+        n += 1
+        bp = max(v, key=lambda x: x[1])
+        own = bp[0]["a"] if bp[1] > 0.003 else "idle"
+        ba = max(v, key=lambda x: x[2])
+        top += own == (ba[0]["a"] if ba[2] > 0 else "idle")
+        vs = sorted(v, key=lambda x: -x[1])
+        if vs[0][1] > 0.003:
+            nxt = vs[1] if vs[1][1] > 0.003 else None
+            sw.append(vs[0][2] - (nxt[2] if nxt else 0.0) > 0)
+    out = {"T1": spearman(list(pv), list(av)), "T2": float(np.mean(within)) if within else None, "T3": top / max(1, n),
+           "T4": float(np.mean(sw)) if sw else None, "T5": float((pv @ av) / (pv @ pv)) if pv @ pv > 0 else None, "T6": {}}
+    for a in PASS_ACTIONS:
+        ok = [(r, p_) for r, p_ in zip(rows, pv) if r["a"] == a and r["rule"] != "soft"]
+        soft = [(r, p_) for r, p_ in zip(rows, pv) if r["a"] == a and r["rule"] == "soft"]
+        e = {}
+        for tag, xs, h in (("ok", ok, 1), ("soft", soft, 13)):
+            if len(xs) >= 100:
+                ma, mp = float(np.mean([tf(r, h) for r, _ in xs])), float(np.mean([p_ for _, p_ in xs]))
+                bar = max(0.015, 0.25 * abs(ma))
+                e[tag] = {"n": len(xs), "actual": round(ma, 5), "perceived": round(mp, 5), "gap": round(mp - ma, 5),
+                          "bar": round(bar, 5), "holds": abs(mp - ma) <= bar, "horizon": h}
+            elif xs:
+                e[tag] = {"n": len(xs), "note": "n < 100, no bar"}
+        out["T6"][a] = e
+    hold = {"T1": out["T1"] is not None and out["T1"] >= T_BARS["T1"], "T2": out["T2"] is not None and out["T2"] >= T_BARS["T2"],
+            "T3": out["T3"] >= T_BARS["T3"], "T4": out["T4"] is not None and out["T4"] >= T_BARS["T4"],
+            "T5": out["T5"] is not None and T_BARS["T5"][0] <= out["T5"] <= T_BARS["T5"][1],
+            "T6": all(x.get("holds", True) for e in out["T6"].values() for x in e.values())}
+    out["holds"] = hold
+    out["verdict"] = "PASS" if all(hold.values()) else "FAIL"
+    return out
+
+
+def reach(recs):
+    """Prereg "Can every verdict happen?" on the v1 rows: an oracle agent (perceived = the 1-week actual; the 13-week actual where a soft
+    rule binds, as T6 holds those rows) passes; the v1 agents fail T1-T4 and T6; doubling the oracle's numbers fails T5 (and T6)."""
+    oracle = lambda r: act_of(r, 13 if r["rule"] == "soft" else 1)          # noqa: E731
+    return {"oracle (PASS reachable)": passtest(recs, perceived=oracle), "v1 agents as they are": passtest(recs),
+            "oracle doubled (T5 fails)": passtest(recs, perceived=lambda r: 2 * oracle(r))}
+
+
 def table(res, h=1, m="net"):
     lines = [f"| action | n | perceived | actual {m} {h}w | gap | rho | sign disagree |", "|---|---|---|---|---|---|---|"]
     for a, e in res["per_action"].items():
@@ -301,13 +389,29 @@ def main():
     ap.add_argument("--first", action="store_true")
     ap.add_argument("--analyze", action="store_true")
     ap.add_argument("--workers", type=int, default=WORKERS)
+    ap.add_argument("--v2", action="store_true", help="agent values v2 and bills that hurt; rows in runs/value-consistency-v2/")
+    ap.add_argument("--passtest", action="store_true")
+    ap.add_argument("--reach", action="store_true")
     a = ap.parse_args()
+    global OUT
+    extra = None
+    if a.v2:
+        OUT, extra = ROOT / "runs" / "value-consistency-v2", V2
+    if a.reach:
+        res = reach(load(ROOT / "runs" / "value-consistency" / "rows.jsonl"))
+        print(json.dumps(res, indent=1, default=str))
+        (ROOT / "runs" / "value-consistency" / "reach.json").write_text(json.dumps(res, indent=1, default=str))
     if a.run:
-        collect(MAIN, OUT / "rows.jsonl", a.workers)
+        collect(MAIN, OUT / "rows.jsonl", a.workers, extra)
     if a.harness:
-        collect(HARNESS, OUT / "harness.jsonl", a.workers)
+        collect(HARNESS, OUT / "harness.jsonl", a.workers, extra)
     if a.first:
-        collect(FIRST, OUT / "first.jsonl", a.workers)
+        collect(FIRST, OUT / "first.jsonl", a.workers, extra)
+    if a.passtest:
+        recs = load(OUT / "rows.jsonl")
+        res = {k: passtest(recs, k) for k in ("net", "social", "unclipped")}
+        print(json.dumps(res, indent=1, default=str))
+        (OUT / "passtest.json").write_text(json.dumps(res, indent=1, default=str))
     if a.analyze:
         res = {}
         for name in ("rows", "harness", "first"):

@@ -230,7 +230,8 @@ def _one():
     return 1.0
 
 
-_STEP = {"see_friend": 0, "together": 1, "work": 2, "spend_self": 3, "spend_shared": 4}     # which count an action moves
+_STEP = {"see_friend": 0, "together": 1, "work": 2, "spend_self": 3, "spend_shared": 4, "rest": 5}     # which count an action moves
+#        (rests are read only by agent values v2; under v1 the sixth count changes nothing)
 
 
 class WeekPlanner:
@@ -248,15 +249,23 @@ class WeekPlanner:
         self.gap = max(0, world.need_month() - world.funded) if (world.p[m]["in"] or world.p[world.other(m)]["in"]) else 0
         self.memo = {}
 
-    def __call__(self, st=(0, 0, 0, 0, 0)):
+    def __call__(self, st=(0, 0, 0, 0, 0, 0)):
         if st in self.memo:
             return self.memo[st]
-        f, t, wk, ss, sp = st
+        f, t, wk, ss, sp = st[:5]
         o = dict(self.o)
         a0 = self.o["asp"]
         o["asp"] = {"friends": a0["friends"] + f, "together": a0["together"] + t,
                     "net": a0["net"] + self.inc * wk - self.self_step * ss}
         o["gap"] = min(max(0, self.gap - self.share * sp), 10)
+        if "v2" in self.o:              # agent values v2: the week so far moves with the plan (counts, rests, money, the bill funded)
+            from . import agent_values as AV
+            lev = self.o.get("lever")
+            sc = (lev["friend_scale"], lev["together_scale"]) if (lev and lev["adaptive"]) else (1.0, 1.0)
+            o["v2"] = AV.advance(self.o["v2"], friends=f, together=t, works=wk, self_spends=ss, shared=sp, rests=st[5] if len(st) > 5 else 0,
+                                 inc=self.inc, self_step=self.self_step, share_step=self.share, scale=sc)
+            if self.o.get("v2_partner") is not None:
+                o["v2_partner"] = AV.advance(self.o["v2_partner"], together=t, scale=(1.0, sc[1]))
         ag = self.ag
         had, old = "_noise" in ag.__dict__, ag.__dict__.get("_noise")
         ag._noise = _one
@@ -281,7 +290,7 @@ def week_utilities(world, m, w):
     return WeekPlanner(world, m, w)()
 
 
-def plan_week(util, budget, cost=None, passes=None, floor=0.003, start=(0, 0, 0, 0, 0)):
+def plan_week(util, budget, cost=None, passes=None, floor=0.003, start=(0, 0, 0, 0, 0, 0)):
     """The week as the world plays it: `passes` passes, each taking the highest-utility action above the agent's floor that fits in
     the units left. `util` is a WeekPlanner (utilities move after each action, as the world's do) or a fixed {action: utility}.
     -> (summed utility, [actions])."""
@@ -319,7 +328,7 @@ def plan_value(util, budget, step=1, partner_sessions=0, together_cost=None):
     b = budget
     while b >= -1e-9:
         k = min(partner_sessions, int((b + 1e-9) // together_cost))
-        v, acts = plan_week(util, b - k * together_cost, start=(0, k, 0, 0, 0))
+        v, acts = plan_week(util, b - k * together_cost, start=(0, k, 0, 0, 0, 0))
         v += k * u_tog
         if v > best[0] + 1e-12:
             best = (v, ["partner_together"] * k + acts)

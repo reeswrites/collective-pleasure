@@ -239,6 +239,14 @@ class FixConfig:
     # 26-week windows of the formation, retry, reading and outside-option rollouts.
     decide_on: str = "net"
     decide_weeks: int = 0
+    # Agent recalibration and bills (docs/results/agent-recalibration-prereg.md). Defaults are the old behaviour, bit for bit
+    # (tests/test_agent_values.py). Read only in worlds where the fixes are on; not part of fixes_on.
+    agent_values: str = "v1"         # "v1": PersonaAgent.utilities as before; "v2": the change to this week's close (mar.agent_values)
+    bills_hurt: bool = False         # an unfunded bill costs a late fee, security (the lost buffer) and stress as the pot runs dry
+    late_fee: float = 0.05           # share of the unfunded bill added when the pot pays it (ASSUMED)
+    bill_stress: float = 0.30        # friction per member at settlement x unfunded share x dryness (ASSUMED)
+    bill_runway: float = 30.0        # pot at which dryness is 0: three months of the couple's bill (ASSUMED)
+    evict_stress: float = 0.30       # friction per member when even the pot cannot pay (ASSUMED); the rest carries one month
 
 
 ACTIVE_FIXES = None      # module default, set by `use_fixes`; WeeklyWorld(fixes=None) reads it
@@ -483,6 +491,7 @@ class Hedonic:
         sat = {k: self.satisfaction(k, aspiration_values.get(k, 0.0)) for k in self.targets}
         p_asp = sum(self.asp_w[k] * sat[k] for k in sat)
         s_asp = c.unmet_aspiration * sum(self.asp_w[k] * (1 - sat[k]) for k in sat)
+        self.last_autonomy = aspiration_values.get("autonomy", 0.0)      # read only by agent values v2 (a record; the model never reads it)
         raw = c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * together_sessions + self.glow + extra_pleasure
         pleasure = _clip(raw)
         glow_used = self.glow

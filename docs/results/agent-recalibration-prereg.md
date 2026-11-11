@@ -86,9 +86,11 @@ Checked free, before any run, with `scripts/value_consistency.py --reach` on the
 
 | Verdict or clause | Free check | Result |
 |---|---|---|
-| PASS | v1 rows with perceived replaced by the 1-week actual (an oracle agent) | to be shown in the commit that adds `--reach` |
-| T1 to T4, T6 fail | the v1 rows as they are | to be shown |
-| T5 fails | v1 rows with perceived doubled | to be shown |
+| PASS | v1 rows with perceived replaced by the actual each row is held to (an oracle agent) | PASS: T1 1.00, T2 1.00, T3 99.9%, T4 98%, T5 1.00, T6 holds |
+| T1 to T6 fail | the v1 rows as they are | FAIL on every clause: T1 0.43, T2 0.39, T3 34%, T4 40%, T5 2.48, T6 fails for work, friends, bills, spending |
+| T5 fails alone among T1 to T5 | the oracle's numbers doubled | T1 to T4 hold, T5 0.50 fails (T6 fails too) |
+
+Run with `uv run python scripts/value_consistency.py --reach` (runs/value-consistency/reach.json). The first version of this check found PASS unreachable: see Amendment 1.
 
 The metric sees the mechanism: every v2 term is a term of `Hedonic.close_week` or of the world's friction and extra-pleasure sums, which the check's actual reads (`valuecheck._rows`, the evaluator's net line).
 
@@ -113,4 +115,6 @@ One world for the pass test. One-week horizon by design. The bill numbers are AS
 
 ## Amendments
 
-None yet.
+**Amendment 1 (2026-11-11, before any v2 run; found by the reach check).** As first written, T1 to T5 held every row to its 1-week actual, while T6 held soft-rule rows to their 13-week actual. An agent that prices a sanction at its real cost (item 4) then cannot pass T5: an oracle agent with the right numbers scored a slope of 0.30, because the 2,065 rows where card D1 binds carry four weeks of friction in the perceived value and one week in the actual. Change: every T row holds a soft-rule row to its 13-week actual, the rest to 1 week. No bar moved. The v1 numbers under the amended rule are in the table above (T5 becomes 2.48 instead of 1.2; the others move by at most 0.01).
+
+**Implementation note (2026-11-11, before any v2 run).** The design said last week's raw pleasure would stand in for the terms the agent does not project. The code computes them directly instead, since each is a pure read of the world: glow, items, the pairing terms, ritual anticipation, the commitment payoff and friction, warnings and presses running, scorekeeping and check-ins. Only the makers' terms (which change state when read) are held at last week's value. The trapped and restricted conditions are held at whether they held last week. A test checks the result: at the week's very last call, v2's value of every action equals the change in the agent's own net that week to the rounding of the hedonic rows (`tests/test_agent_values.py`).
