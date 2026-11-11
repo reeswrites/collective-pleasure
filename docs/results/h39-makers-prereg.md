@@ -137,4 +137,73 @@ Scripted makers on a fixed rule. Three kinds, one value point each. Credit only 
 
 ## Amendments
 
-(none yet)
+### Amendment 1 (2026-11-11): calibration, pilot, power, "Can every verdict happen?"
+
+Committed before any confirmatory run. No prediction, threshold, test or verdict rule changed. Code: commit 823e43a (`src/mar/makers.py`, `scripts/h39_makers_run.py`).
+
+**Calibration before the pilot (parameters changed, stated plainly).** The design's first numbers broke the household. With 2-unit blocks and a 0.012 time cost, makers spent up to 6 of their 10 weekly units and displaced paid work. On 8 to 15 pilot pairings (sample seed 900, excluded from the confirmatory data) pleasure fell from 0.967 (makers off) to 0.86 and half the pairs stopped forming. A second problem: at the next setting, safe cooks and carers never made anything (a block was worth less than its time to every persona), so all making was by artists and extractive makers. The calibrated point, chosen on those pilot pairings only:
+
+| Parameter | Design | Now |
+|---|---|---|
+| time units per block | 2 | 1 |
+| time cost per block | 0.012 | 0.02 |
+| a meal; care (struggling receiver) | 0.03; 0.02 (0.03) | 0.03; 0.02 (0.03), now per 1-unit block |
+| a piece, per partner-week for 8 weeks | 0.004 | 0.003 |
+| process pleasure at enjoyment 1 | 0.01 | 0.005 |
+| replacement value per block | 2.75 | 1.375 (the wage for 1 unit) |
+| a typical block (C-pleasure rate = replacement / typical) | 0.03 | 0.025 |
+| credit motive κ | 0.004 | 0.007 (about half the time cost at money weight 1) |
+| extractive cue; craving | 0.02; 0.05 | 0.01; 0.025 |
+| long project | 16 blocks | 32 blocks (the same time), 2 blocks a week expected |
+
+So a block now gives about 1.2 times its time cost to a receiver, and a caring partner (togetherness weight above about 0.6) makes. The time cost of 0.02 is the point where 1 to 2 blocks a week leave average pleasure about where makers-off has it; it is a fitted number, not a measured one.
+
+**Pilot (EXPLORATORY; 30 pilot pairings, seeds 900 and 901, arms Z, H, P, BP, BP-PN; excluded from the confirmatory data).**
+
+| Quantity | Pilot effect | Pilot sd of the pairing | Source |
+|---|---|---|---|
+| P1 pleasure, BP − Z | +0.0002 | 0.021 | runs/h39-makers/pilot-analysis.json |
+| P2 blocks per partner-week, BP − Z | +0.20 | 0.30 | same |
+| P3 enjoyment-0 share, H − Z | −0.015 | 0.10 | same |
+| P5 extractive credit share, H − P | +0.014 | 0.12 | same |
+| P5b pleasure, P − H, extractive pairings | −0.007 | 0.028 | same |
+| P6a projects started, BP-PN − BP | +0.16 | 0.51 | same |
+| P6b projects paid, BP-PN − BP | +0.09 | 0.49 | same |
+| P6c pleasure, BP-PN − BP | −0.0007 | 0.006 | same |
+
+What I saw: makers on, at this calibration, sits near makers off on pleasure; crediting raises making (+0.2 blocks per partner-week) but not pleasure; imbalances never evened out in any arm (0 of 10 to 14 long-together pair-seeds); protection was asked for in about 0.2 runs per pair-seed and agreed in 0.17.
+
+**Power check** (`seeds_for_power`, paired, 80%, alpha 0.05, on the pilot's 2-seed spreads; `runs/h39-makers/power.json`). Open cells in the 120 confirmatory pairings: 59 with exactly one extractive partner, 91 with at least one, 63 with at least one artist, 84 with an enjoyment-0 partner.
+
+| Prediction | Margin or effect | Spread | Units for 80% | Units available | Status |
+|---|---|---|---|---|---|
+| P1 | 0.003 | 0.021 | over 300 | 120 | **DESCRIPTIVE** |
+| P2 | 0.10 | 0.30 | about 75 | 120 | confirmatory (manipulation check, no verdict weight) |
+| P3 | 0.03 | 0.10 | about 90 | 84 | **DESCRIPTIVE** |
+| P5 | 0.05 | 0.12 | about 46 | 59 | confirmatory (little weight, see above) |
+| P5b | 0.007 | 0.028 | 110 | 91 | **DESCRIPTIVE** |
+| P6a | 0.20 | 0.51 | 52 | 63 | confirmatory |
+| P6b | 0.10 | 0.49 | 199 | 63 | **DESCRIPTIVE** |
+| P6c | pilot effect 0.0007 | 0.006 | over 300 | 63 | **DESCRIPTIVE** |
+| P4, P7 | – | – | no pilot (P4 had 10 to 14 pair-seeds per arm; P7's arms were not piloted) | – | P4 DESCRIPTIVE; P7 confirmatory |
+
+Seeds: 4 per pairing (0 to 3), the most the run budget allows (13 arms × 120 pairings × 4 seeds, about 45 minutes on 3 workers). Four seeds lower the per-pairing spread, so the table above is conservative, but it does not close P1's gap. **So the H39 verdict and the H20a verdict are DESCRIPTIVE**: the verdict rules are applied and reported, without verdict wording in the summary.
+
+**Can every verdict happen?** (`scripts/h39_makers_run.py --reach`, `runs/h39-makers/reach.json`; the analysis code run on relabelled or shifted pilot rows, plus small parameter flips on 10 pilot pairings.)
+
+| Verdict or clause | Free check | Result |
+|---|---|---|
+| H39 supported | BP = Z + 0.01 | reached (P1 holds, P1b holds) |
+| H39 not supported | BP = Z | reached |
+| H39 inconclusive | BP = Z + 0.004 ± 0.08 by pairing | reached |
+| P5b fails / holds | the pilot (P − H = −0.007) fails; H and P swapped gives a positive estimate | both reached |
+| P5 fails | extractive = safe (cue, boost and craving 0): extractive share 0.50 under H, 0.63 under P (H − P negative) | reached |
+| P6 (H20a) supported | BP-PN = BP plus one more project started and paid, +0.003 pleasure | reached |
+| P6 fails | BP-PN = BP | reached |
+| nobody agrees to protect | trust threshold 2 | agreed 0 (the negotiation can say no) |
+| P1b can disagree | the inconclusive case | reached (P1b misses) |
+| metric sees the mechanism | `makers.week_terms` → `close_week(extra_pleasure)` → weekly `pleasure` → `pl`; credit → `exit_fallback.contribution_share` → `settlement` → `carry_out` (exit money and the outside option at readings); unit test `test_contribution_share_includes_credit_and_protected_project` | traced |
+
+P4 ("imbalances even out") can fail in both directions on the analysis, but the pilot shows 0 evening out in every arm, so P4's "within ±0.10" may hold only because nothing evens out anywhere. That is reported as such.
+
+Observer layer: it landed (commits 218ee4a and before) before this run. Maker pleasure and craving reach its decision decomposition inside the "other" group (the observer has no makers group); a sample of runs is read with it after the run.
