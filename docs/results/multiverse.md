@@ -18,16 +18,24 @@ Each conclusion was checked at many parameter settings. "Holds in" is the share 
 | C3 | Best friend-contact gap at most 14 days at overlap 0.7, every half-life (amendment A1b) | 115 of 128 (0.898) | **fragile** (one point under the line) | none | per-contact cost (-0.45), tau_w (-0.41) | "Weekly or so" mostly survives. Median of the worst half-life's gap 6 days; it breaks when contact is costly |
 | C3b | Best gap at most 7 days (the "4 to 7 days" headline) | 93 of 128 (0.73) | **fragile** | per-contact cost 24 or 28.8; A = 0.5; activity value x0.5; tau_s = 6 | per-contact cost (-0.45) | The specific "4 to 7 days" leans on the per-contact cost set after the smoke run. At the old meeting cost (24) it is 8 to 11 days |
 | C3c | Sharing shortens the gap against the reunion-only control by at least a day (A1c) | 62 of 128 (0.48) | **flips** | nine parameters, including m_scale = 0.6, rel = 3, tau_w = 3.5, thr = 3, per-contact cost 0 or 1.8 | m_scale (-0.40) | Do not state. Most of the drop to "weekly" comes from shrinking the reunion layer, as the amendment already said; whether sharing adds to it is a coin flip over the ranges |
-| C4 | Negotiation v2.1: living apart beats cohabiting with no pot on non-offsettable suffering by at least 0.02 | running | | | | (household sweep in progress; this row will be filled when it finishes) | |
-| C5 | Pleasure demo D2a: seed v2.2 beats the imposed baseline on pleasure | running | | | | (household sweep in progress; this row will be filled when it finishes) | |
-| C5b | Pleasure demo D3: relational share of v2.2 households above 0.40 | running | | | | (household sweep in progress; this row will be filled when it finishes) | |
-| C6 | Seed v2: binding a stay commitment changes non-offsettable suffering by less than 0.02 (the null) | running | | | | (household sweep in progress; this row will be filled when it finishes) | |
+| C4 | Negotiation v2.1: living apart beats cohabiting with no pot on non-offsettable suffering by at least 0.02 | 8 of 8 (1.00); all 16 one-at-a-time points | **robust** | none | weekly connection decay (+0.93), living cost (+0.81) | The direction is safe to state: apart beats cohabiting with no pot by 0.06 to 0.26 at every setting tried. The size moves a lot with the need-clock and living-cost assumptions |
+| C5 | Pleasure demo D2a: seed v2.2 beats the imposed baseline on pleasure | 8 of 8 (1.00); all 14 one-at-a-time points | **robust** (small edge) | none | living cost (+0.71) | The sign holds everywhere tried, but the edge stays small (+0.014 to +0.090, default +0.030). At 2 of 8 points it is within 2 standard errors of zero with one seed |
+| C5b | Pleasure demo D3: relational share of v2.2 households above 0.40 | 8 of 8 (1.00); all 14 one-at-a-time points | **robust** | none | together-event value (+0.93) | Holds (0.41 to 0.53), but it is set by the assumed value of time together, as the demo already said; at some points only 2 to 7 households qualify |
+| C6 | Seed v2: binding a stay commitment changes non-offsettable suffering by less than 0.02 (the null) | 16 of 16 (1.00); all 12 one-at-a-time points | **robust** | none | none strong (largest 0.29) | The null survives, including a breach load four times the default (difference 0.0098). It is still a null about a threshold breach rule, which cannot be swept without a code change |
 | C7 | VPGG: voluntary beats compulsory on liberty v2 and on empowerment (sum above 0, at least 8 of 15 compositions) | 54 of 54 grid points (1.00) | **robust** | none | n/a (grid) | Holds everywhere tried. The exact count (11 of 15) is not stable: it runs from 8 to 14 with r |
 | C8 | VPGG: no oscillation (cooperator-share std below 0.05 in all 3 seeds) | 21 of 24 (0.875) | **fragile** | revision = 0.4 | mutation (+0.61), sigma share (-0.61) | The miss mostly stands, but low mutation or fast revision push the std just over the floor (0.056 to 0.089). Even then the fluctuations are small |
 
 ## What to stop saying confidently
 
-Filled in when the household rows finish. From the exact rows so far: the concert boundary (about 3 weeks), the specific "about 29%" greedy loss, the specific "4 to 7 days" friend gap, and the claim that sharing itself (rather than the smaller reunion layer) makes contact more frequent.
+Stop stating these as findings, or state them only with "under the assumed parameters, and it moves":
+
+1. **The concert boundary of about 3 weeks** (horizon P5). It flips: weekly-negative and monthly-positive hold together in 30% of settings, and the boundary ran from 1 week to never.
+2. **"Greedy loses up to about 29%."** Greedy loses something almost everywhere, but the size ran from 8% to 96% (median 34%) at gamma 1 over 52 weeks. Quote a range or no number.
+3. **"The best friend-contact gap is 4 to 7 days."** It holds in 73% of settings and moves with the per-contact cost that was set after the smoke run (8 to 11 days at the old meeting cost). "About weekly rather than monthly" holds in 90% and is the safer wording.
+4. **"Sharing itself makes contact more frequent."** It flips (48%). Most of the move to "weekly" comes from the smaller reunion layer.
+5. **"No VPGG oscillation"** is fragile, not robust: slower mutation pushes it just over the floor.
+
+These held across the ranges and can be stated with their usual caveats: greedy loses something whenever state carries over; VPGG voluntary beats compulsory on both freedom measures (the sign, not the 11 of 15 count); in negotiation, living apart beats cohabiting with no pot (direction, not size); the seed v2 binding null (as a fact about the threshold rule); and seed v2.2's pleasure edge over baseline and its relational share (both small or assumption-set, as the demo said).
 
 ## Per conclusion
 
@@ -56,16 +64,28 @@ Full grid: r in {2, 2.5, 3, 3.5, 4, 4.5}, sigma share in {0.25, 0.5, 0.75}, hori
 
 6 parameters, 24 hypercube points plus 12 one-at-a-time points, 3 seeds each (111 runs, 3000 generations). The default reproduces std 0.016 to 0.019 and shares 0.262, 0.280, 0.457. Three hypercube points exceed the 0.05 floor in at least one seed (max std 0.057 to 0.089), all with mutation at or below 0.0008 (one also with a large sigma share); one-at-a-time, revision 0.4 gives 0.056 in one seed. Even there the amplitude is small. Reading: "the cycles did not appear" holds for the assumed update knobs and most nearby ones; lower mutation is where to look if anyone tries again. The shares match Hauert et al. only at the published point, as before (they move with r and sigma, as they should).
 
-### C4 to C6: household rows
+### C4: negotiation v2.1, the disagreement point
 
-Running (Amendment 1 design). This section is filled in when they finish.
+Amendment 1 design: arm `fair_default`, seed 0, 57 pairings, each failed week-0 negotiation played both ways (cohabiting with no pot, and apart), 16 one-at-a-time points and 8 hypercube points (1425 runs). Default at HEAD: 26 no-pot households, s_non 0.181 cohabiting against 0.022 apart, difference 0.159 (seed noise: standard error 0.027). The published figures (0.159 against 0.0315, three arms, older code) differ in level but not in direction.
+
+The difference stayed between 0.063 and 0.260 at every point. Living cost (1 to 4 per week) and the connection-need decay (0.15 to 0.6) move it most, because they set how bad cohabiting with no pot is. The outside-option rollout length, the exit floor, the no-pot holdings and the breach load barely move it (the breach load not at all). Caveats that the sweep cannot touch: the extra cost of living alone (1.5 a week) is hardcoded, and "apart scores well" is partly circular, since apart is the outside option the member chose under the same valuation.
+
+### C5: the pleasure demo
+
+Amendment 1 design: arms `v22_bindable` and `baseline`, seed 0, 57 pairings, 14 one-at-a-time points and 8 hypercube points (2622 runs). Default at HEAD: D2a +0.030 (standard error 0.014 with one seed; published +0.03 with 15 seeds), D3 0.477 over 22 households (published 0.47).
+
+D2a stayed positive everywhere: +0.014 to +0.090. It is largest when connection decays fast (0.6: +0.089) and smallest at low points in the hypercube (+0.014, +0.019), where it is within about 1.5 standard errors of zero. So "v2.2 does better than baseline" survives the sweep in sign, but the edge never becomes large; the original caveat (by only +0.03, and it loses on the hand personas) still applies. D3 stayed between 0.41 and 0.53 and tracks the assumed pleasure of a together event almost one for one (Spearman +0.93); at a living cost of 4 only 2 households qualify, so that point says little.
+
+### C6: seed v2, the binding null
+
+`author_seed_v2_bindable` against `author_seed_v2_free_exit` (cards at HEAD), imposed, 57 pairings, seeds 0 to 2, 12 one-at-a-time points and 16 hypercube points (9918 runs). Default at HEAD: difference 0.00036 (published 0.0003). The largest difference anywhere was 0.0098, at a breach load of 0.8 (four times the default), where 6 of 171 runs differ at all. So raising the threshold does start to let a bind hold someone, slowly, and never near the 0.02 margin within the range. The null is robust to the threshold's value; it is not evidence about commitments, for the reason already given in household-seed-v2.md (a threshold rule, not a cost comparison).
 
 
 ## Limits
 
 - Ranges are judgment, mostly half to double. Robust here means robust to these ranges and these parameters. The model structure (state layout, decision rules, leave rule, breach rule) was not varied; where it is hardcoded, the prereg lists it as not sweepable without a code change.
 - The labels are mechanical. C3 is labeled fragile at 115 of 128 points (0.898), one point below the line.
-- Household rows used one or two seeds per point (the originals used 3 to 15) and 8 hypercube points, so their shares are coarse. The default-point seed noise is reported beside each.
+- Household rows used one to three seeds per point (the originals used 3 to 15) and 8 (C4, C5) or 16 (C6) hypercube points, so their shares are coarse and lean on the one-at-a-time points. The default-point seed noise is reported beside each.
 - The household code has changed since negotiation v2.1 and seed v2 ran, so their default points are recomputed at HEAD and differ from the published numbers.
 - Deterministic sweeps are exhaustive at each point but the points are a sample of the parameter space. No interval is given for a share (ADR 0015 point 4 applies to the exact rows).
 
