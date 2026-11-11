@@ -64,6 +64,19 @@ Everything in this section is the author's thesis extended in the conversation. 
 
 **The link to this project.** Appeasement trades long-run pleasure for less immediate pain. That is the same greedy pattern the horizon study measured: a policy that looks only at the reward it can see loses to a planner whenever actions leave a trace in state (docs/results/horizon.md, sections 1 and 3). Appeasement is the relationship version. The trace is the suppressed signal, which Claude likened to a leak in a stable loop.
 
+### Support from the literature: Sinhababu (added 2026-11-11, at the author's request)
+
+The author asked what Neil Sinhababu argues and asked for both points to be added. The summaries below come from secondary sources checked by web search on 2026-11-11. They are Claude's summaries. Read the primary texts before citing.
+
+- **The epistemic argument for hedonism** (Sinhababu 2015; a later version in a 2024 volume; a guest essay on utilitarianism.net). Moral disagreement undermines most moral beliefs, because the processes that form them are unreliable. Phenomenal introspection is the exception. It is reliable for nonmoral facts about experience, and it reveals that pleasure is good and displeasure is bad. So the goodness of pleasure survives the skepticism. This supports the author's position that pleasure is the good. It also answers the "thermometer, not temperature" worry in the author's saved note "pleasure as the detector of value" (docs/notes/hedonic-technology-synthesis.md, Q13). Pleasure's goodness is given in the experience itself, and what misfires is desire and consequence. A known objection: if pleasure is defined as "felt goodness", the claim may be analytic.
+- **Amplification by vividness** (Sinhababu, *Humean Nature*, OUP 2017). Desire drives action, and its effects grow with the vividness of sensory or imaginative representations of what is desired. This explains procrastination: a vivid temptation beats a judged-more-important but faint goal.
+
+**How the model uses this (Claude-added framing).** Vividness does two jobs that can come apart:
+- At decision time, vividness amplifies wanting (Sinhababu).
+- Afterward, memory vividness weights liking in the remembering self (the author's view, ADR 0017).
+
+The middle reading of the detector worry is: liking is the good, and wanting is the detector that misfires. This is Claude's synthesis, offered to the author, not yet confirmed. Candidate hypothesis H34 tests vivid cues that inflate wanting without liking.
+
 ## 4. The author's one-self view and lifetime pleasure
 
 **Author:** "lifetime pleasure seems obvious to me", and the experiencing self is the remembering self. ADR 0017 records the measure: the sum over moments of present pleasure, vividness-weighted memory re-experienced now, and anticipation. Greedy scoring is the special case that is exact only when nothing carries over.
