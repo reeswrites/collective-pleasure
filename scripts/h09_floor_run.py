@@ -172,6 +172,32 @@ def summarize(rows, ledger_summary=None, out=print):
     return res
 
 
+def merge(out):
+    """Combine the log.jsonl files under out (the run was split by seed into parallel processes: out/log.jsonl holds seed 0, out/seed<k>/ the rest)
+    into out/results.json. Rows are de-duplicated by (arm, pairing, seed); the top-level log counts for seed 0 only. Cost = the sum of each
+    log's last recorded spend (a stopped process's calls are paid for even if its rows are dropped)."""
+    out = Path(out)
+    rows, seen, usd = [], set(), 0.0
+    for lp in [out / "log.jsonl"] + sorted(out.glob("seed*/log.jsonl")):
+        last = 0.0
+        for line in lp.read_text().splitlines():
+            d = json.loads(line)
+            last = d["spent_usd"]
+            r = d["row"]
+            if lp.parent == out and r["seed"] != 0:
+                continue
+            key = (r["arm"], r["a"], r["b"], r["seed"])
+            if key not in seen:
+                seen.add(key)
+                rows.append(r)
+        usd += last
+    rows.sort(key=lambda r: (r["seed"], PAIRS.index((r["a"], r["b"])), r["arm"]))
+    res = {"rows": rows, "ledger": {"usd_total": round(usd, 6), "note": "sum of each process's last logged spend"}, "model": "claude-haiku-5-5",
+           "max_tokens": MAX_TOKENS, "seeds": sorted({r["seed"] for r in rows}), "aborted": None}
+    (out / "results.json").write_text(json.dumps(res, default=str))
+    return res
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", default=None, help="claude model id, e.g. claude-haiku-5-5")
@@ -180,9 +206,14 @@ def main(argv=None):
     ap.add_argument("--max-usd", type=float, default=None)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--analyze", action="store_true")
+    ap.add_argument("--merge", action="store_true", help="combine the per-seed logs under --out into results.json, then analyze")
     ap.add_argument("--out", default=str(OUT))
     a = ap.parse_args(argv)
     out = Path(a.out)
+    if a.merge:
+        d = merge(out)
+        summarize(d["rows"], d["ledger"])
+        return 0
     if a.analyze:
         d = json.loads((out / "results.json").read_text())
         summarize(d["rows"], d.get("ledger"))

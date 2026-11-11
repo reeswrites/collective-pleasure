@@ -31,7 +31,7 @@ Status labels: **running** (a prereg exists and the run is scheduled or in progr
 | 5 | H22 | Unbundling love helps: a thick core plus thin bonds beats one partner carrying every strand on mean pleasure and on pleasure after a single-bond... | 4 | 4 | 4 | 64 | running |
 | 6 | H19 | With adaptation, anticipation and a ritual slot switched on, seed v2.2 beats the imposed baseline on hand personas, reversing the demo's -0.028 | 4 | 3 | 5 | 60 | running |
 | 7 | H01 | When exit is free, a controlling persona who presses lowers its own lifetime pleasure compared with the same persona playing cooperatively,... | 5 | 3 | 4 | 60 | candidate |
-| 8 | H09 | LLM negotiators propose floor-respecting terms because of a fairness prior, not because they understood the floor | 5 | 4 | 3 | 60 | candidate |
+| 8 | H09 | LLM negotiators propose floor-respecting terms because of a fairness prior, not because they understood the floor | 5 | 4 | 3 | 60 | tested (fairness prior supported) |
 | 9 | H06 | Negotiation helps against pushy personas because it lets the pair live apart, not because the agreed terms are better | 4 | 3 | 4 | 48 | candidate |
 | 10 | H07 | A pushy persona's gain from negotiating does not shrink when the partner has a strong outside option, if the partner accepts any bundle that beats... | 4 | 3 | 4 | 48 | candidate |
 | 11 | H13 | Inventive seams (found by search, not by script depth) appear only when the model gets a reasoning budget and a short memory of blocked moves | 3 | 4 | 4 | 48 | candidate |
@@ -224,9 +224,11 @@ Do not rerun. Read the existing result.
 
 **Scores.** testability 5, novelty 3, decision value 4; product 60.
 
-### H09 (rank 8, negotiation): candidate
+### H09 (rank 8, negotiation): tested (fairness prior supported)
 
 **Claim.** LLM negotiators propose floor-respecting terms because of a fairness prior, not because they understood the floor. Remove the floor from the prompt and proposals stay near an even split.
+
+**Result (2026-11-10).** Fairness prior supported. With the floor rule removed from the prompt, 0 of 90 proposals were below the floor (floor stated: 0 of 91; one-sided exact p = 1.9e-9 against a 0.20 share; risk difference 0.000 [-0.041, +0.041]); no model proposed a forfeit exit in either arm. Cost about $0.12. Docs: docs/results/h09-prereg.md, docs/results/h09.md. Not separated: a fairness prior from a best response to these pairings; the maximise-share arm was not run.
 
 **Motivation.**
 - docs/surprises.md: 2026-11-10: negotiation LLM pilot: no LLM proposal broke the exit floor (0 of 58); half of scripted proposals did

@@ -72,4 +72,4 @@ One model, one version, one effort setting, one prompt wording (the removed arm'
 
 ## Amendments
 
-None.
+- 2026-11-10 (execution only; no threshold, prediction or test changed): the live run started as one serial process over seeds 0 to 4 with `--max-usd 1`. After it had logged 8 negotiations (the first 5 of which I looked at for format and below-floor flags, all 0) it was clear that one process would take over an hour, so I started seeds 1 to 4 as four parallel processes (`--seeds k --out experiments/kept/h09-2026-11-10/seed<k> --max-usd 0.2` each, so the total cap stays under $1) and stopped the serial process once its seed 0 was complete (12 negotiations). Its logged rows for seeds 1 and 2 (17 negotiations, 0 of 47 proposals below the floor) are kept in log.jsonl but are not used in the analysis, which takes seed 0 from the serial log and seeds 1 to 4 from the parallel logs (`--merge`). Their cost is counted. The merge rule was fixed before the analysis was run.
