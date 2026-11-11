@@ -509,9 +509,9 @@ def cards(t, names):
         elif left.get(x["w"]):
             res = f"{' and '.join(names[r] for r in left[x['w']])} moved out."
         else:
-            outs = [names[r] for r in OB.ROLES if (x.get("bar_out") or {}).get(r)]
-            res = (f"The outside option beat staying for {' and '.join(outs)}; one more check like this and they leave."
-                   if outs else "They stayed.")
+            outs = [names[r] for r in OB.ROLES if x["m"][r]["margin"] < 0]
+            res = (f"{' and '.join(outs)} would rather leave, but leaving takes two checks in a row like this; they stay "
+                   "for now." if outs else "They stayed.")
         out.append({"w": x["w"], "kind": kind, "title": title, "opts": list(opts), "members": members, "result": res})
     for d in t.get("decision", []):
         if d.get("chosen") is None or d["cands"][d["chosen"]]["a"] != "leave":
