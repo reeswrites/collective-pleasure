@@ -173,7 +173,7 @@ M1 and M3 first (small, local, and the cheapest test of whether rules can produc
 
 ## 5. Author answers (2026-11-11 conversation)
 
-Exact words are in experiments/questions.jsonl, one row per answer. These are Claude's formalizations of the answers. The author confirmed the ones marked "confirmed". Read back on 2026-11-11: Q2 and Q4 (marked "read back" below), then Q6 to Q10. All answered questions are now read back; Q13's notes were fetched but the "thermometer vs pleasure is the good" follow-up is open.
+Exact words are in experiments/questions.jsonl, one row per answer. These are Claude's formalizations of the answers. The author confirmed the ones marked "confirmed". Read back on 2026-11-11: Q2 and Q4 (marked "read back" below), then Q6 to Q10. All answered questions are now read back. Q13 is closed: the author holds that pleasure is the good, and the detector worry was answered by adding Sinhababu (theory.md) at the author's request. The reading "liking is the good, wanting is what misfires" stays marked as Claude's synthesis.
 
 **Read-back record for Q6 to Q10 (2026-11-11; verbatim answers in experiments/questions.jsonl):**
 - **Q6, confirmed ("yes"):** a life with no core relationship is a valid persona, expected to score lower; relationships are hedonic technology; egoists and utilitarians alike have reason to attend to others' pleasure. H32 tested one Claude-chosen mechanism, not the whole thesis.
