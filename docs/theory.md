@@ -28,7 +28,7 @@ Attribution marks used below. **Author:** the idea is in the author's words. **C
 
 The first test is **Author** (the notes). The second is the author's "derived from vs extracted from" test, restated in the conversation. The third came out of the reassurance-seeking part of the conversation. Putting the three side by side as a test set is **Claude-added**. They become evaluator criteria in ADR 0018.
 
-1. **Liking, not only wanting.** Does the technology raise the pleasure that is felt, or only the pull toward more? The engineering note lists metrics for delivery speed, and says only closure rate and next-day verdict measure liking. A fast system can drift into the trap with no metric noticing.
+1. **Liking, not only wanting.** Does the technology raise the pleasure that is felt, or only the pull toward more? A metrics list on the author's engineering page says only closure rate and next-day verdict measure liking. [Correction 2026-11-11: that list and claim are from likely AI-written text on the author's Notion page, which the author does not hold. Closure rate and next-day verdict are Claude's measures of liking.] A fast system can drift into the trap with no metric noticing.
 2. **Persists because worth it, not because hard to leave.** Why does it persist? If the outputs are worth the upkeep, the technology works. If leaving costs too much, it is extraction. The author's relationship note says both people should be better off and free to leave.
 3. **Lasting security, not access you must keep checking.** Does it settle something, or does it need constant reassurance to feel safe? The author raised reassurance seeking (googling, AI, Reddit, advice) as a case. **Claude (paraphrase):** the loop never closes, because relief keeps it running and the fear is never tested.
 
@@ -113,7 +113,7 @@ Status as of 2026-11-10. "Running" means another agent holds it. New ids are in 
 
 | Claim | Experiment | Status |
 |---|---|---|
-| Commitment converts friction into lifetime pleasure | Lever L-B crossover | running (H20) |
+| Commitment converts friction into lifetime pleasure (Claude's hypothesis; correction 2026-11-11: the line it came from is likely AI text the author does not hold) | Lever L-B crossover | running (H20) |
 | Unbundled thick core beats one partner | Lever L-C | running (H22) |
 | Adaptation, anticipation and ritual let rules produce pleasure | Lever L-A | running (H19) |
 | Memory bridges the two selves | Horizon | running (H21) |

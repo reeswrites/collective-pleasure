@@ -14,7 +14,7 @@ The tests come from the author's notes (liking vs wanting; derived vs extracted,
 
 Each test becomes a named measure that the evaluator computes for any rule set. A measure that its world cannot yet compute is reported as "not measurable here", never as zero.
 
-1. **Liking vs wanting.** Needs version 3 of the model, where pleasure splits into a wanting value (drives action choice) and a liking value (the experienced payoff, adapting on a slower clock). Measure: liking per unit of wanting-driven activity, closure rate (share of sessions that end at a natural stop), and next-day verdict (a lagged liking check). Flag a rule set when wanting-driven activity rises while mean liking does not (synthesis M7 and M9). Until version 3 exists the evaluator reports "not measurable here".
+1. **Liking vs wanting.** Needs version 3 of the model, where pleasure splits into a wanting value (drives action choice) and a liking value (the experienced payoff, adapting on a slower clock). Measure: liking per unit of wanting-driven activity, closure rate (share of sessions that end at a natural stop), and next-day verdict (a lagged liking check). Flag a rule set when wanting-driven activity rises while mean liking does not (synthesis M7 and M9). [Correction 2026-11-11: closure rate and next-day verdict come from a metrics list that is likely AI-written text on the author's Notion page, which the author does not hold. They are Claude's measures, kept because the liking-vs-wanting study uses them.] Until version 3 exists the evaluator reports "not measurable here".
 2. **Worth it vs hard to leave.** Two parts. (a) The counterfactual "why they stay": for each household week, replay with the exit cost removed (breach load, forfeit, commitment bind) and ask whether the pair would still stay, using the existing bar max(outside option, status quo value). Report the share of staying weeks that survive the removal. (b) Dissolution analysis: for pairs that stay and have low or falling pleasure, record the exit cost that holds them. Report: stay-worth-it share, stay-held-by-cost share, and the pleasure of each group.
 3. **Lasting security vs checking.** Needs a reassurance-seeking or checking cost in the model: an action that restores a security reading briefly and recurs, with the threshold for needing it falling each time it is used (the loop in the conversation, paraphrased from Claude). Measure: checking actions per week, the share of security that comes from checking, and lifetime pleasure net of checking time. Compare against households whose security is built by history. Until the model has the loop, report "not measurable here".
 
@@ -23,7 +23,7 @@ Each test becomes a named measure that the evaluator computes for any rule set. 
 For a rule set R on a pairing set, one block with these lines, each with the ADR 0015 interval:
 
 - Lifetime pleasure (ADR 0017 measure), freedom and cooperation, as now.
-- Liking-to-wanting ratio, closure rate, next-day verdict (or "not measurable here").
+- Liking-to-wanting ratio, closure rate, next-day verdict (or "not measurable here"). These are Claude's measures, not the author's (correction 2026-11-11).
 - Stay-worth-it share and stay-held-by-cost share.
 - Checking share of security and net lifetime pleasure after checking (or "not measurable here").
 - A one-line reading in plain English that names which test, if any, R fails.

@@ -32,6 +32,7 @@ What it changes: whether the evaluator can carry test 1 as a measure (ADR 0018),
   - Liking per unit of wanting-driven activity: mean liking over cued units. A cued unit is a chosen unit whose wanting exceeds its liking.
   - Liking-to-wanting ratio: total liking over total wanting of chosen units. Gap per unit: mean (wanting - liking).
   - Closure rate: the share of G sessions that the agent ended at a natural stop while the day still had time. A session the day's end cut off was ended by the clock, not at a natural stop.
+  - [Correction 2026-11-11: closure rate and next-day verdict are Claude's measures, not the author's view; their source list is likely AI-written text the author does not hold.]
   - Next-day verdict: the retrospective liking verdict on each G session, scored peak-end on liking only, (peak unit liking + last unit liking) / 2, averaged over G sessions. It never sees wanting. Peak-end: Kahneman et al. 1993, from memory, verify.
   - The flag: a run is flagged when wanting-driven activity rises while mean liking does not. "Rises" is against its matched twin, the same persona, environment, rule and agent with wanting set equal to liking. Activity is G units. Flagged iff G units > twin's G units and mean liking per slot <= twin's.
   - Divergence: mean gap per cued unit in the last week minus the first week (growth of the gap over time).

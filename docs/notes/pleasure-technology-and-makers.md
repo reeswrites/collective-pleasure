@@ -27,7 +27,7 @@ Attribution rule used here: a line counts as the author's only if it is in the a
 | The making project (found by search) | 2026-08-25 | Likely AI-assisted, quoting the author | The author's plan to make small digital games. Only marginally relevant. |
 | Relationships as a Hedonic Technology | 2026-11-10 | Author-written (already in the synthesis) | Used here only for its lines on co-creation, giving, and sharing surplus. |
 
-An attribution correction for the earlier synthesis. It credits three things to the author that sit in likely-AI text: "Put it at the trigger, before commitment, never inside the consumption" (inside the quote block of the Engineering page), the Find / Supply / Serve metrics list with "next-day verdict" (an AI reply on the same page), and "Commitment is the instrument that converts present friction into recalled pleasure" (the AI-assisted skeleton). The ideas may still be ones the author holds. This note does not edit the synthesis; it flags it.
+An attribution correction for the earlier synthesis. It credits three things to the author that sit in likely-AI text: "Put it at the trigger, before commitment, never inside the consumption" (inside the quote block of the Engineering page), the Find / Supply / Serve metrics list with "next-day verdict" (an AI reply on the same page), and "Commitment is the instrument that converts present friction into recalled pleasure" (the AI-assisted skeleton). The ideas may still be ones the author holds. This note does not edit the synthesis; it flags it. [Update 2026-11-11: the author answered "q4 i do not hold those". The synthesis and other docs now carry correction notes; see "Author answers 2026-11-11" below.]
 
 ## 2. Making in the notes
 
@@ -72,7 +72,7 @@ An attribution correction for the earlier synthesis. It credits three things to 
 
 **Claude's inference:** give maker agents an aim. A safe maker aims at the receiver's liking. An extractive maker aims at consumption or dependence, so its goods raise wanting more than liking. This plugs into test 1 (liking vs wanting).
 
-**Claude's inference, a candidate prediction:** if norms credit makers by volume consumed, extractive makers win credit and total liking falls. If norms credit by the receiver's later verdict, safe makers win. (The "next-day verdict" metric is from an AI passage; the author would need to endorse it.)
+**Claude's inference, a candidate prediction:** if norms credit makers by volume consumed, extractive makers win credit and total liking falls. If norms credit by the receiver's later verdict, safe makers win. (The "next-day verdict" metric is from an AI passage and the author does not hold it, 2026-11-11; it is Claude's measure.)
 
 ### 3c. How norms credit making
 
@@ -127,3 +127,13 @@ An attribution correction for the earlier synthesis. It credits three things to 
 3. Is an extractive maker one whose goods raise wanting without liking, or is it about the maker's motive (profit), or both?
 4. Do you hold, as your own view, the lines the earlier synthesis credited to you that come from AI text: "put it at the trigger", the next-day-verdict metric, and "commitment converts present friction into recalled pleasure"?
 5. Should a long making project be protected from exit by a commitment window, or should the maker carry the risk that a partner leaves?
+
+## 6. Author answers 2026-11-11
+
+Quoted verbatim from experiments/questions.jsonl (read-backs in experiments/readbacks.jsonl, items makers-q1 to makers-q5). Numbers refer to the questions in section 5.
+
+- **q1 (how making counts).** "i think it certainly counts its like valuing domestic work but yeah we might have to think more sophisticated" and "but yeah pleasure is certianly a consideration too". Reading: the author likes a base (the domestic-work value of making) plus a pleasure adjustment, and is OK testing arms. The method is open.
+- **q2 (does enjoying the making lower credit?).** Confirmed with "agree with your leans on q2 q3 and q5 except for 5 its all about negoitation and trust again". Enjoying the making does not lower credit.
+- **q3 (what is an extractive maker?).** Same answer. For the model, an extractive maker is one whose goods raise wanting without liking (motive is unobservable).
+- **q4 (the three AI-text lines).** "q4 i do not hold those". The three lines (the "put it at the trigger" line with its friction claim, the metrics list with the next-day verdict and its liking claim, and "commitment converts present friction into recalled pleasure") are from likely AI-written text on the author's Notion pages, not the author's view. Docs that credited them to the author were corrected the same day (the synthesis, theory, H20 in hypotheses, ADR 0016 and 0018, the levers and liking-wanting preregs).
+- **q5 (protecting a long making project).** Revised by "its all about negoitation and trust again" (the end of the q2/q3/q5 answer above). Protection of a long making project is negotiated and rests on trust; it is not imposed by a rule such as a fixed commitment window.

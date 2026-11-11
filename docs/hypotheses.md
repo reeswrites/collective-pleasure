@@ -54,14 +54,16 @@ Where the product ties, rows are ordered by decision value, then testability.
 
 ## Hypotheses
 
-### H20 (rank 1, author's theory): tested (partly held: the late gain held, LB2; the early dip missed, LB1)
+### H20 (rank 1, Claude's hypothesis; was labelled author's theory, corrected 2026-11-11): tested (partly held: the late gain held, LB2; the early dip missed, LB1)
 
 **Claim.** Commitment converts present friction into lifetime pleasure. Pleasure in weeks 0 to 26 is lower with a commitment and pleasure in weeks 52 to 156 and the lifetime total are higher, in at least 60 percent of pairings.
+
+**Correction 2026-11-11 (attribution).** This claim was motivated by "Commitment is the instrument that converts present friction into recalled pleasure", which is from likely AI-written text on the author's Notion page, which the author does not hold (2026-11-11). H20 stays as Claude's hypothesis and its results stand. Author-written support is narrower: the makers note (docs/notes/pleasure-technology-and-makers.md, section 3e) quotes the author from "What should we be doing to maximize pleasure?" (author-written, except the longevity list at the end): "I think long-term projects (goals, games, relationships) are the key to creating reward payoff structure for yourself." and "Achieving the goal is actually less important than having one." That supports long projects as the payoff structure. It does not say commitment converts friction into pleasure, nor an early dip. So the H20 result bears on the model, not on a view the author holds.
 
 **Running work.** pleasure levers L-B (commitment as converter)
 
 **Motivation.**
-- docs/notes/hedonic-technology-synthesis.md: M4 and prediction P4 (the author's central claim)
+- docs/notes/hedonic-technology-synthesis.md: M4 and prediction P4 (originally "the author's central claim"; corrected 2026-11-11, it rests on likely AI text and is Claude's hypothesis)
 - docs/results/pleasure-demo.md: commitments change almost nothing the model measures; trust never fell
 - docs/decisions/0016-pleasure-levers.md: L-B
 
