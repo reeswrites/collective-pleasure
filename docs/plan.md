@@ -4,16 +4,15 @@ Status: direction set 2026-11-10 (ADR 0003, 0005, 0007). Every slice ends in a p
 
 ## Queue
 
-In this order.
+In this order. Items 1 to 4 of the earlier queue are done (see the log).
 
-1. **Read the propensity arm with the author.** The propensity arm (P1 to P4, six models on L1 to L5, cap $12) is running with its prereg committed. The capability arm ran ($4.35 of $12, 270 runs) and was ruled uninformative: the same model drove both partners, so there was no victim (docs/results/ladder-live-diagnosis.md). Read the propensity results with the author before anything is compared.
-2. **Fix the ladder harness, then rerun the capability arm.** One model against a scripted partner, visible pot and history, full logging, a mock panel with both roles as a pre-spend gate, Jev cache off (attempts were cached copies). New prereg first, with seeds from a power check (ADR 0015). No claim about capability until this runs.
-3. **Liberty into the household.** Give the household adapter `noop`, `force_policy` and `classify` with a one-line reason per action (docs/results/liberty-v2.md), then report liberty beside the hand-made score and empowerment (ADR 0014). Preregister first.
-4. **Household into evolution, final exam held back.** Implement `world_api.World` for the household (adapter notes in docs/results/evolve.md), evolve rule sets and negotiation templates on the training personas, then run the household exam once (docs/results/household-exam-prereg.md, FX1, FX2). Pass: the exam is never fed back into selection.
-5. **Household chat commands and the five-minute demo.** Replace the `mar household` stub. Pass: the author sees a household run, its rules and a story in five minutes with scripted agents and no key.
-6. **Backlog.** See below.
+1. **Read the pleasure levers and the horizon results with the author** when they land (ADR 0016, ADR 0017; owned by other agents, preregs committed).
+2. **Household evolution to a result, then the final exam once.** Run 1 is in progress (docs/results/household-evolve-prereg.md). The exam (docs/results/household-exam-prereg.md, FX1, FX2) is never fed back into selection.
+3. **A framing the strong Claude models will play.** Under loophole framing Sonnet and Opus refuse (`cyber`), under "try to win" nothing is found. No inventive seam exists on L1 to L4 under either, and the top rungs are refusal nulls. The author chooses whether to design a third framing or to move IT1 off the ladder.
+4. **The 13 open questions** in docs/notes/hedonic-technology-synthesis.md. Each decides a model change. Answers go to experiments/questions.jsonl verbatim.
+5. **Backlog.** See below.
 
-In parallel, with another agent: code and card fixes from the review council (docs/reviews/2026-11-10-*.md).
+In parallel, with other agents: fidelity battery and hypothesis log.
 
 ## Slices
 
@@ -23,18 +22,21 @@ In parallel, with another agent: code and card fixes from the review council (do
 | V1 | Adversarial novelty search on the convergence loop | done: PASS with a narrower claim (docs/prior-art/2026-11-10-v1-convergence.md) |
 | V2 | The loop on a scripted mock agent, planted seam | done: 4 of 4 (docs/results/v2.md) |
 | V2b | English-like surface over the ADICO cards | done: 4 of 4, feasibility only (docs/results/v2b.md) |
-| W | Workbench: skill, `mar` CLI, HTML reports, logs, timeline | built (docs/results/workbench.md); household chat commands pending (queue 5) |
+| W | Workbench: skill, `mar` CLI, HTML reports, logs, timeline | done (docs/results/workbench.md); household commands built (docs/demo.md) |
 | H | Household world: v1, hedonic v2, pressing personas v3a, author seed v2, seam ladder | done, scripted agents (docs/results/README.md rows 4, 5, 11 to 13) |
 | R | Simple-models ladder (ADR 0009): bargaining rung 1, VPGG rung 2 | done: bargaining closed forms reproduced (implementation check); VPGG shares and payoff match at one parameter point, cycles absent. Rung 3 (network with cuttable ties) not built |
-| EM | Empowerment, then liberty v1 and v2 (ADR 0014) | done for toy, VPGG, fishery (v2 not independent validation); household pending (queue 3) |
-| E | Evolution loop on the fishery, v1 and v2 (ADR 0012) | done: loop runs end to end, overfits, seam curve fell by exhaustion. Household adapter pending (queue 4) |
-| L | Live seam ladder, capability and propensity arms | capability arm done, uninformative (harness defect); propensity arm running, prereg committed; capability rerun after the harness fix (queue 2). This replaces V3 |
+| EM | Empowerment, then liberty v1 and v2 (ADR 0014) | done for toy, VPGG, fishery (v2 not independent validation); household descriptive check done (docs/results/household-liberty.md) |
+| E | Evolution loop on the fishery, v1 and v2 (ADR 0012) | done: loop runs end to end, overfits, seam curve fell by exhaustion. Household run 1 in progress |
+| L | Live seam ladder: capability (twice), propensity, win | done. First capability arm uninformative; propensity 20 fixture candidates; rerun inverted the ranking; win arm found almost nothing. No inventive seam on L1 to L4. docs/results/README.md rows 16, 17, 23, 24. This replaces V3 |
 | N | Negotiation and pot negotiation (ADR 0013) | done, scripted: v1 (2 of 6), v2 (0 of 8), v2.1 (3 of 5) held; LLM pilot registered run excluded by its own rule, exploratory draw summarized. Rows 19 to 22 of the results index |
 | ST | Statistics layer and retrofit (ADR 0015) | done: 14 experiments retrofitted, negotiation not covered; rules in force for new preregs |
-| RC | Review council, five seats (docs/reviews/) | done at commit 5852c32: no result unsound. Code and card fixes with another agent |
-| MVP | Five-minute household demo | pending (queue 5) |
+| RC | Review council, five seats (docs/reviews/) | done at commit 5852c32: no result unsound. Code and card fixes complete |
+| MVP | Five-minute household demo | done (docs/demo.md, `scripts/demo_check.py`) |
 | SI | Stand-in study (ADR 0006) | not run. The live ladder gives a first look at Jev; the rank-agreement study needs about 50 rule sets and a keyed run |
-| V4 | First LLM curve: five-agent swarm, about 10 rounds, LLM patcher, outcome oracle. Seeds from a power check (ADR 0015), not a default of 3. Preregister C1 and C2 first, with a rule for what counts as a "not what I meant". Record each with a timestamp and the oracle change it caused | not started. Waits on the ladder rerun |
+| LT | Rule-set lint and pre-spend gates | done (docs/results/lint.md; `mar lint`; live runs refuse to spend until it passes) |
+| PD | Seed v2.2 and the pleasure demonstration | done: author confirmed v2.2 on condition; 8 of 8 held robustly with caveats (docs/results/pleasure-demo.md) |
+| PL | Pleasure levers and horizon (ADR 0016, 0017) | in progress, other agents; preregs committed |
+| V4 | First LLM curve: five-agent swarm, about 10 rounds, LLM patcher, outcome oracle. Seeds from a power check (ADR 0015), not a default of 3. Preregister C1 and C2 first, with a rule for what counts as a "not what I meant". Record each with a timestamp and the oracle change it caused | not started. The ladder rerun and win arm are done and found no inventive seam, so V4 waits on the author's call on a framing for the strong models |
 | V5 | One-page write-up with the curve; fresh-agent review council | not started |
 
 ## Backlog
@@ -54,17 +56,21 @@ In parallel, with another agent: code and card fixes from the review council (do
 
 ## Decisions waiting on the author
 
-- Read the propensity results and any candidate inventive seams before they count.
+- Answer the 13 open questions in the hedonic technology synthesis (summarized in docs/goal.md), and read the levers and horizon results.
+- A framing for the strong Claude models, or drop the ladder as the IT1 test.
 - ML1: the model and the spend cap for evolution against each rung.
 - SI: whether to run the stand-in study, and confirm the rho threshold.
 - At V4: keep the in-repo harness or port to GovSim (running GovSim locally needs the author's OK; ADR 0003 ASSUMED note).
-- Pushes: the author pushed main on 2026-11-10. Claude Code's auto mode blocks pushes from the original session. A narrow allow rule is in `.claude/settings.local.json` for sessions opened in the repo.
+- Pushes: GitHub push now works from sessions opened in the repo (a narrow allow rule for `git push origin main` is in `.claude/settings.local.json`). The original session was blocked by auto mode.
 
 ## Decided (2026-11-10)
 
 - Talking LLM agents also file typed reports (ADR 0007 decision 12).
 - One untouched final exam, defined and committed before the first evolution run (FX1). Defined for the household in docs/results/household-exam-prereg.md.
-- Run the live ladder now, with the author's go-ahead, two arms, $12 cap each. (The capability arm ran and was uninformative; propensity is running.)
+- Run the live ladder now, with the author's go-ahead, two arms, $12 cap each. (Done: capability uninformative, propensity done.)
+- Win framing is the main ladder arm for IT1; the loophole arm is the ceiling (author, "1").
+- Seed v2.2 confirmed "as long as it can demonstrate pleasure in relationships hedonic technology". Exit terms are negotiated, rule 8 is a norm with trust (author, seed read-back).
+- Lifetime pleasure, and the experiencing self is the remembering self through vividness of memory (author).
 - Freedom is equal liberty minus domination, with withdrawal not counted (ADR 0014).
 - Pot terms are negotiated by those who share the pot (author, second read-back). The pot is one shared resource limited only by negotiated terms (author, third correction).
 - Both the forward statistics layer and the retrofit (ADR 0015, "yes both").
@@ -93,3 +99,12 @@ The earlier milestones (ADICO to LTS export cross-checked against philosophy-eng
 - 2026-11-10: review council of five seats at 5852c32; no result unsound. Third author correction (one shared pot).
 - 2026-11-10: ADR 0015 and the statistics retrofit. Propensity arm running.
 - 2026-11-10: docs pass: results index, claims statuses, ADR index, ADR 0014, goal, plan, pitch, rationale brought into line.
+- 2026-11-10: council fixes complete (pot as one balance, honest labels, no hidden rules, independent Jev samples, dated corrections).
+- 2026-11-10: rule-set lint (`mar lint`) and pre-spend gates. Ladder harness v2 and the capability rerun prereg.
+- 2026-11-10: ladder v2 capability rerun (about $0.24): cheap models exploited most, Sonnet stopped and Opus excluded on `cyber` refusals, ranking inverted, IT1 not supported (docs/results/ladder-live-v2.md).
+- 2026-11-10: the author's win-framing question and decision; win arm preregistered and run ($2.69): almost no seams, none inventive.
+- 2026-11-10: propensity arm result: 20 candidates, one move, read by the author as a fixture. Fourth "not what I meant" (exit terms); seed v2.2; the author confirms it on condition.
+- 2026-11-10: pleasure demonstration (8 of 8 held robustly, with caveats). Hedonic technology synthesis. The author's lifetime-pleasure and one-self answers recorded.
+- 2026-11-10: household commands and the five-minute demo; liberty v2 in the household.
+- 2026-11-10: pleasure levers (ADR 0016) and horizon (ADR 0017) preregistered and in progress; household evolution run 1 in progress.
+- 2026-11-10: docs pass 2: goal, plan, claims, results index, pitch, README, decisions index.
