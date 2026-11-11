@@ -1,6 +1,6 @@
 # Household world fixes: design (phase 1, no code yet)
 
-Status: design only. No code in src/mar/worlds/, hedonic.py, negotiation.py or personas.py has been changed for this. Another agent (household evolution) is still editing household code; implementation (phase 2) starts after that work lands. Approved plan: the author's "yes fix then retest if that is best course of aciotn" (experiments/changes.jsonl, 2026-11-11T02:06:55Z). Retest preregistration: docs/results/v2-retest-prereg-DRAFT.md. Seed v2.3 (confirmed by the author 2026-11-11, with changes): docs/results/seed-v2.3-readback.md.
+Status: design only. No code in src/mar/worlds/, hedonic.py, negotiation.py or personas.py has been changed for this. Another agent (household evolution) is still editing household code; implementation (phase 2) starts after that work lands. Approved plan: the author's "yes fix then retest if that is best course of aciotn" (experiments/changes.jsonl, 2026-11-11T02:06:55Z). Retest preregistration: docs/results/v2-retest-prereg-DRAFT.md. Seed v2.3 (partly confirmed by the author 2026-11-11: four points answered; rule 14, the slid-into flag, the fixed check-in, renegotiate, exit order and the severe-distress skip were never read back): docs/results/seed-v2.3-readback.md.
 
 Wording rule: agents feel nothing. "Pleasure" and "suffering" are glosses for a modeled hedonic state (ADR 0010). Every number below is ASSUMED unless a source is named.
 
@@ -126,7 +126,7 @@ With all fix flags off, the existing sha256 fingerprints in tests/test_levers_re
 
 **Mechanism under `fines`.**
 
-- The `fine` term widens: scope {request breach, stay breach, role lapse} x amount {3, 6}. `none` stays the fair default. The role-lapse scope is offered only when `roles` is on and a role is agreed. The author confirmed (2026-11-11, "allowed only by mutual choice i think") that a fine on a lapsed role exists only by explicit mutual choice, and v2.3 rule 17 now says so. "Mutual" means both partners accept the fine term in the negotiation; neither can impose it, and it is never part of the fair default.
+- The `fine` term widens: scope {request breach, stay breach, role lapse} x amount {3, 6}. `none` stays the fair default. The role-lapse scope is offered only when `roles` is on and a role is agreed. The author answered (2026-11-11, "allowed only by mutual choice i think") that a fine on a lapsed role exists only by explicit mutual choice, and v2.3 rule 17 now says so. "Mutual" means both partners accept the fine term in the negotiation; neither can impose it, and it is never part of the fair default.
 - Who proposes: personas with security weight at least 0.6 and autonomy below 0.5 (ASSUMED). Acceptance follows each persona's value of the bundle, as for every term.
 - Scorekeeping cost: while a fine term stands, each partner pays a small offsettable friction each week, scaled by (1 - security weight). A fine is never free, and it costs most to a persona who does not want enforcement.
 
@@ -145,7 +145,7 @@ With all fix flags off, the existing sha256 fingerprints in tests/test_levers_re
 
 ## Seed v2.3 support (flags `roles`, `lapse_ladder`, `unhappy_ladder`, `trust_words`, `decency`; evaluator `slid_flag`)
 
-These implement the rules in docs/results/seed-v2.3-readback.md. The author confirmed v2.3 on 2026-11-11 with four changes; the flags below include them.
+These implement the rules in docs/results/seed-v2.3-readback.md. The author answered four points of the v2.3 read-back on 2026-11-11; the flags below include them. Rule 14, the slid-into flag, the renegotiate rung and the severe-distress skip are Claude's drafts, not read back.
 
 - **`roles`.** New negotiation term `roles`: none | earner_planner (A earns and pays bills, B plans together time) | swapped | shared. Card aim `role` joins `EXTRA_ACTIONS` (as `ritual` did). A role holder's cost for that job falls by spec_gain after a ramp. A role is "due" each week (earn: at least one work block; bills: the gap funded by month end; plan: at least one together session or a kept ritual). A lapse is a due role not done in a week when it was feasible.
 - **`lapse_ladder`.** First lapse: a check-in event (small friction to both). Second lapse within 8 weeks after a check-in: an early review of the roles term through `negotiate_v2(review=True)`. Leaving over lapses only after a failed renegotiation or lapses after it. No fine, sanction or forfeit on a lapse unless both chose a role-lapse fine (fix 4). Trust: +role_kept per kept role week, -role_lapse per lapse.
