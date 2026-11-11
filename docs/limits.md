@@ -32,12 +32,12 @@ Fix: none planned. See [reviews/2026-11-11-scope.md](reviews/2026-11-11-scope.md
 Results cannot be about "exit moves the egoist" without naming the partner's judging rule.
 Fix: reported as a band, not fixed. See [results/h32-v2.md](results/h32-v2.md).
 
-**8. Designs can make a verdict impossible.** IT1 had no victim, so no verdict could occur. H32 had too few open cells. Some classifier checks hold by construction.
+**8. Designs can make a verdict impossible.** On ladder rungs L1 to L4 the formal model already reaches every harm kind, so no run could be classed inventive. H32 had too few open cells for "supported". Some classifier checks hold by construction. (A separate, earlier flaw: the first live ladder run had no victim, because one model drove both partners.)
 Results cannot be about a clause that cannot fail.
 Fix: the required "Can every verdict happen?" section in [templates/prereg.md](templates/prereg.md). See [negative-results.md](negative-results.md).
 
-**9. The formal model reaches every harm.** The checker sees all harms the world allows, so no agent can be inventive against it.
-Results cannot be about inventiveness, and IT1 stays untested.
+**9. The formal model reaches every harm on the old rungs.** On L1 to L4 the checker sees every harm those rules allow, so no agent can be inventive against them.
+Results from those rungs cannot be about inventiveness. The IT1 rerun uses rungs where an inventive, paying seam is reachable (checked by a free gate) and is running now.
 Fix: a deliberately narrower model, ladder only. See [plans/inventive-seam-next.md](plans/inventive-seam-next.md).
 
 **10. Agents feel nothing, and the cast is three seats.** No scale, no network.
