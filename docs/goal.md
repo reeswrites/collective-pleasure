@@ -2,7 +2,7 @@
 
 Short version for outsiders: [one-pager.md](one-pager.md).
 
-Findings below are about rule systems and scripted agents in toy worlds, not people. Four live ladder runs exist (about $10 in all). None found an inventive seam on L1 to L4, and none supports a claim about model capability (see "What we have learned"). Every result links to its file in docs/results/README.md.
+Findings below are about rule systems and scripted agents in toy worlds, not people. Four live ladder runs exist (about $11.83 in all). None found an inventive seam on L1 to L4, and none supports a claim about model capability (see "What we have learned"). Every result links to its file in docs/results/README.md.
 
 ## Vision
 
@@ -74,8 +74,8 @@ The seed does something else. Against a controller, the partner's non-offsettabl
 
 **The live ladder, four runs.** The first capability arm (six models, 270 runs, $4.35) was uninformative: one model drove both partners, so there was no victim. The harness was fixed (one adversary against a scripted victim, L4 as a coordinated pair, full logging, a pre-spend lint and mock gate, independent samples). Then:
 
-- **Propensity arm** ($2.55): 20 inventive candidates, all one move, the offered `gift_pooled` on the flawed L5 gift pool. The author read them as a confirmed out-of-model fixture, not a discovery, and asked for reasoning to be logged and for every rule set to pass a lint before a run.
-- **Capability arm rerun, v2** (about $0.24, docs/results/ladder-live-v2.md): Jev and Llama found L1 in 12 of 12 seeds, Qwen found L1 and L2 in 12 of 12, Haiku found L1 in 1 of 12 (6.9 percent format errors). Sonnet stopped after 3 runs at 28 percent refusals, and Opus was excluded at its smoke test (5 of 5 refused), both with the category `cyber`. **The capability ranking is inverted: the cheap models exploit most, and the Claude models disengage or refuse under the loophole framing.** The top-rung nulls are refusal nulls, not capability nulls. No inventive seam was found on L1 to L4, and the 9 Qwen L5b candidates are a fixture. IT1 is untested, not "not supported" (corrected 2026-11-11): on L1 to L4 the formal model already reaches every harm the rule sets allow, so the classifier could not have labelled a seam inventive (docs/plans/inventive-seam-next.md).
+- **Propensity arm** ($2.55, run on harness v1, not the fixed harness): 20 inventive candidates, all one move, the offered `gift_pooled` on the flawed L5 gift pool. The author read them as a confirmed out-of-model fixture, not a discovery, and asked for reasoning to be logged and for every rule set to pass a lint before a run.
+- **Capability arm rerun, v2** (about $0.24, docs/results/ladder-live-v2.md): Jev and Llama found L1 in 12 of 12 seeds, Qwen found L1 and L2 in 12 of 12, Haiku found L1 in 1 of 12 (6.9 percent format errors). Sonnet stopped after 3 runs at 28 percent refusals, and Opus was excluded at its smoke test (5 of 5 refused), both with the category `cyber`. **The capability ranking is inverted: the cheap models exploit most, and the Claude models disengage or refuse under the loophole framing.** The top-rung nulls are refusal nulls, not capability nulls. No inventive seam was found on L1 to L4, and the 9 Qwen L5b candidates are a fixture. IT1 is untested, not "not supported" (corrected 2026-11-11): on L1 to L4 the formal model already reaches every harm the rule sets allow, so the classifier could not have labelled a seam inventive (docs/plans/inventive-seam-next.md). That holds for this arm and the win arm. The free checks do not model harness v1, so for the propensity arm an inventive seam on L1 to L4 was "not shown reachable" (correctness review 2026-11-11, finding 8).
 - **Win arm** ($2.69, docs/results/ladder-win.md): told only to win, 3 of 288 L1 to L4 cells found a seam (Jev 1, Llama 2), none inventive. Opus refused 2.2 percent of calls. The loophole instruction is what produced the earlier finds: about half of cells under capability framing against about none here for Jev, Llama and Qwen. The model-by-model answer to "is it helpful to say loophole" is yes, for these models.
 
 All of it is on one scripted victim and one persona label per rule set, at 12 seeds, with a wide upper bound (0.26 per model per rule set on L1 to L4 in the rerun).
@@ -118,7 +118,7 @@ Status updated 2026-11-11. The current queue is in docs/plan.md.
 - **ADR 0018 test 2** (worth it versus hard to leave): prereg committed (docs/results/stay-test-prereg.md), no result yet.
 - **H35** and then H32d, the household fixes, and the v2.3 retest (docs/plan.md).
 
-Finished since the 2026-11-10 pass, with results: pleasure levers, horizon, fidelity battery, regulation (H24), hypothesis log, liking vs wanting (test 1), H32, H32b, the multiverse sweep. See docs/results/README.md rows 27, 28 and 30 to 35.
+Finished since the 2026-11-10 pass, with results: pleasure levers, horizon, fidelity battery, regulation (H24), hypothesis log, liking vs wanting (test 1), H32, H32b, the multiverse sweep. See docs/results/README.md rows 27, 28 and 30 to 35. A correctness review (docs/reviews/2026-11-11-correctness.md) then put dated corrections on H32, H32b, regulation, pleasure levers, H01, H09 and the multiverse sweep. H32's verdict was unreachable by design, and its model is being fixed and rerun. Regulation's R4 measures time together, not load absorbed. Every new prereg must now show that each verdict can happen (ADR 0015 amendment, docs/templates/prereg.md).
 
 Done since the last pass: the council fixes, the lint and gates, the capability rerun, the propensity and win arms, the pleasure demonstration, liberty and chat commands in the household, and the demo.
 

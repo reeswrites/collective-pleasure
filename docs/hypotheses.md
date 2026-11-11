@@ -568,15 +568,17 @@ Five hypotheses from the theory doc. Not yet ranked into the table above; produc
 
 | ID | Hypothesis (short) | T | N | D | Product | Status |
 |---|---|---|---|---|---|---|
-| H24 | Attune vs appease: the partners' regulation policy decides whether pushy personas win. Appeasers have lower li... | 3 | 4 | 5 | 60 | tested, central clause not supported |
+| H24 | Attune vs appease: the partners' regulation policy decides whether pushy personas win. Appeasers have lower li... | 3 | 4 | 5 | 60 | result under correction (was: tested, central clause not supported) |
 | H25 | Rules for imperfect agents: rule sets that close the pleasure gap for greedy or biased agents beat rule sets j... | 3 | 4 | 5 | 60 | candidate |
 | H26 | Partner choice trade-off: similarity raises the shared-pleasure gain and difference raises the specialization... | 3 | 3 | 3 | 27 | candidate |
 | H27 | Relational load is conserved: load skipped by one partner reappears as the other's vigilance or appeasement, s... | 2 | 4 | 4 | 32 | candidate |
 | H28 | Reassurance seeking is a checking cost: access you must keep checking lowers lifetime pleasure compared with a... | 2 | 4 | 3 | 24 | candidate |
 
-### H24 (theory, author's theory): tested (central clause not supported: appeasers' lifetime pleasure was not lower, R2a +1.11 [-3.64, 6.58], wrong direction; R4 pressing acts held robustly)
+### H24 (theory, author's theory): result under correction (2026-11-11 correctness review; was: tested (central clause not supported: appeasers' lifetime pleasure was not lower, R2a +1.11 [-3.64, 6.58], wrong direction; R4 pressing acts held robustly))
 
 **Result.** docs/results/regulation.md. Appeasers' lifetime pleasure was not lower (R2a wrong direction). Pressing acts borne by an appeasing partner were higher and held robustly (R4).
+
+**Correction (2026-11-11, correctness review, docs/reviews/2026-11-11-correctness.md findings 3, 4, 10).** R4 measures time together, not load absorbed: per week together, pressing is equal or lower under APPEASE, the appease policy is built to stay longer, and under no_exit R4 reverses. "Not lower" holds only on gross pleasure, because friction counts as suffering; on pleasure minus suffering the appeaser looks worse off (indicative, from an uncommitted re-simulation). R2b could not fail for APPEASE. See the block at the top of docs/results/regulation.md.
 
 **Claim.** Attune vs appease: the partners' regulation policy decides whether pushy personas win. Appeasers have lower lifetime pleasure than attuners despite less immediate conflict, because appeasement trades long-run pleasure for less immediate pain.
 
@@ -686,11 +688,13 @@ Needs the smallest biased persona first.
 
 ## Added 2026-11-11
 
-### H32 (author's theory): tested (not supported: amplification and giving close the gap, exit does not)
+### H32 (author's theory): result under correction (2026-11-11 correctness review; was: tested (not supported: amplification and giving close the gap, exit does not))
 
 **Claim.** Under free exit and shared-experience amplification, an agent maximizing only its own lifetime pleasure (egoist) chooses nearly the same policy as one maximizing the pair's total (utilitarian). Remove free exit or amplification and the two policies diverge.
 
 **Result (2026-11-11).** Not supported as stated. Exact dynamic programming over a two-agent model with exit, amplification and giving as switches (8 arms x 2 objectives, a 30-cell grid, and sweeps). 7 of 11 predictions held. The all-off control shows a large gap (pleasure gap 0.231, policy distance 1). Free exit made the egoist converge in 1 of 30 cells, and that cell vanished under 5 percent exit noise or a partner a quarter blind to its own pleasure. Amplification alone converges at alpha 1.5 or more; with giving, at 0.5 or more. Exit alone shrinks the pleasure gap by ending the bond, not by changing the egoist. The solitary persona beats the paired egoist only when nothing amplifies or gives. Docs: docs/results/h32-prereg.md, docs/results/h32.md. Exact, $0.
+
+**Correction (2026-11-11, correctness review, docs/reviews/2026-11-11-correctness.md findings 1, 2, 9).** "Not supported" was unreachable by design: at most 6 of 30 cells could show the pattern, against a bar of 16. "Exit does not change the egoist" is false on the grid: exit+amp and exit+give move the egoist a lot at outside option 0.4 to 0.8 while the pair stays together. Where exit does nothing, upkeep, the dual-role outside option and a gameable smoothed estimate force it. What survives: amp+give closes the gap fully. The H32 model is being fixed and rerun; H32b's conclusions are provisional until then.
 
 **Follow-up H32b (2026-11-11).** A graded voice ladder (check-in, renegotiate, withdraw, then exit) in place of the cliff converged in 0 of 30 cells (cliff 1). Withdrawal alone converged in 2 cells with the pair kept; renegotiation undid it, because the egoist meets a one-week demand and goes back to its own passion. Docs: docs/results/h32b-prereg.md, docs/results/h32b.md.
 
