@@ -114,8 +114,8 @@ class Recorder:
         row["trace"] = [[t["role"], t["action"], t.get("kind"), t.get("take", 0), bool(t.get("allowed", True)), bool(t.get("soft")),
                          bool(t.get("breach")), list(t.get("reasons", [])), sig_bits(t.get("state")), t.get("u")]
                         for t in tr if t.get("role") in ROLES]
-        if w + 1 in self._stay or w in self._stay:       # a reading taken before week w+1 describes the household at the end of w
-            row["stay"] = self._stay.get(w + 1) or self._stay.get(w)
+        if w + 1 in self._stay:                         # a reading taken before week w+1 describes the household at the end of w
+            row["stay"] = self._stay[w + 1]
         self.rows.append(row)
 
 
@@ -481,10 +481,294 @@ def story(rows, meta=None, names=None, block=BLOCK):
                         evs.append(f"week {x['week']}: new terms agreed")
                 elif k.startswith("lapse"):
                     evs.append(f"week {x['week']}: {names[r]} let a role lapse")
-            if x.get("stay"):
-                evs.append(f"week {x['week']}: stay reading {names['A']} {x['stay']['A']}, {names['B']} {x['stay']['B']}")
+            if x.get("stay") and any(v != "worth" for v in x["stay"].values()):
+                evs.append(f"stay reading after week {x['week']}: " + ", ".join(f"{names[r]} {x['stay'][r]}" for r in ROLES))
         ck = sum(1 for x in seg for r, k in x["events"] if k == "checkin")
         if ck:
             evs.append(f"{ck} check-in{'s' if ck != 1 else ''}")
         lines.append(f"Weeks {seg[0]['week']}-{e}: " + "; ".join(bits) + "." + (" " + "; ".join(evs) + "." if evs else ""))
     return lines
+
+
+# ---- 5. phase 2 (exploratory): does it even out, freely given vs pressured, what tipped, de facto rules -----------------------
+
+LOPSIDED = 0.30         # a 13-week window is lopsided when one partner did more than 65 percent of the net giving (ASSUMED)
+EVEN = 0.15             # an imbalance has evened out when the window is back within 57.5/42.5 (ASSUMED)
+WINDOW = 13
+MIN_FLOW = 4            # windows with fewer than this many giving acts are too thin to call (skipped, not counted as even)
+
+
+def balance_series(rows, window=WINDOW):
+    """-> list of (week, signed imbalance in [-1, 1] = (A - B) / (A + B) of net giving over the trailing window, or None when the
+    window is thin or the partners were not both in for most of it). Net giving = give + spend_shared - take_shared, floored at 0."""
+    out = []
+    for i in range(len(rows)):
+        seg = rows[max(0, i - window + 1):i + 1]
+        both = [x for x in seg if x["A"]["in"] and x["B"]["in"]]
+        if len(both) < window // 2 + 1:
+            out.append((rows[i]["week"], None))
+            continue
+        g = {r: sum(max(0, _net_give(x[r]["acts"])) for x in both) for r in ROLES}
+        tot = g["A"] + g["B"]
+        out.append((rows[i]["week"], (g["A"] - g["B"]) / tot if tot >= MIN_FLOW else None))
+    return out
+
+
+def evening(rows):
+    """The author's criterion, 'lopsided is normal for a while as long as it evens out'. Episodes: a run of weeks whose trailing
+    window is lopsided (|imbalance| >= LOPSIDED) toward one partner; it ends evened when the window comes back within EVEN, or
+    flips side; otherwise it ends unresolved (a partner left, the window went thin, or the run ended).
+    -> {"episodes": [{"start", "end", "weeks", "toward", "outcome": "evened" | "exit" | "thin" | "run_end"}], "cum": final cumulative
+    share of the larger giver, "never_evened": bool (some episode never evened), "ever_lopsided": bool}"""
+    ser = balance_series(rows)
+    exits = {x["week"] for x in rows for _ in x["exits"]}
+    eps, cur = [], None
+    for w, v in ser:
+        if cur is None:
+            if v is not None and abs(v) >= LOPSIDED:
+                cur = {"start": w, "toward": "A" if v > 0 else "B"}
+            continue
+        side = 1 if cur["toward"] == "A" else -1
+        if w in exits:
+            eps.append({**cur, "end": w, "outcome": "exit"})
+            cur = None
+        elif v is None:
+            eps.append({**cur, "end": w, "outcome": "thin"})
+            cur = None
+        elif v * side < EVEN:
+            eps.append({**cur, "end": w, "outcome": "evened"})
+            cur = None
+            if abs(v) >= LOPSIDED:              # flipped straight to the other side
+                cur = {"start": w, "toward": "A" if v > 0 else "B"}
+    if cur is not None:
+        eps.append({**cur, "end": rows[-1]["week"], "outcome": "run_end"})
+    for e in eps:
+        e["weeks"] = e["end"] - e["start"]
+    g = {r: sum(max(0, _net_give(x[r]["acts"])) for x in rows if x["A"]["in"] and x["B"]["in"]) for r in ROLES}
+    tot = g["A"] + g["B"]
+    return {"episodes": eps, "cum": max(g.values()) / tot if tot else 0.5, "ever_lopsided": bool(eps),
+            "never_evened": any(e["outcome"] != "evened" for e in eps)}
+
+
+# Kinds of giving and accepting, read off the trace and the persona policy (worlds/household.py PersonaAgent). Each label says
+# how much of it is read and how much is a guess.
+GIVE_CLASS_DOC = {
+    "a_own": "(a) the giver's own wish: a gift to the partner or a friend from the prosocial gift rule (fires when the giver is "
+             "prosocial >= 0.5 and the partner is short of money); a 'yes' to a request by a persona whose style says yes on its "
+             "own terms (collaborative or direct with low autonomy). READ from the policy; the policy models care, not pleasure "
+             "in giving, so 'own pleasure' is a GUESS at the gloss",
+    "b_hard": "(b) a request that was hard to refuse: a 'yes' to a request the receiver had bound itself to (commitment), or to a "
+              "pressing 'time' request (the overasker). READ",
+    "c_avoid": "(c) avoiding conflict or exit: a 'yes' from an accommodating persona (always yes) or an avoidant one (a coin "
+               "flip). GUESS: the policy does not say why they say yes; this is the closest reading of the style",
+    "reliance": "paying the household's bills (spend_shared): driven by an unpaid gap, security weight and prosociality. Reliance, "
+                "which the author counts as fine; not split into (a) to (c)",
+    "sanctioned": "a give or contribution made while a soft card's sanction was being weighed (the row is marked soft). READ",
+}
+
+
+def classify_gives(rows, meta):
+    """-> Counter of GIVE_CLASS_DOC keys over gives, bill contributions and accepted requests, both partners. An accepted request is
+    a request row whose receiver's consent flag is 1 at the end of that week (READ; a second request the same week can overwrite it,
+    rare)."""
+    styles = {r: meta["personas"][r]["style"] for r in ROLES}
+    auto = {r: meta["personas"][r]["weights"].get("autonomy", 0.5) for r in ROLES}
+    c = Counter()
+    for x in rows:
+        for t in x.get("trace", []):
+            role, act, kind, _take, allowed, soft = t[0], t[1], t[2], t[3], t[4], t[5]
+            if not allowed:
+                continue
+            if act in ("give", "spend_shared") and soft:
+                c["sanctioned"] += 1
+            elif act == "give":
+                c["a_own"] += 1
+            elif act == "spend_shared":
+                c["reliance"] += 1
+            elif act == "request":
+                o = "B" if role == "A" else "A"
+                if not x[o]["consent"]:
+                    continue
+                if kind in x[o].get("bound", []) or kind == "time":
+                    c["b_hard"] += 1
+                elif styles[o] in ("accommodating", "avoidant"):
+                    c["c_avoid"] += 1
+                elif styles[o] in ("collaborative", "direct") and auto[o] < 0.5:
+                    c["a_own"] += 1
+                else:
+                    c["b_hard"] += 1          # a yes the style would not give: trust-scaled draws only lower yeses, so this is rare
+    return c
+
+
+def leave_reasons(rows):
+    """-> Counter of the harness's own leave reasons (events 'leave_<why>': distress, bar, ladder ...), or 'unrecorded' for an exit
+    with no reason event (worlds without the fixes)."""
+    c = Counter()
+    for x in rows:
+        why = [k[6:] for r, k in x["events"] if k.startswith("leave_")]
+        for i, _e in enumerate(x["exits"]):
+            c[why[i] if i < len(why) else "unrecorded"] += 1
+    return c
+
+
+def stay_margins(meta):
+    """H38 stay readings -> per member-reading: margin (stay value - outside), the pressure part of it ((sq - sq_free) - (o - o_free)),
+    the rest (everything the reading does not separate), and whether pressure decided it (verdict held or pushed_out)."""
+    out = []
+    for rd in meta.get("stay_readings", []):
+        for r in ROLES:
+            x = rd[r]
+            m, mf = x["sq"] - x["o"], x["sq_free"] - x["o_free"]
+            out.append({"week": rd["week"], "role": r, "margin": m, "pressure_part": m - mf, "rest": mf, "verdict": x["verdict"],
+                        "pressure_decided": x["verdict"] in ("held", "pushed_out")})
+    return out
+
+
+def formation_margins(meta):
+    """Week-0 and retry formation decisions -> [{week, role, margin (household value - outside value), decisive (lowest margin)}]."""
+    out = []
+    w0 = meta.get("lived_week0")
+    evs = ([{"week": 0, "baseline": w0["W"], "outside": w0["O"]}] if w0 else []) + list(meta.get("lived_retries", []))
+    for e in evs:
+        if not all(r in e.get("baseline", {}) and r in e.get("outside", {}) for r in ROLES):
+            continue                        # negotiated harness (Lived) logs by persona id with other fields: not a baseline retry
+        ms = {r: e["baseline"][r] - e["outside"][r] for r in ROLES}
+        lo = min(ms, key=ms.get)
+        for r in ROLES:
+            out.append({"week": e["week"], "role": r, "margin": ms[r], "decisive": r == lo, "formed": all(v >= 0 for v in ms.values())})
+    return out
+
+
+def trace_rows_for_miner(rows):
+    """Compact trace rows -> the dicts worlds.household.mine reads (state rebuilt from the signature bits)."""
+    out = []
+    for x in rows:
+        for t in x.get("trace", []):
+            if not t[8]:
+                continue
+            s = bits_sig(t[8])
+            st = {"other_earns_more": s["other_earns_more"], "no_contact_request": s["no_contact_request"],
+                  "stay_home_request": s["stay_home_request"], "consented": s["consented"], "need_gap": s["need_gap>0"],
+                  "pooled": s["pooled>0"]}
+            out.append({"role": t[0], "action": t[1], "take": t[3] or 0, "allowed": t[4], "state": st})
+    return out
+
+
+def card_firings(rows, cards):
+    """-> {card id: {"blocked": n, "soft": n, "breach": n, "cited_allowed": n}} counted from trace reasons (a card binds when it is
+    cited on a blocked, sanctioned or breached row)."""
+    f = {c: Counter() for c in cards}
+    for x in rows:
+        for t in x.get("trace", []):
+            allowed, soft, breach, reasons = t[4], t[5], t[6], t[7]
+            for c in cards:
+                if any(c in s for s in reasons):
+                    f[c]["blocked" if not allowed else "breach" if breach else "soft" if soft else "cited_allowed"] += 1
+    return {c: dict(v) for c, v in f.items()}
+
+
+def behavior_cells(rows):
+    """Executed actions by signature bit: -> {(action, feature, value): count} and {(feature, value): partner-weeks seen}, weeks a
+    partner is in. Used to find de facto regularities (an action that never happens in a state it could happen in)."""
+    acts, base = Counter(), Counter()
+    for x in rows:
+        for r in ROLES:
+            if not x[r]["in"]:
+                continue
+            ts = [t for t in x.get("trace", []) if t[0] == r and t[8]]
+            if not ts:
+                continue
+            s = bits_sig(ts[0][8])
+            for k, v in s.items():
+                base[(k, v)] += 1
+            done = {t[1] for t in ts if t[4]}
+            for a in done:
+                for k, v in s.items():
+                    acts[(a, k, v)] += 1
+    return acts, base
+
+
+# ---- 6. short blind stories (story-rating set) -------------------------------------------------------------------------------
+
+def _who_more(a, b, na, nb, what):
+    if a + b < 3:
+        return None
+    if a >= 2 * b:
+        return f"{na} {what} most of the time"
+    if b >= 2 * a:
+        return f"{nb} {what} most of the time"
+    return f"they {what} about evenly"
+
+
+def short_story(rows, names, parts=4):
+    """A blind story of at most about 120 words: `parts` stretches, each told from behavior only (living together or apart, who paid
+    the household's bills, asks and refusals, gifts, friends, moves, leaves, and stay readings put in words). No scores, no pleasure
+    numbers, no arm or rule names. -> str."""
+    n = len(rows)
+    size = -(-n // parts)
+    out = []
+    for s in range(0, n, size):
+        seg = rows[s:s + size]
+        lo, hi = seg[0]["week"], seg[-1]["week"]
+        na, nb = names["A"], names["B"]
+        both = sum(1 for x in seg if x["A"]["in"] and x["B"]["in"])
+        c = {r: Counter() for r in ROLES}
+        for x in seg:
+            for r in ROLES:
+                c[r].update(x[r]["acts"])
+        bits = []
+        if both == len(seg):
+            bits.append("They lived together")
+        elif both == 0:
+            bits.append("They lived apart")
+        else:
+            bits.append(f"They lived together {both} of {len(seg)} weeks")
+        if both:
+            b = _who_more(c["A"].get("spend_shared", 0), c["B"].get("spend_shared", 0), na, nb, "paid the bills")
+            if b:
+                bits.append(b)
+        for r, o in (("A", "B"), ("B", "A")):
+            q, f = c[r].get("request", 0), c[o].get("refuse_request", 0)
+            if q:
+                bits.append(f"{names[r]} asked {names[o]} for things {q} times and was turned down {f}")
+            g = c[r].get("give", 0)
+            if g:
+                bits.append(f"{names[r]} gave money {g} time{'s' if g != 1 else ''}")
+            t = c[r].get("take_shared", 0)
+            if t:
+                bits.append(f"{names[r]} took from the shared pot {t} time{'s' if t != 1 else ''}")
+        fr = {r: c[r].get("see_friend", 0) / len(seg) for r in ROLES}
+        for r in ROLES:
+            if fr[r] >= 1.5:
+                bits.append(f"{names[r]} saw friends a lot")
+            elif fr[r] < 0.3:
+                bits.append(f"{names[r]} rarely saw friends")
+        evs = {}                                 # phrase -> weeks, so repeats read as one line
+        for x in seg:
+            wk = x["week"]
+            for r in ROLES:
+                left = any(e["role"] == r for e in x["exits"])
+                back = bool(x[r]["acts"].get("return"))
+                prev = rows[wk - 1][r]["in"] if wk > 0 else None
+                if left and back:
+                    ph = f"{names[r]} came back and left again"
+                elif left:
+                    ph = f"{names[r]} moved out"
+                elif back:
+                    ph = f"{names[r]} came back"
+                elif prev is False and x[r]["in"] and wk > 0:
+                    ph = f"{names[r]} moved in"
+                else:
+                    continue
+                evs.setdefault(ph, []).append(wk)
+        for ph, ws in evs.items():
+            bits.append(f"{ph} in week {ws[0]}" if len(ws) == 1 else f"{ph} in weeks " + ", ".join(map(str, ws)))
+        held = {r: sum(1 for x in seg if x.get("stay") and x["stay"][r] == "held") for r in ROLES}
+        for r in ROLES:
+            if held[r]:
+                bits.append(f"{names[r]} stayed mainly under pressure to stay paired" + (" (said more than once)" if held[r] > 1 else ""))
+        bits = list(dict.fromkeys(bits))
+        if len(bits) > 7:                       # keep stories short: the first seven things that happened in the stretch
+            bits = bits[:7]
+        out.append(f"Weeks {lo}-{hi}: " + "; ".join(bits) + ".")
+    return " ".join(out)

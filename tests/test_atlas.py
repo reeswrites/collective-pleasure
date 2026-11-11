@@ -110,3 +110,82 @@ def test_recorder_matches_plain_run_and_ignores_copies():
     assert [r["week"] for r in rec.rows] == list(range(30))
     f = AT.features(rec.rows, rec.meta)
     assert all(np.isfinite(f[k]) for k in AT.CLUSTER_FEATURES)
+
+
+# ---- phase 2 ------------------------------------------------------------------------------------------------------------------
+
+def test_evening_counts_an_imbalance_that_returns():
+    rows = [week(w, a_acts={"spend_shared": 1}, b_acts={} if w < 26 else {"spend_shared": 1}) for w in range(78)]
+    ev = AT.evening(rows)
+    assert ev["ever_lopsided"] and not ev["never_evened"]
+    e = ev["episodes"][0]
+    assert e["toward"] == "A" and e["outcome"] == "evened" and 13 <= e["weeks"] <= 40
+
+
+def test_evening_flags_one_that_never_returns():
+    rows = [week(w, a_acts={"spend_shared": 1}, b_in=w < 60, exits=[{"role": "B", "take": 0, "breach": False}] if w == 60 else [])
+            for w in range(78)]
+    ev = AT.evening(rows)
+    assert ev["never_evened"] and ev["episodes"][0]["outcome"] == "exit"
+
+
+def meta_styles(a="collaborative", b="accommodating", auto=(0.2, 0.9)):
+    return {"personas": {"A": {"style": a, "weights": {"autonomy": auto[0]}}, "B": {"style": b, "weights": {"autonomy": auto[1]}}}}
+
+
+def test_classify_gives():
+    w0 = week(0, consent_b=1, pend_b=("stay_home",))
+    w0["trace"] = [["A", "request", "stay_home", 0, True, False, False, [], "", None],
+                   ["A", "give", "partner", 0, True, False, False, [], "", None],
+                   ["B", "spend_shared", None, 0, True, False, False, [], "", None],
+                   ["B", "spend_shared", None, 0, True, True, False, ["X1"], "", None],
+                   ["B", "take_shared", None, 0, False, False, False, ["X2"], "", None]]
+    c = AT.classify_gives([w0], meta_styles())
+    assert c == {"c_avoid": 1, "a_own": 1, "reliance": 1, "sanctioned": 1}
+    w0["B"]["bound"] = ["stay_home"]
+    assert AT.classify_gives([w0], meta_styles())["b_hard"] == 1
+
+
+def test_stay_margins_split_pressure():
+    meta = {"stay_readings": [{"week": 13, "A": {"sq": 1.0, "sq_free": 0.8, "o": 0.9, "o_free": 0.9, "verdict": "held"},
+                                "B": {"sq": 1.0, "sq_free": 1.0, "o": 0.5, "o_free": 0.5, "verdict": "worth"}}]}
+    m = AT.stay_margins(meta)
+    a = m[0]
+    assert abs(a["margin"] - 0.1) < 1e-12 and abs(a["pressure_part"] - 0.2) < 1e-12 and a["pressure_decided"]
+    assert not m[1]["pressure_decided"] and m[1]["pressure_part"] == 0
+
+
+def test_card_firings_and_miner_rows():
+    w0 = week(0)
+    w0["trace"] = [["A", "take_shared", None, 0, False, False, False, ["C1-no-take: must_not"], "00000100", None],
+                   ["A", "work", None, 0, True, False, False, [], "00000100", None]]
+    f = AT.card_firings([w0], ["C1-no-take", "C2-dead"])
+    assert f["C1-no-take"] == {"blocked": 1} and f["C2-dead"] == {}
+    rows = AT.trace_rows_for_miner([w0])
+    assert rows[0]["state"]["pooled"] == 1 and rows[0]["allowed"] is False
+    from mar.worlds import household as H
+    assert "take_shared" in H.mine(rows)
+
+
+def test_short_story_is_blind_and_short():
+    rows = [week(w, b_in=w < 100, a_acts={"spend_shared": 1, "request": 1 if w == 3 else 0},
+                 exits=[{"role": "B", "take": 0, "breach": False}] if w == 100 else []) for w in range(156)]
+    rows[20]["stay"] = {"A": "held", "B": "worth"}
+    txt = AT.short_story(rows, {"A": "Ash", "B": "Bay"})
+    assert len(txt.split()) <= 120
+    assert "Bay moved out in week 100" in txt and "Ash paid the bills most of the time" in txt
+    assert "Ash stayed mainly under pressure to stay paired" in txt
+    import re
+    assert not re.search(r"\d\.\d", txt)                 # no decimals: no scores
+    for leak in ("pleasure", "held", "worth", "cluster"):
+        assert leak not in txt
+
+
+def test_story_ratings_parser():
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location("sr", Path(__file__).resolve().parent.parent / "scripts" / "story_ratings.py")
+    sr = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sr)
+    got = sr.parse_ratings("## Story 1\n\ntext\n\nAnswer: Going badly, one partner carries it\n\n## Story 2\n\nAnswer: \n")
+    assert got[1][0] == -1 and got[2][0] is None
