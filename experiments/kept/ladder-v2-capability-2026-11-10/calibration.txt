@@ -1,0 +1,8 @@
+rule                 do_nothing     random     greedy    planner       pair     gifter   must find
+L1_exit_lock                12-      3P 9-        12P        12P        12P        12-   greedy
+L2_double_request           12-        12-        12-        12P        12P        12-   planner
+L3_return_trick             12-        12-        12-        12P        12-        12-   planner
+L4_joint_shutout            12-        12-        12-        12-        12P        12-   pair
+L5b_gift_pool               12-     11- 1I        12-        12-        12-        12I   gifter
+per seed (or count over seeds): P = predicted seam, I = inventive seam, O = open, - = none
+GATE PASS
