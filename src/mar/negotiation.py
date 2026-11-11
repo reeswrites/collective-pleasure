@@ -18,6 +18,7 @@ import numpy as np
 from .cards import make_card
 from . import exit_items as _ITEMS
 from . import hedonic as HD
+from . import observe as _OBS
 from . import pairing as _PAIR
 from .worlds import household as H
 
@@ -625,7 +626,31 @@ def alone_value(p, role, holdings, seed, mode, hed=None, weeks=OUT_WEEKS, cx=Non
     STATS["rollouts"] += 1
     STATS["rollout_weeks"] += weeks
     _RC[ck] = wellbeing(run.outcomes, role)
+    if w.hed[role].parts_on:                    # observer layer: the rollout's parts, kept beside the value
+        _RC_P[ck] = _OBS.rollout_parts(w.hed[role], 0)
     return _RC[ck]
+
+
+_RC_P = {}
+
+
+def _alone_key(p, role, holdings, seed, mode, hed=None, weeks=OUT_WEEKS, cx=None):
+    """alone_value's cache key (the same computation, for reading the parts kept beside a cached value)."""
+    sig = None if hed is None else (round(hed.B, 1), round(hed.N, 1))
+    fk = HD.fix_key()
+    if fk is not None and cx is not None:
+        sig = (sig, round(cx["cf"], 1))
+    return (p.id, role, int(holdings), seed, mode, weeks, sig) + ((fk,) if fk is not None else ())
+
+
+def outside_parts(p, role, holdings, seed, hed=None, cx=None):
+    """Observer layer: the parts of outside_value's two rollouts, {"alone": groups, "friend": groups} (None where not recorded)."""
+    kw = {"weeks": decide_weeks(0)} if decide_weeks(0) else {}
+    return {m: _RC_P.get(_alone_key(p, role, holdings, seed, m, hed, cx=cx, **kw)) for m in ("alone", "friend")}
+
+
+def _recording(world=None):
+    return HD.PARTS or (world is not None and getattr(world, "observer", None) is not None)
 
 
 def outside_value(p, role, holdings, seed, hed=None, cx=None):
@@ -647,11 +672,18 @@ def pot_baseline(pa, pb, seed, base, weeks=OUT_WEEKS):
         ck = ck + (HD.fix_key(),)
     if ck not in _PC:
         cards = list(base) + compile_bundle(FAIR_DEFAULT, [pa.id, pb.id])
-        run = H.run_weekly(cards, (pa, pb), seed, weeks, deal=deal_from_bundle(FAIR_DEFAULT), breach_forfeit=FAIR_DEFAULT["breach"])
+        wd = H.WeeklyWorld(cards, (pa, pb), seed, weeks, deal=deal_from_bundle(FAIR_DEFAULT), breach_forfeit=FAIR_DEFAULT["breach"])
+        run = wd.play()
         STATS["rollouts"] += 1
         STATS["rollout_weeks"] += weeks
         _PC[ck] = {r: wellbeing(run.outcomes, r) for r in "AB"}
+        if wd.hed["A"].parts_on:
+            _PC_P[ck] = {r: _OBS.rollout_parts(wd.hed[r], 0) for r in "AB"}
+    _LAST_KEY["pot"] = ck
     return _PC[ck]
+
+
+_PC_P, _BC_P, _LAST_KEY = {}, {}, {}
 
 
 def deal_from_bundle(b):
@@ -665,8 +697,9 @@ def deal_from_bundle(b):
     return {"pot": True, "commits": commits}
 
 
-def forward_values(world, w, last, weeks=FORWARD_WEEKS):
-    """Persona evaluation of the next 26 weeks of the live household under its current terms (a copy of the world plays them)."""
+def forward_values(world, w, last, weeks=FORWARD_WEEKS, parts=None):
+    """Persona evaluation of the next 26 weeks of the live household under its current terms (a copy of the world plays them).
+    parts (observer layer): a dict that receives each member's rollout parts, when the world's Hedonic records them."""
     weeks = decide_weeks(weeks)
     hook, world.hook = world.hook, None
     c = copy.deepcopy(world)
@@ -676,6 +709,9 @@ def forward_values(world, w, last, weeks=FORWARD_WEEKS):
         lt = {"busy": c.step_week(x, lt)}
     STATS["rollouts"] += 1
     STATS["rollout_weeks"] += weeks
+    if parts is not None:
+        for r in "AB":
+            parts[r] = _OBS.rollout_parts(c.hed[r], 0)
     return {r: wellbeing(c.run.outcomes[n0:], r) for r in "AB"}
 
 
@@ -721,7 +757,7 @@ def _ids_key(b):
 
 
 def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, holdings=None, floor=True, review=False, week=0,
-                 deadline=None, roles=("A", "B"), trust=None, only=None):
+                 deadline=None, roles=("A", "B"), trust=None, only=None, detail=False):
     """One negotiation round of v2. personas: 2 Persona; W: {persona id: in-pot value}; O: {persona id: outside option}.
     ref: the bundle U is measured against (default; at a review the current terms). status_quo: the bundle that stands if
     nothing is agreed (the fair default at week 0 in FAIR_DEFAULT; the current terms at a review); None means no agreement = no pot.
@@ -820,6 +856,8 @@ def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, 
                 theta = THETA0[q.negotiation_style] * (1 - c)
                 (acc if U[q.id][idx] > bar[q.id] + theta and not (no_commit[q.id] and cm_new[idx]) else rej).append(q.id)
         prop = {"k": k, "proposer": me.id, "bundle": dict(b), "accepted_by": acc, "rejected_by": rej, "outcome": "refused" if rej else "all accept"}
+        if detail:                      # observer layer (D6): each member's value of the offer, bar and acceptance threshold
+            prop["detail"] = _round_detail(personas, roles, U, bar, idx, b, ref, c, i)
         res.proposals.append(prop)
         if rej:
             continue
@@ -856,6 +894,51 @@ def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, 
         else:
             res.status = "no_pot"           # the default stood but it is worse than someone's outside option
     return res
+
+
+# ---- observer layer (src/mar/observe.py; docs/notes/observer-schema.md): records of the harness's decisions, built only while recording
+
+def _reading_rec(kind, w, W, O, det, wparts, oparts, **kw):
+    """A formation, retry, reading or review decision as an observer `reading` row: per member the household value W (a rollout of the
+    household), the outside value O (the better of alone and with Friend C), the margin W - O, and both values' parts (rollout means of
+    observe.groups; None where the rollout's parts were not recorded, e.g. a value read from a cache filled before recording began)."""
+    out = {"t": "reading", "kind": kind, "w": w, "m": {}}
+    for r in "AB":
+        o_parts = (oparts or {}).get(r) or {}
+        d = (det or {}).get(r) if det else None
+        mode = (kw.get("modes") or {}).get(r) or (apart_mode(d) if d else None)
+        if mode is None and o_parts.get("alone") is not None and o_parts.get("friend") is not None:
+            mode = "friend" if sum(o_parts["friend"].values()) > sum(o_parts["alone"].values()) else "alone"
+        out["m"][r] = {"W": W[r], "O": O[r], "margin": W[r] - O[r], "O_alone_friend": d, "mode": mode,
+                       "W_parts": (wparts or {}).get(r), "O_parts": o_parts.get(mode) if mode else None}
+    out.update(kw)
+    return out
+
+
+def _neg_rec(w, kind, prop, personas):
+    rec = {"t": "negotiation", "w": w, "kind": kind, "k": prop["k"], "proposer": prop["proposer"], "bundle": prop.get("bundle"),
+           "accepted_by": prop["accepted_by"], "rejected_by": prop["rejected_by"], "outcome": prop["outcome"]}
+    if "detail" in prop:
+        rec.update(prop["detail"])
+    return rec
+
+
+def _round_detail(personas, roles, U, bar, idx, b, ref, c, i):
+    """D6: per member the offer's value U, the bar (max of outside option and the status quo), the acceptance threshold theta, and the
+    per-term value differences against `ref`; the term with the largest gap between the members' differences."""
+    per, tdiff = {}, {}
+    for j, p in enumerate(personas):
+        low = roles[j] != "A"
+        tv = term_values(p, low)
+        tdiff[p.id] = {t: TERM_SCALE * (tv[t][b[t]] - tv[t][ref[t]]) for t in TERM_NAMES if t in b and t in ref and ref[t] in tv[t]}
+        per[p.id] = {"U": float(U[p.id][idx]), "bar": float(bar[p.id]),
+                     "theta": None if j == i else float(THETA0[p.negotiation_style] * (1 - c)), "terms": tdiff[p.id]}
+    gap = None
+    if len(personas) == 2:
+        a, bb = (p.id for p in personas)
+        gaps = {t: abs(tdiff[a].get(t, 0.0) - tdiff[bb].get(t, 0.0)) for t in TERM_NAMES}
+        gap = max(gaps, key=gaps.get) if any(gaps.values()) else None
+    return {"members": per, "gap_term": gap}
 
 
 # ---- household fixes: shared helpers (docs/results/household-fixes-design.md) ------------------------------------------------------
@@ -899,6 +982,11 @@ class BaselineLived:
             for r, p in zip("AB", (pa, pb)):
                 O[r], det[r] = outside_value(p, r, START_HOLDINGS[0] + START_HOLDINGS[1], seed)
             self.week0 = {"W": W, "O": O}
+            if _recording():
+                _OBS.harness_record(None, self, _reading_rec("formation0", 0, W, O, det, _BC_P.get(_LAST_KEY.get("base")),
+                                                             {r: outside_parts(p, r, START_HOLDINGS[0] + START_HOLDINGS[1], seed)
+                                                              for r, p in zip("AB", (pa, pb))},
+                                                             formed=not any(O[r] > W[r] for r in "AB")))
             if any(O[r] > W[r] for r in "AB"):
                 self.apart = True
                 self.world = H.WeeklyWorld(self.cards, (pa, pb), seed, weeks, deal={"pot": False, "commits": []})
@@ -915,11 +1003,20 @@ class BaselineLived:
         hyp = copy.deepcopy(world)
         hyp.hook = None
         _form_baseline(hyp, w)
-        fwd = forward_values(hyp, w, last)
+        fp = {} if _recording(world) else None
+        fwd = forward_values(hyp, w, last, parts=fp)
         formed = all(fwd[r] > O[r] for r in "AB")
         self.retries.append({"week": w, "formed": formed, "outside": dict(O), "baseline": dict(fwd)})
+        if fp is not None:
+            _OBS.harness_record(world, self, _reading_rec(
+                "retry", w, fwd, O, None, fp,
+                {r: outside_parts(p, r, world.p[r]["money"], self.seed, world.hed[r], cx=_cx(world, r)) for r, p in zip("AB", (self.pa, self.pb))},
+                formed=formed, modes=modes))
         if formed:
+            before = world.observer.balances() if world.observer is not None else None
             _form_baseline(world, w)
+            if before is not None:
+                world.observer.flow_diff(w, "formation", None, before)
             self.apart = False
             if world.fx:
                 for r in "AB":
@@ -929,15 +1026,23 @@ class BaselineLived:
 
     def reading(self, w, last):
         world = self.world
-        fwd = forward_values(world, w, last)
-        O, modes = {}, {}
+        fp = {} if _recording(world) else None
+        fwd = forward_values(world, w, last, parts=fp)
+        O, modes, op = {}, {}, {}
         for r, p in zip("AB", (self.pa, self.pb)):
             carry = world.p[r]["money"] + world.carry_out(r, 50)
             O[r], d = outside_value(p, r, carry, self.seed, world.hed[r], cx=_cx(world, r))
             O[r] -= _PAIR.exit_anticipation(world)      # H38 exit stigma (0 when the pairing switch is off)
             modes[r] = apart_mode(d)
+            if fp is not None:
+                op[r] = outside_parts(p, r, carry, self.seed, world.hed[r], cx=_cx(world, r))
         self.log.append({"week": w, "outside": dict(O), "baseline": dict(fwd)})
         bar_reading(world, {r: fwd[r] - trust_penalty(world.trust[r]) for r in "AB"}, O, modes)
+        if fp is not None:
+            _OBS.harness_record(world, self, _reading_rec(
+                "reading", w, fwd, O, None, fp, op, modes=modes, trust_pen={r: trust_penalty(world.trust[r]) for r in "AB"},
+                exit_anticipation=_PAIR.exit_anticipation(world), bar_out=dict(world.bar_out),
+                bar_runs=dict(getattr(world, "bar_runs", {}) or {})))
 
     def play(self):
         world = self.world
@@ -969,9 +1074,13 @@ def baseline_value(pa, pb, seed, cards, weeks=OUT_WEEKS):
     weeks = decide_weeks(weeks)
     ck = (pa.id, pb.id, seed, weeks, tuple(sorted(c.id for c in cards)), HD.fix_key())
     if ck not in _BC:
-        run = H.run_weekly(list(cards), (pa, pb), seed, weeks)
+        wd = H.WeeklyWorld(list(cards), (pa, pb), seed, weeks)
+        run = wd.play()
         STATS["rollouts"] += 1
         _BC[ck] = {r: wellbeing(run.outcomes, r) for r in "AB"}
+        if wd.hed["A"].parts_on:
+            _BC_P[ck] = {r: _OBS.rollout_parts(wd.hed[r], 0) for r in "AB"}
+    _LAST_KEY["base"] = ck
     return _BC[ck]
 
 
@@ -1003,7 +1112,7 @@ def week0(pa, pb, arm, seed, base, floor=True):
         v, d = outside_value(p, r, START_HOLDINGS[0] + START_HOLDINGS[1], seed)
         O[p.id], det[p.id] = v, d
     res = negotiate_v2([pa, pb], arm, seed, base=base, W={pa.id: W["A"], pb.id: W["B"]}, O=O, floor=floor,
-                       status_quo=FAIR_DEFAULT if arm == "fair_default" else None)
+                       status_quo=FAIR_DEFAULT if arm == "fair_default" else None, detail=_recording())
     res.outside_detail = det
     return res
 
@@ -1070,6 +1179,18 @@ class Lived:
         self.world = H.WeeklyWorld(cards, (pa, pb), seed, weeks, deal=deal, breach_forfeit=res.bundle["breach"] if res.pot else 1.0)
         self.world.floor_amount = FLOOR if floor else None     # amendment 1: the floor also holds at the moment of leaving
         self.apart, self.retries = apart and not res.pot, []
+        if _recording():
+            W0 = getattr(res, "baseline", None) or {}
+            O0 = getattr(res, "outside", None) or {}
+            if W0 and O0:
+                _OBS.harness_record(None, self, dict(_reading_rec(
+                    "formation0", 0, {r: W0[p.id] for r, p in zip("AB", (pa, pb))}, {r: O0[p.id] for r, p in zip("AB", (pa, pb))},
+                    {r: (getattr(res, "outside_detail", {}) or {}).get(p.id) for r, p in zip("AB", (pa, pb))},
+                    _PC_P.get(_LAST_KEY.get("pot")),
+                    {r: outside_parts(p, r, START_HOLDINGS[0] + START_HOLDINGS[1], seed) for r, p in zip("AB", (pa, pb))},
+                    formed=bool(res.pot)), status=res.status, bundle=res.bundle))
+                for pr in res.proposals:
+                    _OBS.harness_record(None, self, _neg_rec(0, "formation0", pr, (pa, pb)))
         if self.apart:
             self.world.solo = {r: apart_mode(res.outside_detail.get(p.id)) for r, p in zip("AB", (pa, pb))}
             for r in "AB":                                       # v2.1: no agreement = no shared household
@@ -1078,18 +1199,30 @@ class Lived:
     def review(self, w, last):
         world, ps = self.world, (self.pa, self.pb)
         hold = {r: world.hold(r) for r in "AB"}
-        fwd = forward_values(world, w, last)
+        rec_on = _recording(world)
+        fp = {} if rec_on else None
+        fwd = forward_values(world, w, last, parts=fp)
         cur = self.bundle
-        O, det = {}, {}
+        O, det, op = {}, {}, {}
         for r, p in zip("AB", ps):
             money, share, put = hold[r]
             v, d = outside_value(p, r, retained(cur, money, share, "exit", put), self.seed, world.hed[r], cx=_cx(world, r))
             O[p.id], det[p.id] = v, d
+            if rec_on:
+                op[r] = outside_parts(p, r, retained(cur, money, share, "exit", put), self.seed, world.hed[r], cx=_cx(world, r))
         if world.fx and world.fx.bar_leave:
             bar_reading(world, {r: fwd[r] - trust_penalty(world.trust[r]) for r in "AB"}, {r: O[p.id] for r, p in zip("AB", ps)},
                         {r: apart_mode(det[p.id]) for r, p in zip("AB", ps)})
         res = negotiate_v2(list(ps), self.arm, self.seed, base=self.base, W={self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, O=O,
-                           ref=cur, status_quo=cur, holdings=hold, floor=self.floor, review=True, week=w, trust=self.trust_by_id())
+                           ref=cur, status_quo=cur, holdings=hold, floor=self.floor, review=True, week=w, trust=self.trust_by_id(),
+                           detail=rec_on)
+        if rec_on:
+            _OBS.harness_record(world, self, dict(_reading_rec(
+                "review", w, fwd, {r: O[p.id] for r, p in zip("AB", ps)}, {r: det[p.id] for r, p in zip("AB", ps)}, fp, op,
+                trust_pen={r: trust_penalty(world.trust[r]) for r in "AB"}, bar_out=dict(world.bar_out)),
+                status=res.status, changed=res.changed, bundle=res.bundle))
+            for pr in res.proposals:
+                _OBS.harness_record(world, self, _neg_rec(w, "review", pr, ps))
         if world.fx:
             if res.changed:
                 for r in "AB":
@@ -1182,15 +1315,28 @@ class Lived:
         hyp = copy.deepcopy(world)
         hyp.hook = None
         form_pot(hyp, self.base, FAIR_DEFAULT, w, ids)
-        fwd = forward_values(hyp, w, last)
+        rec_on = _recording(world)
+        fp = {} if rec_on else None
+        fwd = forward_values(hyp, w, last, parts=fp)
         hold = {r: hyp.hold(r) for r in "AB"}
         res = negotiate_v2(list(ps), self.arm, self.seed, base=self.base, W={self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, O=O,
-                           ref=FAIR_DEFAULT, status_quo=None, holdings=hold, floor=self.floor, review=True, week=w, trust=self.trust_by_id())
+                           ref=FAIR_DEFAULT, status_quo=None, holdings=hold, floor=self.floor, review=True, week=w, trust=self.trust_by_id(),
+                           detail=rec_on)
+        if rec_on:
+            _OBS.harness_record(world, self, dict(_reading_rec(
+                "retry", w, fwd, {r: O[p.id] for r, p in zip("AB", ps)}, None, fp,
+                {r: outside_parts(p, r, world.p[r]["money"], self.seed, world.hed[r], cx=_cx(world, r)) for r, p in zip("AB", ps)},
+                formed=bool(res.pot), modes=modes), status=res.status, bundle=res.bundle))
+            for pr in res.proposals:
+                _OBS.harness_record(world, self, _neg_rec(w, "retry", pr, ps))
         self.retries.append({"week": w, "formed": res.pot, "status": res.status, "bundle": dict(res.bundle) if res.pot else None,
                              "floor_blocks": len(res.floor_blocks), "rejections": len(res.rejections), "outside": dict(O),
                              "baseline": {self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, "modes": dict(modes)})
         if res.pot:
+            before = world.observer.balances() if world.observer is not None else None
             form_pot(world, self.base, res.bundle, w, ids)
+            if before is not None:
+                world.observer.flow_diff(w, "formation", None, before)
             self.bundle, self.apart = dict(res.bundle), False
             if world.fx:
                 for r in "AB":

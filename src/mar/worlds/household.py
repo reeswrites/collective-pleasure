@@ -33,6 +33,7 @@ from .. import english as _english
 from ..cards import load_cards
 from .. import exit_fallback as _EXIT
 from .. import exit_items as _ITEMS
+from .. import observe as _OBS
 from .. import pairing as _PAIR
 from ..patch_check import check_sanctions
 
@@ -848,6 +849,8 @@ class PersonaAgent:
     The world executes the highest-utility candidate that is physically possible and permitted. Small seeded noise
     (+-10 percent) breaks ties and varies seeds. Documented in docs/decisions/0010-hedonic-model.md."""
 
+    _obs = None          # observer layer (src/mar/observe.py): set only on an observed world's agents; never read by the policy
+
     def __init__(self, persona):
         self.persona = persona
         w, ax = persona.weights, persona.axes
@@ -866,7 +869,13 @@ class PersonaAgent:
         ok = self._consents(kind)
         t = self.trust
         if ok and t < TRUST["full"]:
-            return self.rng.random() < t / TRUST["full"]
+            x = self.rng.random()
+            res = x < t / TRUST["full"]
+            if self._obs is not None:
+                self._obs.consent_detail(self, kind, ok, t, x, res)
+            return res
+        if self._obs is not None:
+            self._obs.consent_detail(self, kind, ok, t, None, ok)
         return ok
 
     def _consents(self, kind):
@@ -878,7 +887,10 @@ class PersonaAgent:
         if s == "direct":
             return a < 0.3
         if s == "avoidant":
-            return self.rng.random() < 0.5
+            x = self.rng.random()
+            if self._obs is not None:
+                self._coin = x
+            return x < 0.5
         return False
 
     def _noise(self):
@@ -925,7 +937,15 @@ class PersonaAgent:
                 u["together"] *= lv["together_scale"]
             if "see_friend" in u:
                 u["see_friend"] *= lv["friend_scale"]
-        return {a: v * self._noise() for a, v in u.items()}
+        P = o.get("_parts")          # observer layer: a sink for the parts, present only on an observed world
+        if P is None:
+            return {a: v * self._noise() for a, v in u.items()}
+        out = {}
+        for a, v in u.items():
+            n = self._noise()
+            out[a] = v * n
+            P[a] = _OBS.utility_parts(self, o, a, v, n)
+        return out
 
     def together_utility(self, o):
         h, L = o["hed"], o["hed"].level
@@ -1029,6 +1049,7 @@ class WeeklyWorld:
         deal (negotiated pots, docs/decisions/0013): {"pot": bool, "commits": [...]} replaces the week-0 commitment stub; with
         pot False the partners start with their own holdings and no share of the pot. deal=None is the old behaviour, bit for bit."""
         pa, pb = personas
+        self.observer, self._force = None, None     # observer layer (src/mar/observe.py) and its replay switch; None = off
         self.deal, self.breach_forfeit = deal, breach_forfeit
         self.pot = True if deal is None else bool(deal["pot"])
         self.gate = cards if isinstance(cards, PyGate) else PyGate(cards)
@@ -1102,6 +1123,8 @@ class WeeklyWorld:
         self.early_review = False                    # set by the v2.3 ladders: the harness runs a review at the next week
         if self.fx:
             self._fix_init()
+        if _OBS.ACTIVE is not None:
+            _OBS.Observer(self, _OBS.ACTIVE)         # use_observer block: every world built inside carries an observer
 
     # -- pleasure levers (ADR 0016; docs/results/pleasure-levers-prereg.md). Every method below is called only when self.lv is set.
     def _lever_init(self):
@@ -1197,6 +1220,8 @@ class WeeklyWorld:
             self.units[r] -= V2_COST["together"]
             self.wk[r]["together"] += 1
         self._lever_session(tag)
+        if self.observer is not None:
+            self.observer.together(self.cur_w, tag, None, True)
 
     def _lever_obs(self, r):
         lv = self.lv
@@ -1307,6 +1332,8 @@ class WeeklyWorld:
             self._trust_move(o, gain, "word", w)
             self.words.append((w, who, o, gain))
             self.fstats["words"] += 1
+            if self.observer is not None:
+                self.observer.word(w, who, o, gain, "said")
 
     def _revoke_words(self, who, w):
         """A lapse or breach by `who` takes back the gain of their words within the word window."""
@@ -1318,6 +1345,8 @@ class WeeklyWorld:
             if sp == who and w - ww <= fx.word_window:
                 self._trust_move(rc, -g, "word_revoked", w)
                 self.fstats["words_revoked"] += 1
+                if self.observer is not None:
+                    self.observer.word(w, sp, rc, g, "revoked", said=ww)
             else:
                 keep.append((ww, sp, rc, g))
         self.words = keep
@@ -1453,6 +1482,8 @@ class WeeklyWorld:
                 f = min(self.fine_amount, int(self.p[r]["money"]))
                 self.p[r]["money"] -= f; self.p[o]["money"] += f
                 self.fstats["fines_paid"] += 1
+                if self.observer is not None:
+                    self.observer.flow_direct(w, r, o, f, "fine_role")
             if fx.lapse_ladder and self.v23_ladders():
                 L = self.role_ladder[o]                       # the other partner responds to the lapse
                 if L["stage"] == 0 or w - L["t"] > fx.ladder_window:
@@ -1473,6 +1504,8 @@ class WeeklyWorld:
         n_p = wk["together"] if cohab else 0
         unit = fx.session_base * fx.a_max * fx.sociability
         amp = unit * (n_f * cx["cf"] * fx.overlap_C + n_p * cx["cp"] * self.overlap_ab)
+        if self.hed[r].parts_on:                         # observer layer: the friend and partner shares of amp
+            self.hed[r].amp_split = (unit * n_f * cx["cf"] * fx.overlap_C, unit * n_p * cx["cp"] * self.overlap_ab)
         rel, pain = 0.0, 0.0
         # friend bond
         if n_f > 0:
@@ -1576,7 +1609,10 @@ class WeeklyWorld:
 
     def _trust_move(self, who, delta, why, w):
         """who's trust in the other partner changes by delta, clamped to [0, 1]."""
+        before = self.trust[who]
         self.trust[who] = round(min(1.0, max(0.0, self.trust[who] + delta)), 6)
+        if self.observer is not None:
+            self.observer.trust(w, who, why, before, self.trust[who])
         if why != "kept":
             self.trust_log.append((w, who, why, self.trust[who]))
 
@@ -1818,6 +1854,14 @@ class WeeklyWorld:
         return ob
 
     def apply(self, r, cand, w, sanc):
+        ob = self.observer
+        if ob is None:
+            return self._apply(r, cand, w, sanc)
+        before = ob.balances()
+        self._apply(r, cand, w, sanc)
+        ob.applied(r, cand, w, sanc, before)
+
+    def _apply(self, r, cand, w, sanc):
         a, me, oth = cand["a"], self.p[r], self.other(r)
         o, wk = self.p[oth], self.wk[r]
         self.units[r] -= V2_COST.get(a, 0)
@@ -1913,7 +1957,12 @@ class WeeklyWorld:
 
     def step_agent(self, r, w, last_week, rec):
         o = self.obs(r, w, last_week)
+        ob = self.observer
+        if ob is not None:
+            o["_parts"] = {}
         cands = self.agents[r].propose(o)
+        if self._force is not None:              # counterfactual replay copies only (observe.replay); never set on a live world
+            cands = _OBS.forced(self, r, w, cands)
         # soft rules: the agent weighs the estimated sanction against the utility
         scored = []
         for u, cand in cands:
@@ -1922,7 +1971,8 @@ class WeeklyWorld:
             if dec == "soft":
                 u -= sum(SANCTION_UTILITY[s["kind"]] * MONTH_WEEKS * s["duration_months"] for s in sanc)
             scored.append((u, cand, dec, sanc, reasons))
-        for u, cand, dec, sanc, reasons in sorted(scored, key=lambda t: -t[0]):
+        order = sorted(scored, key=lambda t: -t[0])
+        for i, (u, cand, dec, sanc, reasons) in enumerate(order):
             a = cand["a"]
             if u <= 0.003 and a not in ("leave", "return"):
                 break
@@ -1935,13 +1985,20 @@ class WeeklyWorld:
                 rec["blocked"][r].add(a)
                 self.run.trace.append(row)
                 continue
+            if ob is not None:
+                ob.decision(r, w, o, order, i)
             if dec == "breach":
                 row["breach"] = True
+                before = ob.balances() if ob is not None else None
                 cand = dict(self.breach(r, a, w, cand), breach=True)     # so `apply` logs the exit as a breach (exit_log)
                 row["take"] = cand.get("take", 0)
+                if ob is not None:
+                    ob.breached(r, a, w, before)
             self.run.trace.append(row)
             self.apply(r, cand, w, sanc)
             return
+        if ob is not None:
+            ob.decision(r, w, o, order, None)
 
     def friend_attempt(self, w, rec):
         tgt = "A" if w % 2 == 0 else "B"
@@ -1953,8 +2010,12 @@ class WeeklyWorld:
             d = _PAIR.withdraw(self, tgt)
             if d and self.pair_rng.random() < d:
                 self.pstats["friend_declined"] += 1
+                if self.observer is not None:
+                    self.observer.friend(w, tgt, "declined", d=d)
                 return
-        dec, _, _ = self.decide(tgt, "see_friend", w)
+        dec, _, reasons = self.decide(tgt, "see_friend", w)
+        if self.observer is not None:
+            self.observer.friend(w, tgt, "blocked" if dec == "hard" else "met", dec=dec, reasons=reasons)
         if dec == "hard":
             rec["c_blocked"] += 1
         else:
@@ -1969,6 +2030,8 @@ class WeeklyWorld:
             if k == "move":
                 self.moved = s["duration"]
                 for x in "AB":
+                    if self.observer is not None:
+                        self.observer.flow_direct(w, x, "outside", min(3, max(0, self.p[x]["money"])), "move_cost")
                     self.wk[x]["conn_hit"] += 0.3; self.wk[x]["sec_hit"] += 0.1; self.p[x]["money"] = max(0, self.p[x]["money"] - 3)
             elif k == "job_loss":
                 self.p[r]["jobless"] = s["duration"]; self.wk[r]["sec_hit"] += 0.15
@@ -1979,13 +2042,19 @@ class WeeklyWorld:
                 self.hed[r].level["connection"] = min(1.0, self.hed[r].level["connection"] + 0.3)
 
     def step_week(self, w, last_week):
+        ob = self.observer
+        if ob is not None:
+            ob.week_begin(w, last_week)
         ev = []
         self.wk = {r: {"income": 0, "spent_self": 0, "works": 0, "rests": 0, "friends": 0, "together": 0, "contrib": 0,
                        "friend_initiated": 0, "sanctioned": 0, "conn_hit": 0.0, "sec_hit": 0.0, "pressed": 0, "took": 0} for r in "AB"}
         self.units = {r: UNITS for r in "AB"}
         self.start_shocks(w, ev)
         if self.contest:
+            before = ob.balances() if ob is not None else None
             _EXIT.contest_tick(self, w)
+            if ob is not None:
+                ob.flow_diff(w, "contest", None, before)
         if self.items:
             _ITEMS.week_start(self, w)
         if self.mech:
@@ -2019,11 +2088,17 @@ class WeeklyWorld:
         for r in "AB":
             me, wk = self.p[r], self.wk[r]
             cost = HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if (me["in"] or self.with_friend(r)) else 1.5)
+            if ob is not None:
+                m0, p0 = me["money"], self.pool
             me["money"] -= cost
             if me["money"] < 0:                         # the shared pot as a safety net (ASSUMED): an overdrawn member draws from it
                 draw = min(self.pool, -me["money"] + 2)
                 self.pool -= draw; me["money"] += draw
+                if ob is not None:
+                    ob.flow_direct(w, "pot", r, draw, "safety_net")
             me["money"] = max(0, me["money"])
+            if ob is not None:
+                ob.flow_direct(w, r, "outside", m0 + (p0 - self.pool) - me["money"], "living_cost")
         settle = w % MONTH_WEEKS == MONTH_WEEKS - 1
         if settle:
             need = self.need_month()
@@ -2033,6 +2108,8 @@ class WeeklyWorld:
             d = min(self.pool, short)                                # unfunded bills come out of the shared pot
             self.pool -= d
             short -= d
+            if ob is not None:
+                ob.flow_direct(w, "pot", "bills", d, "bills_from_pot", short=short)
             if short > 0.01:                                         # bills unpaid even from savings (ASSUMED security hit)
                 for r in inn:
                     self.wk[r]["sec_hit"] += 0.15
@@ -2080,6 +2157,9 @@ class WeeklyWorld:
             if self.contest:
                 fric += _EXIT.CONTEST_FRICTION
             ip = _ITEMS.weekly_pleasure(self, r) if self.items else 0.0     # exit fallbacks slice 2: home and pet (0 when off)
+            if h.parts_on:                                  # observer layer: the sources inside extra_pleasure and friction
+                h.xparts = {"items": ip, "warn": WARN_FRICTION if warn else 0.0, "press": PRESS_FRICTION * wk["pressed"],
+                            "contest": _EXIT.CONTEST_FRICTION if self.contest else 0.0}
             if self.fx:
                 fx = self.fx
                 if fx.valued_money:
@@ -2087,6 +2167,9 @@ class WeeklyWorld:
                     h.valued = (fx, float(me["money"]), float(pw["money"]), float(pw["security"]))
                 xp, xf, terms = self._lever_terms(r, w) if lvl else (0.0, 0.0, None)
                 fp, ff, fterms = self._fix_terms(r, w)
+                if h.parts_on:
+                    h.xparts.update(lever_pl=xp, lever_fr=xf, fix_pl=fp, fix_fr=ff, fix=dict(fterms), lever=dict(terms or {}),
+                                    amp=getattr(h, "amp_split", None) if fx.contact else None)
                 hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=tog_in,
                                        friction=fric + xf + ff, extra_pleasure=xp + fp + ip, report_raw=fx.pairing is not None)
                 if lvl:
@@ -2095,6 +2178,8 @@ class WeeklyWorld:
                 hrow[r]["fix"] = {k: (round(v, 5) if isinstance(v, float) else v) for k, v in fterms.items()}
             elif lvl:
                 xp, xf, terms = self._lever_terms(r, w)
+                if h.parts_on:
+                    h.xparts.update(lever_pl=xp, lever_fr=xf, lever=dict(terms))
                 hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=tog_in,
                                        friction=fric + xf, extra_pleasure=xp + ip)
                 hrow[r]["lever"] = {**{k: round(v, 5) for k, v in terms.items()}, "eff_together": round(tog_in, 4),
@@ -2129,6 +2214,8 @@ class WeeklyWorld:
                 rw["need_met"] = self.bills_met
             self.month_rows, self.funded = [], 0
             self.contrib_month = {"A": 0, "B": 0}
+        if ob is not None:
+            ob.week_end(w, row, busy, settle)
         return busy
 
     def play(self):

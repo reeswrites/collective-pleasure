@@ -354,6 +354,22 @@ def feedback(B, cfg=DEFAULT):
     return (cfg.a_up if B >= cfg.tip else cfg.a_down) * (B - cfg.tip)
 
 
+PARTS = False            # observer layer (src/mar/observe.py): when True, every Hedonic built records the additive parts of each week's
+#                          close (pleasure, offsettable and non-offsettable suffering by source) in `parts_acc`. Read-only: the arithmetic
+#                          that sets pleasure, B and N is unchanged, and nothing the model reads depends on it. Off by default.
+
+
+@contextmanager
+def recording_parts(on=True):
+    """Every Hedonic built inside the block records its weekly parts (observer layer)."""
+    global PARTS
+    saved, PARTS = PARTS, on
+    try:
+        yield
+    finally:
+        PARTS = saved
+
+
 class Hedonic:
     """One agent's hedonic state. `persona` needs .needs (salience per need) and .aspirations (targets) and
     .weights (aspiration importances: security, autonomy, togetherness, money, other_connections)."""
@@ -375,6 +391,16 @@ class Hedonic:
         self.run = {c: 0 for c in CONDITIONS}      # consecutive weeks each condition has held
         self.nonoff_run = 0                         # consecutive weeks with S_non > 0
         self.max_nonoff_run = 0
+        self.parts_on, self.parts_acc, self.xparts = PARTS, [], None     # observer layer only; never read by the model
+
+    def __deepcopy__(self, memo):
+        """The default deep copy, except that a copy starts with no recorded parts (observer layer: a rollout's parts are its own)."""
+        import copy
+        c = self.__class__.__new__(self.__class__)
+        memo[id(self)] = c
+        for k, v in self.__dict__.items():
+            setattr(c, k, [] if k == "parts_acc" else copy.deepcopy(v, memo))
+        return c
 
     @property
     def capacity(self):
@@ -401,6 +427,34 @@ class Hedonic:
 
     def event_new_connection(self):
         self.glow += self.cfg.new_connection_event
+
+    def _parts(self, sat, together_sessions, glow_used, extra_pleasure, friction, active, raw, pleasure, s_off_raw, s_off, s_non_raw,
+               s_non):
+        """The additive parts of this week's close (observer layer). Computed beside close_week's own arithmetic, never in place of it:
+        pleasure = sum(p) + clip_p; s_off = sum(s_off parts) + clip_off; s_non = sum(s_non parts) + clip_non."""
+        c, L = self.cfg, self.level
+        vm = getattr(self, "valued", None)
+        if vm is None:
+            pn = {n: c.w_need * self.sal[n] * _clip((L[n] - 0.5) / 0.5) for n in NEEDS}
+        else:
+            fx, _money, _w_m, w_s = vm
+            v_s = min(1.0, w_s / fx.w_ref)
+            lost = self.sal["security"] * (1.0 - v_s)
+            rc = self.sal["rest"] + self.sal["connection"]
+            up = 1.0 + (lost / rc if rc > 0 else 0.0)
+            pn = {"rest": c.w_need * self.sal["rest"] * up * _clip((L["rest"] - 0.5) / 0.5),
+                  "connection": c.w_need * self.sal["connection"] * up * _clip((L["connection"] - 0.5) / 0.5),
+                  "money": c.w_need * self.sal["money"] * _clip((L["money"] - 0.5) / 0.5),
+                  "security": c.w_need * self.sal["security"] * v_s * _clip((L["security"] - 0.5) / 0.5)}
+        sn = {n: self.sal[n] * _clip((0.5 - L[n]) / 0.5) for n in NEEDS}
+        pa = {k: c.w_aspiration * self.asp_w[k] * sat[k] for k in sat}
+        sa = {k: c.unmet_aspiration * self.asp_w[k] * (1 - sat[k]) for k in sat}
+        pre = {k: (c.pre_onset_share * inten if on and self.run[k] < c.onset_weeks else 0.0) for k, (on, inten) in active.items()}
+        non = {k: (inten if on and self.run[k] >= c.onset_weeks else 0.0) for k, (on, inten) in active.items()}
+        return {"p_need": pn, "p_asp": pa, "together_event": c.together_event * together_sessions, "glow": glow_used,
+                "extra": extra_pleasure, "x": self.xparts, "clip_p": pleasure - raw,
+                "s_need": sn, "s_asp": sa, "friction": friction, "pre_onset": pre, "clip_off": s_off - s_off_raw,
+                "s_non": non, "clip_non": s_non - s_non_raw, "pleasure": pleasure, "s_off": s_off, "s_non_total": s_non}
 
     # -- close the week
     def close_week(self, aspiration_values, *, trapped=False, restricted=False, together_sessions=0, friction=0.0,
@@ -431,6 +485,7 @@ class Hedonic:
         s_asp = c.unmet_aspiration * sum(self.asp_w[k] * (1 - sat[k]) for k in sat)
         raw = c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * together_sessions + self.glow + extra_pleasure
         pleasure = _clip(raw)
+        glow_used = self.glow
         self.glow *= c.glow_decay
         s_off = s_need + s_asp + friction
         active = {"trapped": (trapped, c.trapped_intensity),
@@ -444,7 +499,11 @@ class Hedonic:
                     s_non += inten
                 else:
                     s_off += c.pre_onset_share * inten
+        s_non_raw, s_off_raw = s_non, s_off
         s_non, s_off = _clip(s_non), _clip(s_off)
+        if self.parts_on:
+            self.parts_acc.append(self._parts(sat, together_sessions, glow_used, extra_pleasure, friction, active, raw, pleasure,
+                                              s_off_raw, s_off, s_non_raw, s_non))
         if s_non > 0:
             self.N = _clip(self.N + 0.5 * s_non)
             self.nonoff_run += 1
