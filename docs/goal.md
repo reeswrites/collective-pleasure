@@ -4,6 +4,15 @@ Short version for outsiders: [one-pager.md](one-pager.md). What results can and 
 
 Findings below are about rule systems and scripted agents in toy worlds, not people. Four live ladder runs exist (about $11.83 in all). None found an inventive seam on L1 to L4, and none supports a claim about model capability (see "What we have learned"). Every result links to its file in docs/results/README.md.
 
+## Current status (2026-11-11)
+
+Run-by-run status lives here, not in the README. The README changes only when a result changes. Detail is in "What is running" below and in docs/plan.md.
+
+- **Inventive seams (IT1): untested, now being tested.** The earlier "none found" on L1 to L4 was a design artifact. A rerun on rungs where a paying inventive seam is reachable (checked first by a free gate) runs under an $8 cap. Candidates count only after the author reads them (plans/inventive-seam-next.md).
+- **Loop a: works, and exploits the test.** Household evolution beat the author's seed on liberty but dropped every commitment power. Evaluator fixes (loss report, liberty that counts normative powers, a lifetime horizon) are in, and evolution is being rerun against exam 2 (results/household-exam-2-prereg.md).
+- **Loop b: not yet measurable.** The counting rule was not operational (results/loop-b-counting.md). A per-read-back log (experiments/readbacks.jsonl) started 2026-11-11.
+- **Seed retest.** The v2.2 / v2.3 retest with the household fixes is designed (judged on pleasure, net shown, everyone counts) and waits on the fixes.
+
 ## Vision
 
 A chat workbench that formalizes the author's intent. The author talks loosely about how agents should behave. The system turns that into precise rules (ADICO cards, also shown as English-like sentences), proves what it can, runs experiments, and answers in plain English and charts. The author says "that's not what I meant" and the system fixes the test. Form: a Claude Code skill, the `mar` CLI, and one HTML report per run (ADR 0005).
