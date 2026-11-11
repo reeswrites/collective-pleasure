@@ -62,6 +62,15 @@ Effect sizes reported for every comparison: difference with CI; Cliff's delta (o
 
 Why this is required: ADR 0015, amendment 2026-11-11 (two cases where a verdict could not happen: IT1, and the H32 cell count).
 
+## Are we measuring what we say? (required)
+
+[Added 2026-11-11 after H38, where "pairing" turned out to mean only moving in with one fixed partner. Fill this in before any confirmatory run.]
+
+- **Construct card.** For each key quantity (the thing manipulated and the thing measured), say in plain words what it encodes in this model and what it does not. Example: "pairing = living with one fixed partner; does not encode romance, romantic priority, exclusivity or partner choice." A reader should be able to tell from the card alone whether the result can speak to the question that motivated it.
+- **Known-answer case.** Name one world where the answer is known in advance (a built trap, a planted dominance, a no-effect control), and show the measure gets it right before the real run.
+- **One other way to measure it.** Give a second reasonable operationalization of the main measure and report both. If they disagree, the conclusion is fragile and must say so.
+- **Story spot-check.** After the run, read 3 to 5 runs as week-by-week stories (pattern atlas, docs/results/pattern-atlas.md) from different arms, and say whether they look like what the measure claims. Report a mismatch as a finding.
+
 ## Verdict rule
 
 [How the predictions combine, for example "rediscovered iff P1, P2 and P3 hold". State the statistical label that counts as a hold. Default: the point estimate meets the threshold AND the 95% interval lies inside it ("holds robustly"); "holds but CI crosses threshold" is reported as weak support and is not counted as a confirmed hold for any claim that would be cited.]
