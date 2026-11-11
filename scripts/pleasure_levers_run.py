@@ -35,6 +35,7 @@ L = HD.LeverConfig
 PILOT_SEEDS = (900, 901, 902)
 DEAL = {"pot": True, "commits": []}
 STAY = {"pot": True, "commits": [{"kind": "stay", "by": w, "to": o, "type": None, "from": 0, "until": 52, "breached": 0} for w, o in (("A", "B"), ("B", "A"))]}
+DESCRIPTIVE = ("LC1a", "LC1b", "LC3", "H1")     # marked before the run (prereg Amendment 1): the pilot needs more pairings than exist
 KPAY = (0.0, 0.02, 0.04, 0.06, 0.08, 0.10, 0.15, 0.20)
 BONDS = (0, 1, 2, 3, 4, 5, 7)          # external bonds; total bonds = 1 + n
 NOADAPT = dict(hab_rate=0.0, tol_rate=0.0)     # adaptation switched off but variants and the switch cost kept (LA1c)
@@ -203,7 +204,7 @@ def predictions(ctl, head, seeds=None):
     fam = [o for o in out if "p" in o]
     for o, hp in zip(fam, S.holm([o["p"] for o in fam])):
         o["holm_p"] = hp
-        o["label"] = o["label_raw"] if (o["label_raw"] != "holds robustly" or hp < 0.05) else "holds but CI crosses threshold"
+        o["label"] = "descriptive" if o["id"] in DESCRIPTIVE else (o["label_raw"] if (o["label_raw"] != "holds robustly" or hp < 0.05) else "holds but CI crosses threshold")
     return out
 
 
