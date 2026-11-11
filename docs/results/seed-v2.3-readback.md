@@ -1,6 +1,17 @@
-# Seed v2.3 read-back (candidate, for the author)
+# Seed v2.3 read-back (for the author)
 
-**Status: candidate. The author has not confirmed any of this.** Nothing runs on v2.3 until the author confirms it. Seed v2.2 is the author's confirmed seed and is not changed: the `author_seed_v2_*` directories stay as they are. If confirmed, v2.3 will live in a new directory, `rules/household/author_seed_v23_bindable`.
+**Status: CONFIRMED BY THE AUTHOR (2026-11-11), with the changes below.** The author went through this read-back and answered four points (experiments/questions.jsonl, topics `seed-v2.3-readback-1` to `-4`, 2026-11-11T02:33:56Z to 02:38:17Z). The rules below are the confirmed wording. The first wording is kept in git history (commit 21ff48c). Seed v2.2 is not changed: the `author_seed_v2_*` directories stay as they are. v2.3 will live in a new directory, `rules/household/author_seed_v23_bindable`, built in phase 2.
+
+## The author's answers (verbatim) and what changed
+
+| Point | The author's words | Change to v2.3 |
+|---|---|---|
+| 1. Trust | "maybe we have to test? but my intutions is mostly actions" | Default is "mostly actions": actions move trust a lot, words a little. The retest adds a descriptive arm comparing three versions: only actions, mostly actions, and words count until tested. |
+| 2. Fines on lapsed roles | "allowed only by mutual choice i think" | Rule 17 changes: no fine by default. A fine on a lapsed role exists only if both partners explicitly choose it, and the scorekeeping cost then applies (as in fix 4). |
+| 3. Exit last | "check in first for general unhappiness too" | Exit last is confirmed as how agents behave, not a ban; free exit (rule 11) stands. New: the ladder covers any unhappiness, not only lapsed roles. |
+| 4. Decency floor | "all three feel right, common ground is anyone you interact with" | All three parts confirmed. "Common ground" now means anyone the agent interacts with. |
+
+Two retest decisions came at the same time (experiments/changes.jsonl, 2026-11-11T02:22:46Z and 02:23:24Z): "pleasure minus suffering yeah i guess if that is what is commonly held" and "yes pairs should be allowed to not form a househodl". They change the retest, not the seed (docs/results/v2-retest-prereg-DRAFT.md).
 
 Wording rule: agents feel nothing. "Pleasure" is a gloss for a modeled hedonic state (ADR 0010).
 
@@ -10,9 +21,9 @@ Sources. The author's exact words come from experiments/questions.jsonl, rows da
 
 Seed v2.3 is seed v2.2 (bindable) plus new rules. The 13 cards of `author_seed_v2_bindable` stay word for word as read back in docs/results/seed-v2.2-readback.md. Trust, the exit floor and the 13-week reviews stay as they are. The new parts are:
 
-- rules 14 to 17 (roles, and the response to a lapsed role);
+- rules 14 to 17 (roles, and the response to unhappiness, including a lapsed role);
 - rule 18 (the decency floor);
-- one change to how trust moves (from actions, not words);
+- one change to how trust moves (mostly from actions, a little from words);
 - one evaluator flag that is not a rule (chosen versus slid-into sacrifice).
 
 Each part below gives the rule in plain English, then the author's exact words, then what is Claude's interpretation. Anything under "Claude's interpretation" is a guess about what the author meant, made so the rule can run in the model.
@@ -37,15 +48,17 @@ The jobs a role can cover in the model are: earning (working), paying the shared
 
 ### Rule 15. `R10a-check-in-first`
 
-**Plain English.** When a partner does not do a role they agreed to, the other partner's first response is a soft check-in. A check-in is a question ("is this still working for you?"). It is not a complaint, a fine or a penalty. It costs both partners a little time.
+**Plain English (confirmed).** When a partner is unhappy, the first response is a soft check-in. This holds for any unhappiness: a role the other partner agreed to and did not do, or a general sense that things are not working. A check-in is a question ("is this still working for you?"). It is not a complaint, a fine or a penalty. It costs both partners a little time.
+
+In the model, "general unhappiness" means a partner's own distress signal: several low weeks in a row, or rising non-offsettable load, or trust falling below a threshold. These are the same signals that today put "leave" on a persona's menu.
 
 ### Rule 16. `R10b-renegotiate-second`
 
-**Plain English.** If the role lapses again within 8 weeks after a check-in, either partner may reopen that role early. They do not have to wait for the 13-week review. The renegotiation can keep the role, move it to the other partner, share it, or drop it.
+**Plain English (confirmed).** If the unhappiness continues within 8 weeks after a check-in (the role lapses again, or the partner is still distressed), either partner may reopen the terms early. They do not have to wait for the 13-week review. For a role, the renegotiation can keep it, move it to the other partner, share it, or drop it. For general unhappiness, any term can be reopened.
 
-### Rule 17. `R10c-no-penalty-exit-last`
+### Rule 17. `R10c-no-default-penalty-exit-last`
 
-**Plain English.** A lapsed role never carries a fine, a sanction or a forfeit, even if the partners would like one. Leaving over lapsed roles is the last step, after a check-in and a renegotiation. This rule is about how a partner responds to a lapse. It does not limit leaving: rule 11 (a partner may leave whenever they like) still holds in full.
+**Plain English (confirmed, changed).** A lapsed role carries no fine, sanction or forfeit by default. A fine on a lapsed role exists only if both partners explicitly choose it as a negotiated term. While such a fine stands, both partners pay a small scorekeeping cost each week. Leaving because of unhappiness is the last step, after a check-in and a renegotiation. This is how a partner responds, not a limit on leaving: rule 11 (a partner may leave whenever they like) still holds in full.
 
 **The author's words (rules 15 to 17).**
 
@@ -53,28 +66,39 @@ The jobs a role can cover in the model are: earning (working), paying the shared
 
 > reliance is fine its the guilt and scorekeeping i dont like
 
-**Claude's interpretation (rules 15 to 17).**
-- The order. The author wrote "renegotiate or a soft check in". Claude put the check-in first because it is the softer step. The author may have meant either one, in any order.
+> check in first for general unhappiness too
+
+> allowed only by mutual choice i think
+
+**Settled by the author.** Check-in comes first (the author's "check in first"). Exit last is how agents behave, not a ban, and free exit stands. The ladder covers general unhappiness too. A fine on a lapsed role is allowed only by mutual choice. The first draft's "no fine, even if both would like one" was too strong and is withdrawn.
+
+**Still Claude's interpretation (rules 15 to 17).**
 - The 8-week window for "again". ASSUMED.
-- "Not leaving right away" became "exit last". Claude kept leaving always allowed (rule 11), so exit last is a policy of the persona agents, not a ban on leaving. An agent will consider leaving over lapses only after a renegotiation has failed or lapses continue after it. It may still leave earlier for other reasons (distress, low trust), as in v2.2.
-- "No penalty, even if both would like one" is Claude's reading of "the guilt and scorekeeping i dont like". It is a strong reading. The author may want a fine allowed when both partners choose it. See question 3 below.
+- What counts as "general unhappiness" in the model (the existing distress signals, listed under rule 15).
+- Leaving over unhappiness comes only after a failed renegotiation or continued distress after it. A severe case (non-offsettable load of 0.4 or more, ASSUMED) may still skip the ladder. Whether the ladder may ever be skipped is not settled; see the open questions.
 - The check-in cost (a small amount of time) is ASSUMED. A check-in that costs nothing would be free to repeat, which reads as nagging.
+- That the scorekeeping cost on a chosen fine is the same one as in fix 4 (scaled by how little the persona values security).
 
-## Trust from actions, not words (a mechanism, not a card)
+## Trust mostly from actions (a mechanism, not a card)
 
-**Plain English.** Trust changes only because of what a partner does. Keeping a role or a commitment raises the other's trust a little each week. Lapsing a role lowers it a little. Breaking a chosen commitment lowers it a lot, as in v2.2. What a partner says does not move trust: agreeing to terms, answering a check-in, or promising to do better changes nothing until the actions follow.
+**Plain English (confirmed, changed).** Trust moves mostly because of what a partner does. Keeping a role or a commitment raises the other's trust a little each week. Lapsing a role lowers it a little. Breaking a chosen commitment lowers it a lot, as in v2.2. What a partner says moves trust a little: answering a check-in or promising to do better gives a small gain that is taken back if the next actions do not follow.
 
 **The author's words.**
 
 > utlimtaly what the person does is the sterongest signal
 
-**Claude's interpretation.**
-- "Strongest signal" became "the only signal". The author said strongest, not only. Words could count a little. Claude made them count zero because the model's agents cannot lie or mean things, so a "word" in the model carries no information anyway.
-- New ASSUMED numbers beside the v2.2 trust block: a kept role week adds 0.002, a lapsed role costs 0.05 (a broken commitment still costs 0.3). A lapse costs less than a breach because a role is a habit the partners chose, not a promise about a specific request. That ranking is Claude's.
+> maybe we have to test? but my intutions is mostly actions
+
+**Settled by the author.** "Mostly actions" is the default. The first draft's "only actions" is withdrawn as the default. Because the author said "maybe we have to test", the retest compares three versions in a descriptive arm: only actions, mostly actions (the default), and words count until tested (a promise moves trust as much as an action until a later action contradicts it).
+
+**Still Claude's interpretation.**
+- What a "word" is in the model. Agents cannot lie or mean things, so a word is an event: agreeing to terms, answering a check-in, or a stated promise to resume a role.
+- ASSUMED numbers beside the v2.2 trust block: a kept role week adds 0.002, a lapsed role costs 0.05, a broken commitment still costs 0.3. A word adds 0.01 in "mostly actions" (a fifth of a lapse), 0 in "only actions", and 0.05 in "words count until tested". A word's gain is removed if a lapse or breach follows within 8 weeks.
+- A lapse costs less than a breach because a role is a habit the partners chose, not a promise about a specific request. That ranking is Claude's.
 
 ## Rule 18. `R11-decency-floor`
 
-**Plain English.** Everyone on common ground treats each other with politeness and common decency. "On common ground" means the two partners, and the friend when the friend shares the home or the pot. In this world decency means three things:
+**Plain English (confirmed, changed).** Everyone treats everyone they interact with with politeness and common decency. "On common ground" means anyone the agent interacts with: the partner, the friend, and in the network lever every external bond. In this world decency means three things:
 
 1. No one acts only to lower another person's pleasure.
 2. No one repeats a request the other has just refused, for 4 weeks.
@@ -90,12 +114,15 @@ And from the original seed (2026-11-10):
 
 > no one owes anyone anything day to day except for what they have negotirated
 
-**Claude's interpretation.**
-- The three parts are Claude's translation of "politeness and common decency" into actions the model has. The model has no speech, so politeness can only show up as what people do.
+> all three feel right, common ground is anyone you interact with
+
+**Settled by the author.** All three parts are confirmed. "Common ground" is anyone you interact with, not only the shared home or pot.
+
+**Still Claude's interpretation.**
+- The model has no speech, so politeness can only show up as what people do.
 - Part 1 already holds in v2.2 for contact and spending (rule 9, no vetoes). It adds nothing for the hand personas. It matters only for pressing personas.
-- Part 2 is the one new constraint. It stops pressing (asking again and again after a no). The 4 weeks are ASSUMED.
-- Part 3 changes nothing in the code. The world already makes every refusal explicit. It is listed so the author can see it is there.
-- "Common ground" as "the home or the pot" is Claude's reading. The author may mean any shared space, or shared values.
+- Part 2 is the one new constraint. It stops pressing (asking again and again after a no). The 4 weeks are ASSUMED. In this world only the partners make requests, so widening common ground changes the code only where Friend C or an external bond can refuse something (today they cannot; phase 2 checks).
+- Part 3 changes nothing in the code. The world already makes every refusal explicit.
 - "You can't complain about doing things for friends" is not turned into a rule. Claude reads it as: what you chose to do for a friend is not a debt. That fits "no scorekeeping" and the evaluator flag below.
 
 ## Evaluator flag (not a rule): chosen versus slid-into sacrifice
@@ -118,15 +145,21 @@ The flag changes nothing in the run. It is a line in the report, like the freedo
 - "One-way" is measured against each partner's own outside option (the value of living apart), following the Q4 answer "better off within the relationship". Equal gains are not required.
 - The pleasure of giving (Q8) is counted in the partner's pleasure when the model has it. Today it does not, so a generous partner may be flagged too often.
 
-## Open questions for the author
+## Questions: settled and still open
 
-1. Roles: is "a negotiated term about who does which recurring job" what you meant by allocating roles? Are the three jobs (earning, paying bills, planning time together) enough to start?
-2. The ladder: check-in first, then renegotiate, then leaving last. Is that order right?
-3. Penalties: should a fine on a lapsed role be impossible (as written), or allowed when both partners choose it?
-4. Trust: should words count for nothing, or for a little?
-5. Decency: are the three parts what you mean by "politeness and common decency"? Is "common ground" the shared home and pot?
-6. The flag: is a recorded choice a fair stand-in for "actively choose it"? Is 26 weeks a fair "for a while"?
-7. Variants: v2.2 has bindable and free-exit variants. Should v2.3 also have both? This draft has only bindable, because the v2.2 headline used bindable.
+Settled by the author on 2026-11-11:
+
+- The ladder order: check-in first, then renegotiate, then leaving last, as agent behavior and not a ban. Free exit stands. It covers general unhappiness too.
+- Fines on lapsed roles: allowed only by mutual choice, with the scorekeeping cost.
+- Trust: mostly actions by default; the three versions are compared in the retest.
+- Decency: all three parts; common ground is anyone you interact with.
+
+Still open. These do not block the retest; until answered, v2.3 runs with Claude's defaults, named here.
+
+1. Roles: are the three jobs (earning, paying bills, planning time together) enough to start? Default: yes.
+2. The ladder: may a partner in severe distress skip straight to leaving? Default: yes, at a non-offsettable load of 0.4 or more (ASSUMED).
+3. The flag: is a recorded choice a fair stand-in for "actively choose it"? Is 26 weeks a fair "for a while"? Default: yes, 26 weeks.
+4. Variants: should v2.3 also have a free-exit variant (no binding stay commitments)? Default: bindable only, because the v2.2 headline used bindable.
 
 ## What is not a card
 

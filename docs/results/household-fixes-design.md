@@ -1,6 +1,6 @@
 # Household world fixes: design (phase 1, no code yet)
 
-Status: design only. No code in src/mar/worlds/, hedonic.py, negotiation.py or personas.py has been changed for this. Another agent (household evolution) is still editing household code; implementation (phase 2) starts after that work lands. Approved plan: the author's "yes fix then retest if that is best course of aciotn" (experiments/changes.jsonl, 2026-11-11T02:06:55Z). Retest preregistration: docs/results/v2-retest-prereg-DRAFT.md. Seed v2.3 candidate: docs/results/seed-v2.3-readback.md.
+Status: design only. No code in src/mar/worlds/, hedonic.py, negotiation.py or personas.py has been changed for this. Another agent (household evolution) is still editing household code; implementation (phase 2) starts after that work lands. Approved plan: the author's "yes fix then retest if that is best course of aciotn" (experiments/changes.jsonl, 2026-11-11T02:06:55Z). Retest preregistration: docs/results/v2-retest-prereg-DRAFT.md. Seed v2.3 (confirmed by the author 2026-11-11, with changes): docs/results/seed-v2.3-readback.md.
 
 Wording rule: agents feel nothing. "Pleasure" and "suffering" are glosses for a modeled hedonic state (ADR 0010). Every number below is ASSUMED unless a source is named.
 
@@ -126,7 +126,7 @@ With all fix flags off, the existing sha256 fingerprints in tests/test_levers_re
 
 **Mechanism under `fines`.**
 
-- The `fine` term widens: scope {request breach, stay breach} x amount {3, 6}. `none` stays the fair default. A role-lapse scope exists in code but is not offered under v2.3 (rule 17 forbids penalties on roles), only in a separate test arm if the author allows it.
+- The `fine` term widens: scope {request breach, stay breach, role lapse} x amount {3, 6}. `none` stays the fair default. The role-lapse scope is offered only when `roles` is on and a role is agreed. The author confirmed (2026-11-11, "allowed only by mutual choice i think") that a fine on a lapsed role exists only by explicit mutual choice, and v2.3 rule 17 now says so. "Mutual" means both partners accept the fine term in the negotiation; neither can impose it, and it is never part of the fair default.
 - Who proposes: personas with security weight at least 0.6 and autonomy below 0.5 (ASSUMED). Acceptance follows each persona's value of the bundle, as for every term.
 - Scorekeeping cost: while a fine term stands, each partner pays a small offsettable friction each week, scaled by (1 - security weight). A fine is never free, and it costs most to a persona who does not want enforcement.
 
@@ -143,13 +143,15 @@ With all fix flags off, the existing sha256 fingerprints in tests/test_levers_re
 
 **Manipulation check.** In fixes-on v2.2 runs, a fine term appears only in households where someone proposed it. Count households with each fine scope. Fidelity P4 rerun with `fine_crowdout` on, reported descriptively.
 
-## Seed v2.3 support (flags `roles`, `lapse_ladder`, `decency`; evaluator `slid_flag`)
+## Seed v2.3 support (flags `roles`, `lapse_ladder`, `unhappy_ladder`, `trust_words`, `decency`; evaluator `slid_flag`)
 
-These implement the candidate rules in docs/results/seed-v2.3-readback.md. None runs before the author confirms v2.3.
+These implement the rules in docs/results/seed-v2.3-readback.md. The author confirmed v2.3 on 2026-11-11 with four changes; the flags below include them.
 
 - **`roles`.** New negotiation term `roles`: none | earner_planner (A earns and pays bills, B plans together time) | swapped | shared. Card aim `role` joins `EXTRA_ACTIONS` (as `ritual` did). A role holder's cost for that job falls by spec_gain after a ramp. A role is "due" each week (earn: at least one work block; bills: the gap funded by month end; plan: at least one together session or a kept ritual). A lapse is a due role not done in a week when it was feasible.
-- **`lapse_ladder`.** First lapse: a check-in event (small friction to both, no trust change from the answer). Second lapse within 8 weeks after a check-in: an early review of the roles term through `negotiate_v2(review=True)`. Leaving over lapses only after a failed renegotiation or lapses after it. No fine, sanction or forfeit on a lapse. Trust: +role_kept per kept role week, -role_lapse per lapse.
-- **`decency`.** State variable `refused_recently` (1 for 4 weeks after the other refused this kind of request). Card `R11-decency-floor`: a partner must not `request` when `refused_recently` is 1. The other two parts of the floor need no code (see the read-back).
+- **`lapse_ladder`.** First lapse: a check-in event (small friction to both). Second lapse within 8 weeks after a check-in: an early review of the roles term through `negotiate_v2(review=True)`. Leaving over lapses only after a failed renegotiation or lapses after it. No fine, sanction or forfeit on a lapse unless both chose a role-lapse fine (fix 4). Trust: +role_kept per kept role week, -role_lapse per lapse.
+- **`unhappy_ladder` (new, from the author's "check in first for general unhappiness too").** The same ladder for general unhappiness. Today a distressed persona (4 or more low weeks, non-offsettable load N at least 0.2, or trust below `leave_below`) puts `leave` on its menu at once. Under this flag, the first distress signal triggers a check-in instead; if distress continues within 8 weeks, an early review of all terms; `leave` joins the menu only after that review fails to end the distress, or at once if N reaches `skip_n` (severe distress skips the ladder; whether it may is still open with the author). Leaving is never blocked by a card; this changes the agent's policy only. Rule 11 (free exit) is unchanged.
+- **`trust_words` (new, from the author's "mostly actions", value not flag).** A setting with three values: `"actions"` (words move trust 0), `"mostly"` (the v2.3 default; a word moves trust +word_gain), `"words"` (words count until tested; a word moves trust +word_gain_tested). A "word" is an event: agreeing to terms at a review, answering a check-in, or a stated promise to resume a role. A word's gain is removed if a lapse or breach by the same partner follows within word_window weeks. Off (the setting `None`) reproduces v2.2 trust exactly.
+- **`decency`.** State variable `refused_recently` (1 for 4 weeks after the other refused this kind of request). Card `R11-decency-floor`: an agent must not `request` when `refused_recently` is 1. The author widened common ground to "anyone you interact with", so the card's actor is any agent (partners, Friend C, external bonds), not only partners. Today only partners can make requests, so in practice it binds partners; phase 2 checks whether any other agent can request or refuse and, if so, gives it the same condition. The other two parts of the floor need no code (see the read-back).
 - **`slid_flag` (evaluator only).** Reads finished runs. For each partner and each 26-week window: one-way if their mean wellbeing is below their outside option while the other's is above it. Slid-into if one-way and no choice event by them in the window (proposed or accepted a term, made a commitment, gave a gift, took a role, or kept terms after a check-in). Reports the share of partner-windows flagged. It never changes a run, so it carries no regression risk.
 
 | name | value | meaning |
@@ -162,6 +164,21 @@ These implement the candidate rules in docs/results/seed-v2.3-readback.md. None 
 | role_lapse | 0.05 | trust loss per lapse |
 | decency_weeks | 4 | weeks a refused request may not be repeated |
 | slid_window | 26 | weeks for the one-way test |
+| word_gain | 0.01 | trust gain per word, `trust_words="mostly"` |
+| word_gain_tested | 0.05 | trust gain per word, `trust_words="words"` (as much as a lapse costs) |
+| word_window | 8 | weeks within which a lapse or breach removes a word's gain |
+| unhappy_window | 8 | weeks of continued distress after a check-in before an early review |
+| skip_n | 0.4 | non-offsettable load at which a partner skips the ladder and may leave at once |
+
+## Retest support (flag `baseline_may_decline`; scoring change)
+
+From the author's two retest decisions (experiments/changes.jsonl, 2026-11-11T02:22:46Z and 02:23:24Z).
+
+- **`baseline_may_decline` (harness flag, in the retest script, not in the world).** "yes pairs should be allowed to not form a househodl". Today the imposed baseline always starts the pair living together. Under this flag, at week 0 each partner compares the value of living under the baseline cards (a 26-week rollout, the same `pot_baseline` style rollout the negotiation uses, with the baseline cards) with their outside option (`negotiation.outside_value`, with every active lever and fix). If either partner's outside option is higher, the pair does not form and both live apart, exactly as a v2.2 pair with no pot does (same `apart` protocol, same apart modes). The baseline's terms are still imposed, not negotiated: the only new choice is whether to form. Same formation rule for both arms, so v2.2 and the baseline compare like with like.
+- **Scoring.** "pleasure minus suffering yeah i guess if that is what is commonly held". Each person is scored at their actual outcome, living apart included: mean over 156 weeks of pleasure minus offsettable minus non-offsettable suffering (the `negotiation.wellbeing` quantity, already the one the negotiation uses). Non-offsettable suffering is reported on its own line as well. This is a change in the analysis only and needs no world flag.
+- **Effect on the predictions in the table below.** Both decisions remove most of the structural mismatch named in the last section. With the baseline also allowed to decline, the bargainer and steward-wanderer pairings that drove the gap can live apart in both arms. My guess (made before any run): the levers-on, fixes-off gap in net wellbeing moves from about -0.02 to between -0.01 and +0.01, before any fix. The fixes' own effects are as in the table.
+
+Regression: `baseline_may_decline` off reproduces the pleasure-levers baseline arm exactly; the scoring change does not touch runs.
 
 ## Predicted effect of each fix on the v2.2 vs baseline gap (levers on)
 
@@ -181,7 +198,7 @@ Guesses made before any run, for the record. The gap is D = v2.2 minus baseline,
 - **Fix 4 (fines).** It makes the model more faithful (fidelity P4) but should not raise pleasure. By the author's own view, a fine adds scorekeeping.
 - **Fix 3 (outside options).** It may widen the pleasure gap, for the reason in finding 2. It should still be built, because without it terms-level claims cannot be cited (fidelity P1a).
 - **The decency floor.** No effect expected with the hand or grid cohorts; it matters only where someone presses.
-- **None of the fixes addresses the structural cause.** v2.2 lets a pair decline to form; the imposed baseline does not. A pair that chooses apart because it is better off by net wellbeing can still score lower on mean pleasure. Two design questions for the author follow, recorded and not decided here: (a) should the baseline face the same formation choice, and (b) should the condition be judged on pleasure or on pleasure net of suffering? The retest prereg reports both measures and a formed-only reading, so the answer can be seen whichever way it goes.
+- **None of the four fixes addresses the structural cause.** v2.2 lets a pair decline to form; the imposed baseline did not. A pair that chooses apart because it is better off by net wellbeing could still score lower on mean pleasure. The author has now settled both questions this raised (2026-11-11): the baseline may also decline to form (`baseline_may_decline`), and the condition is judged on pleasure minus suffering. See "Retest support" above.
 
 ## Phase 2 plan (after the household-evolution agent finishes)
 
@@ -191,7 +208,7 @@ Guesses made before any run, for the record. The gap is D = v2.2 minus baseline,
 4. Fix 2 with unit tests (a money-weight-0 persona gains no pleasure from surplus money; subsistence still hurts). Commit.
 5. Fix 3 with the P1a manipulation check. Commit.
 6. Fix 4 with the P4 check. Commit.
-7. v2.3 support (roles, ladder, decency, slid flag) behind flags; the v2.3 rule directory only after the author confirms the read-back.
+7. v2.3 support (roles, both ladders, trust_words, decency, slid flag) behind flags; the v2.3 rule directory `rules/household/author_seed_v23_bindable` from the confirmed read-back. Then `baseline_may_decline` and the net-wellbeing scoring in the retest script.
 8. Pilot, power check, then Amendment 1 to the retest prereg, committed before any confirmatory run.
 
 Each step: lint the rule sets touched (docs/results/lint.md conventions) and keep the regression tests green.
