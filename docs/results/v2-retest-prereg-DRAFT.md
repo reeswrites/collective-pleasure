@@ -1,6 +1,6 @@
 # Seed v2 retest preregistration: DRAFT (does seed v2.2, or v2.3, beat the baseline once the household is fixed?)
 
-**DRAFT. Not a preregistration yet.** Seed v2.3 is now confirmed by the author (2026-11-11, with changes; docs/results/seed-v2.3-readback.md). This file stays DRAFT until (1) the fixes in docs/results/household-fixes-design.md are built and pass their manipulation checks, and (2) Amendment 1 (pilot and power check) is written. It is then copied to docs/results/v2-retest-prereg.md and committed before any confirmatory run.
+**Superseded on 2026-11-11 by docs/results/v2-retest-prereg.md (the preregistration with Amendment 1). This DRAFT is kept as written before the pilot.** DRAFT. Not a preregistration yet. Seed v2.3 is now confirmed by the author (2026-11-11, with changes; docs/results/seed-v2.3-readback.md). This file stays DRAFT until (1) the fixes in docs/results/household-fixes-design.md are built and pass their manipulation checks, and (2) Amendment 1 (pilot and power check) is written. It is then copied to docs/results/v2-retest-prereg.md and committed before any confirmatory run.
 
 Status: nothing here is a result. Scripted persona-driven agents; no model API calls. Template: docs/templates/prereg.md (ADR 0015).
 
