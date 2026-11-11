@@ -201,13 +201,54 @@ Guesses made before any run, for the record. The gap is D = v2.2 minus baseline,
 - **The decency floor.** No effect expected with the hand or grid cohorts; it matters only where someone presses.
 - **None of the four fixes addresses the structural cause.** v2.2 lets a pair decline to form; the imposed baseline did not. A pair that chooses apart because it is better off by net wellbeing could still score lower on mean pleasure. The author has answered both questions this raised (2026-11-11): the baseline may also decline to form (`baseline_may_decline`), and the condition is judged on pleasure, with pleasure minus suffering shown beside it ("show both, judge on pleasure"). Everyone counts, people who decline included (the author's "everyone counts"), with a descriptive formed-pairs-only line beside it. See "Retest support" above.
 
+## Additions from the test 2 run (docs/results/stay-test.md, 2026-11-11)
+
+The stay-worth-it run found three problems in shared household code. They join the phase 2 work.
+
+### A. Bug: breaches on exit are never logged (no flag; a correctness fix)
+
+`WeeklyWorld.apply` writes `"breach": bool(cand.get("breach"))` into `exit_log` when a partner leaves. `WeeklyWorld.breach` never sets that key on the candidate, so `exit_log[...]["breach"]` is always False. The stay test counted breaches from the commitments' `breached` field instead.
+
+- **Fix.** Set the flag where the leave is decided to be a breach (the `dec == "breach"` path that already marks `row["breach"] = True`) and read it from there when the exit is logged.
+- **Test.** A stay-bound partner pushed to the breach load leaves; assert `exit_log[-1]["breach"]` is True and equals the commitment's `breached` count change. A leave with no commitment logs False.
+- **Regression.** This is a logging fix, so it is not behind a flag. Phase 2 first checks whether `exit_log` reaches the fingerprinted fields (`outcomes`, `trace`, `final`, `meta`) in any of the 10 pinned runs. If no pinned run has a breach on exit, the fingerprints stay. If one changes, the repin is its own commit, naming the run and the one changed field, and nothing else changes in that commit.
+
+### B. The leave decision ignores the outside option (flag `bar_leave`, part of fix 3)
+
+Today a partner leaves only when distressed (4 low weeks, non-offsettable load 0.2, or trust below 0.15). The ADR 0018 bar, max(outside option, status-quo value), only sets terms at reviews and never ends a household. The stay test found the bar would say "leave" in 29 percent of v2.2 readings and 41 percent of baseline readings, yet few households end. So test 2's "worth it" means "not distressed", not "better than the alternatives".
+
+- **Mechanism.** Under `bar_leave` (requires `real_outside`), every `bar_every` weeks while both partners are in, each partner compares the status-quo value (`negotiation.forward_values` minus `trust_penalty`, the same quantity the review uses) with the outside option (`negotiation.outside_value`, with all active levers and fixes). If the outside option is higher by more than `leave_margin` in `bar_runs` readings in a row, `leave` joins that partner's menu, as distress does now. Under v2.3 the general-unhappiness ladder applies first (check-in, then early renegotiation, then leave), so a review can still keep the household by changing terms.
+- **Same rule in every arm.** It applies to the baseline arms too, as the formation choice does (`baseline_may_decline`), so arms stay comparable.
+- **Effect on test 2.** With the flag on, the behavioral lens's "worth it" becomes "better than the alternatives", which is the ADR's wording.
+- **Expected effect on the retest.** More households end, in every arm. The verdict is on pleasure and everyone counts, so a partner who leaves for a better life apart is scored there. My guess: small and of uncertain sign for D, larger for the not-formed-or-ended share.
+
+| name | value | meaning |
+|---|---|---|
+| bar_every | 13 | weeks between readings (the review cycle) |
+| leave_margin | 0.02 | how much better the outside option must be |
+| bar_runs | 2 | readings in a row before leave joins the menu |
+
+All ASSUMED. The outside-option rollouts are cached as now; this adds about two rollouts per partner per 13 weeks.
+
+### C. The take menu cannot meet a "proportional" exit term (flag `take_menu_terms`)
+
+A leaving agent only asks to carry 50, 25 or 12 percent (`LEAVE_TAKES`). The negotiated "proportional" exit term forbids leaving with less than 100 percent of what one put in. So under that term a distressed partner can never leave. In the stay test, 675 of 676 held weeks of the confirmed seed came from one pairing (Steward with Controller) whose reviewed bundle chose "proportional". This is a property of the agent, not of the seed's words.
+
+- **Fix.** Under `take_menu_terms`, the agent's take menu also includes the smallest take its current exit term allows (100 percent of what it put in, for "proportional"), and drops takes the term forbids. With no exit term, the menu is unchanged.
+- **Until it is on, flag it.** Any run with the flag off reports the number of partner-weeks where every take on the menu is forbidden by the exit term. The stay test's held share under the seed is an upper bound set by this quirk.
+- **Retest.** `take_menu_terms` is on in every fixes-on arm. In the fixes-off control it is off (the control replicates old behavior), and the count above is reported.
+
+### What this means for the retest draft
+
+The retest prereg (docs/results/v2-retest-prereg-DRAFT.md) should add `bar_leave` and `take_menu_terms` to "all four fixes on", a manipulation check for each (a partner with a clearly better outside option and no distress leaves within `bar_runs` readings; no partner-week has an all-forbidden take menu), and the count of all-forbidden take menus in the fixes-off arms. That edit is left for the coordinator's go-ahead, since this note asked for the design doc only.
+
 ## Phase 2 plan (after the household-evolution agent finishes)
 
 1. Rebase on their work; run tests/test_levers_regression.py first and confirm it still passes untouched.
-2. `FixConfig` and `use_fixes` in hedonic.py; regression tests above. Commit.
+2. `FixConfig` and `use_fixes` in hedonic.py; regression tests above. Commit. Then the exit-log breach bug (addition A) with its test, as its own commit.
 3. Fix 1 (contact, then contact_motive) with unit tests and the P5 manipulation check. Commit.
 4. Fix 2 with unit tests (a money-weight-0 persona gains no pleasure from surplus money; subsistence still hurts). Commit.
-5. Fix 3 with the P1a manipulation check. Commit.
+5. Fix 3 with the P1a manipulation check, then `bar_leave` (addition B) and `take_menu_terms` (addition C) with their checks. Commit each.
 6. Fix 4 with the P4 check. Commit.
 7. v2.3 support (roles, both ladders, trust_words, decency, slid flag) behind flags; the v2.3 rule directory `rules/household/author_seed_v23_bindable` from the confirmed read-back. Then `baseline_may_decline` and the net-wellbeing scoring in the retest script.
 8. Pilot, power check, then Amendment 1 to the retest prereg, committed before any confirmatory run.
