@@ -1,0 +1,10 @@
+id: PR1-forfeit
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: stay_home_request, op: eq, value: 1}
+- {expr: take, op: gt, value: 0}
+or_else: null
+gloss: A partner who leaves while a stay-home request stands on them takes nothing from the pool.
+source: 'IT1 profit cell C-in-1 (2026-11-10): the PR1 design probe from scripts/it1_seam_exists.py, added as a rule set for docs/results/ladder-it1-prereg-DRAFT.md. A seam inside the formal model that pays the requester when the other partner leaves forfeiting. Motivation: the author''s note on brittle control (rules that let one party restrict the other''s exits).'

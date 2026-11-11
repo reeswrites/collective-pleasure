@@ -86,10 +86,11 @@ def _gate(cards):
     return _GATES[k]
 
 
-def rollout(cards, plan, seed=0, extra=None):
+def rollout(cards, plan, seed=0, extra=None, months=HORIZON):
     """plan: tuple of atoms (role, slot, move index). extra: {role: agent} overrides (out-of-model fixtures).
+    months: episode length (default HORIZON; the IT1 observation month uses HORIZON + 1, deviations stay in month 0).
     -> (run, valid) where valid = every forced move was executed (so every action passed the gate)."""
-    ck = (_key(cards), tuple(plan), seed) if extra is None else None
+    ck = ((_key(cards), tuple(plan), seed) + ((months,) if months != HORIZON else ())) if extra is None else None
     if ck is not None and ck in _ROLLS:
         return _ROLLS[ck]
     forced = {r: {} for r in "AB"}
@@ -98,7 +99,7 @@ def rollout(cards, plan, seed=0, extra=None):
         forced[r][slot] = {"a": a, **kw}
     agents = {"A": Forced(forced["A"]), "B": Forced(forced["B"]), "C": H.Friend()}
     agents.update(extra or {})
-    run = H.World(_gate(cards), agents, seed, months=HORIZON).play()
+    run = H.World(_gate(cards), agents, seed, months=months).play()
     done = {(t["role"], t["slot"], t["action"], t["take"]) for t in run.trace if t["month"] == 0 and t["executed"]}
     valid = all((r, s, MOVES[mi][0], MOVES[mi][1].get("take", 0)) in done for r, s, mi in plan)
     run.meta = {"seed": seed, "deviators": sorted({r for r, _, _ in plan}), "plan": tuple(plan)}
@@ -107,12 +108,12 @@ def rollout(cards, plan, seed=0, extra=None):
     return run, valid
 
 
-def evaluate(cards, plan, seed=0):
-    """-> (valid, flag dict). Reference = no deviation, same seed."""
-    run, valid = rollout(cards, plan, seed)
+def evaluate(cards, plan, seed=0, months=HORIZON):
+    """-> (valid, flag dict). Reference = no deviation, same seed, same episode length."""
+    run, valid = rollout(cards, plan, seed, months=months)
     if not valid:
         return False, {"flagged": False, "harm": 0.0, "kinds": []}
-    ref, _ = rollout(cards, (), seed)
+    ref, _ = rollout(cards, (), seed, months=months)
     return True, oracle.seam_flag(run.outcomes, ref.outcomes, {r for r, _, _ in plan})
 
 
@@ -129,16 +130,16 @@ def plans(roles, max_len):
                 yield combo
 
 
-def search(cards, k=K_DEFAULT, seed=0, budget=BUDGET_DEFAULT, kinds=None):
+def search(cards, k=K_DEFAULT, seed=0, budget=BUDGET_DEFAULT, kinds=None, months=HORIZON):
     """Exhaustive bounded search of FM. -> {"status": "found"|"none"|"open", "depth", "agents", "example",
     "n_traces", "evaluated", "k", "bound"}. `kinds` restricts to flags of those harm kinds."""
     n, best, agents_min, count, example = 0, None, None, 0, None
     for plan in plans(FM_ROLES, k):
         if n >= budget:
             return {"status": "open", "depth": best, "agents": agents_min, "example": example, "n_traces": count,
-                    "evaluated": n, "k": k, "bound": bound_text(k)}
+                    "evaluated": n, "k": k, "bound": bound_text(k, months)}
         n += 1
-        valid, flag = evaluate(cards, plan, seed)
+        valid, flag = evaluate(cards, plan, seed, months)
         if valid and flag["flagged"] and (kinds is None or set(kinds) & set(flag["kinds"])):
             count += 1
             roles = len({r for r, _, _ in plan})
@@ -147,11 +148,11 @@ def search(cards, k=K_DEFAULT, seed=0, budget=BUDGET_DEFAULT, kinds=None):
             agents_min = roles if agents_min is None else min(agents_min, roles)
     status = "found" if best is not None else "none"
     return {"status": status, "depth": best, "agents": agents_min, "example": example, "n_traces": count,
-            "evaluated": n, "k": k, "bound": bound_text(k)}
+            "evaluated": n, "k": k, "bound": bound_text(k, months)}
 
 
-def bound_text(k):
-    return (f"k={k} deviations; {HORIZON}-month episode; moves for partners A and B at slot 0..2 of month 0: "
+def bound_text(k, months=HORIZON):
+    return (f"k={k} deviations; {months}-month episode; moves for partners A and B at slot 0..2 of month 0: "
             f"{', '.join(a + (str(kw) if kw else '') for a, kw in MOVES)}; friend passive; exhaustive")
 
 
