@@ -323,14 +323,15 @@ def household_liberty(world, gate, state, scripts, k=HH_K, w=W_DEFAULT, cap=E.HH
 
 
 def household_run_liberty(cards, personas, seed=0, weeks=E.HH.WEEKS, snapshots=HH_SNAPSHOTS, k=HH_K, w=W_DEFAULT,
-                          cap=E.HH_CAP, cfg=None, press=True, version=2, plain_k=None, bits_snapshots=()):
+                          cap=E.HH_CAP, cfg=None, press=True, version=2, plain_k=None, bits_snapshots=(), powers=False):
     """Run one weekly household world and measure liberty (and plain empowerment) of both partners at the start of the
     snapshot weeks. -> {"run", "snaps": [{"week", "liberty": [l0, l1], "bits": [b0, b1], "c": [..], "ado": [..], "d": [..], "open"}],
     "liberty_min": mean over snapshots of the lower of the two partners' liberty, "bits_min": same for plain empowerment}.
     Open snapshots (cap hit) are kept in `snaps` with open=True and left out of the means. plain_k: horizon for the plain
     empowerment column (default = k, so the two columns are comparable). bits_snapshots: extra weeks at which ONLY plain empowerment
     is measured (cheap) -> "bits_snaps" [[b0, b1], ...]. press=False is the twin: the pressing persona's agent does not press and
-    every script is a cooperator (as empowerment.household_run_bits)."""
+    every script is a cooperator (as empowerment.household_run_bits). powers=True adds the three normative powers to the menu and
+    the key (empowerment.HH_POWER_MENU); False reproduces every earlier number exactly."""
     from .hedonic import DEFAULT
     gate = cards if isinstance(cards, E.HH.PyGate) else E.HH.PyGate(cards)
     wk = E.HH.WeeklyWorld(gate, personas, seed, weeks, cfg or DEFAULT)
@@ -339,7 +340,7 @@ def household_run_liberty(cards, personas, seed=0, weeks=E.HH.WEEKS, snapshots=H
             if hasattr(wk.agents[r], "press"):
                 wk.agents[r].press = False
     scripts = tuple(E.script_for(p) if press else "cooperator" for p in personas)
-    hw = E.HouseholdWorld(tuple(E.consent_for(p) for p in personas))
+    hw = E.HouseholdWorld(tuple(E.consent_for(p) for p in personas), powers=powers)   # powers: count normative powers (ADR 0014 amendment), off by default
     snaps, bits_snaps, bits_open = [], [], 0
     pol = E.scripted_policy(scripts)
     memo = _HH_MEMO.setdefault(id(gate), (gate, {}))[1]      # same state, scripts, consents, k: same answer (the gate is kept alive here)
@@ -354,7 +355,7 @@ def household_run_liberty(cards, personas, seed=0, weeks=E.HH.WEEKS, snapshots=H
                 bits_snaps.append([r["bits"] for r in res])
         if wk_ in snapshots and wk_ < weeks:
             state = hw.snapshot(world, wk_)
-            mk = (state, scripts, hw.consents, k, w, cap, version)
+            mk = (state, scripts, hw.consents, k, w, cap, version, hw.powers)
             if mk not in memo:
                 memo[mk] = household_liberty(hw, gate, state, scripts, k, w, cap, version)
             res = memo[mk]

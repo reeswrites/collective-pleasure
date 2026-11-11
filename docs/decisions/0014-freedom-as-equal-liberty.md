@@ -41,3 +41,15 @@ On whether another member leaving counts as lost freedom (topic exit-not-unfreed
 - ADR 0011's "freedom as empowerment" is amended: empowerment stays as the plain count, and liberty is the main freedom reading. The hand-made score stays as the third.
 - The ASSUMED parts are the weight, the classification tables, the first-step blocking limit and the count-based harm test. Each is listed in the prereg files.
 - References for the conceptions (Berlin, Kant, Rawls, Mill, Pettit, Mackenzie and Stoljar) are in docs/references.md, marked verified or recalled.
+
+## Amendment 2026-11-10 (normative powers) - Claude's framing, for the author to read
+
+Why: run 1 of household evolution (docs/results/household-evolve.md, docs/results/household-loss-report.md) dropped every `may` card of the author's seed and with it the ability to bind a stay, bind a request, or give. The liberty measure could not see the loss: it counts permitted actions (what a member may do), and the three commitment actions were not in the household menu at all. The author said this was "not what I meant" and approved counting them ("Yes, all three").
+
+Decision (Claude's framing; the author has not read this wording): liberty also counts **normative powers**, the ability to change one's own or another's normative position, here making a binding promise to stay, a binding promise to honor requests, and giving a gift (a transfer). The distinction is Hohfeld's between a *privilege* (liberty to do something) and a *power* (ability to create or alter a legal relation). From memory, verify: Hohfeld, "Some Fundamental Legal Conceptions as Applied in Judicial Reasoning" (1913), the eight fundamental conceptions, power/liability beside privilege/no-right. It is also close to the author's own phrase "unless chosen bound": being able to bind oneself is part of what a free member has.
+
+How: `empowerment.HouseholdWorld(powers=True)` adds `HH_POWER_MENU` (commit_stay, commit_request, give) to the menu and a bound flag, a request-promise flag and a gift count to the key. A power exists only where a `may` card names it (as in the world: `household.MECH_AIMS`), so a rule set that drops the card drops the power and the count. All three are classed `own` (using one's own power; no interference with the other). `liberty.household_run_liberty(..., powers=False)` is the switch.
+
+Guard: additive and **off by default**; with the flag off the menu, the key and every number are unchanged (pinned in `tests/test_liberty.py::test_powers_off_reproduces_the_pinned_pre_amendment_numbers`), so the run-1 liberty results reproduce. The modeling is minimal and ASSUMED: a stay promise blocks the member's own leave for 13 weeks inside the window, a gift moves 3 units, a request promise is a flag; breach, trust and fines are not modeled here (they live in the weekly world).
+
+Not decided: whether powers over *another's* position (waiving, releasing) count, and the weight of a power against an option (both count as one reachable future key, as every option does).

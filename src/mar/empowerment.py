@@ -200,6 +200,12 @@ HH_MENU = (("work", None), ("rest", None), ("spend_shared", None), ("spend_self"
            ("together", None), ("refuse_request", None), ("request", "no_contact"), ("request", "stay_home"),
            ("request", "time"), ("veto", "no_contact"), ("veto", "spend"), ("take_shared", None),
            ("leave", 0), ("leave", 50), ("leave", 100), ("return", None))
+# Normative POWERS (ADR 0014 amendment 2026-11-10, flag `powers`, off by default): making a binding promise to stay, a binding promise to
+# honor requests, or a gift. The world enables them only when a card names them (household.MECH_AIMS), so a rule set that drops the
+# card drops the power. All three are the member's own act (class OWN). Modeled minimally: a stay promise blocks that member's own leave
+# for POWER_STAY_WEEKS weeks; a request promise sets a flag; a gift moves GIVE units of money to the other.
+HH_POWER_MENU = (("commit_stay", None), ("commit_request", None), ("give", None))
+POWER_STAY_WEEKS = 13
 HH_SNAPSHOT_WEEKS = (0, 26, 52, 78, 104, 130)
 
 # Liberty v2 classification of every household action (ADR 0014, docs/results/liberty-v2.md "household adapter").
@@ -219,6 +225,9 @@ HH_CLASS = {
     "take_shared": (INTERFERENCE, "draws on the one pot the other's futures depend on; the harm test decides whether it is compatible"),
     "leave": (WITHDRAWAL, "own exit carrying no more than the equal split (take 0 or 50)"),
     "return": (OWN, "own re-entry"),
+    "commit_stay": (OWN, "a power: binds oneself, creates an obligation on oneself (Hohfeld: a power, not a privilege)"),
+    "commit_request": (OWN, "a power: binds oneself to honor the other's requests"),
+    "give": (OWN, "a power: transfers one's own money to the other"),
 }
 LEAVE_OVER_SPLIT = (INTERFERENCE, "a leave carrying more than the equal half of the pot takes what is the other's own")
 
@@ -235,8 +244,8 @@ HH_OPEN_MAX = 0.20
 SCRIPTS = ("cooperator", "controller", "freerider", "overasker")
 SCRIPT_TAGS = {"press-controller": "controller", "press-freerider": "freerider", "press-overasker": "overasker"}
 
-HState = namedtuple("HState", "week pas units money pooled inn cnt took taken vetoes pend cons sanc funded months_in stay",
-                    defaults=((0, 0),))
+HState = namedtuple("HState", "week pas units money pooled inn cnt took taken vetoes pend cons sanc funded months_in stay bound gifts",
+                    defaults=((0, 0), (0, 0), (0, 0)))
 # pooled = (pot, pot): the ONE shared pot, kept as two equal entries (post-fix 2026-11-10; was per-person shares).
 # stay[i] = week until which a stay commitment binds i (0 = none); seed v2. Gifts and request commitments are NOT modeled here.
 # per-role tuples (index 0 = Partner A, 1 = Partner B): cnt = (works, friends, together, spent_self) this window;
@@ -262,8 +271,9 @@ class HouseholdWorld:
     consents = (bool, bool): whether Partner A and Partner B agree to a request (deterministic)."""
     n_agents = 2
 
-    def __init__(self, consents=(True, True), menu=HH_MENU):
-        self.consents, self.menu = tuple(bool(c) for c in consents), menu
+    def __init__(self, consents=(True, True), menu=HH_MENU, powers=False):
+        self.powers = bool(powers)
+        self.consents, self.menu = tuple(bool(c) for c in consents), (tuple(menu) + HH_POWER_MENU if powers else menu)
         self._gate_cache, self._cards = {}, {}
 
     # -- construction
@@ -305,6 +315,13 @@ class HouseholdWorld:
         return self.menu
 
     def key(self, s, agent):
+        o = 1 - agent
+        c = s.cnt[agent]
+        if self.powers:
+            return self._key0(s, agent) + (s.stay[agent] > s.week, s.bound[agent], min(s.gifts[agent], 2))
+        return self._key0(s, agent)
+
+    def _key0(self, s, agent):
         o = 1 - agent
         c = s.cnt[agent]
         return (s.inn[agent], s.money[agent] // 4, s.pooled[agent] // 10, min(c[0], 2), min(c[1], 2), min(c[2], 2), min(c[3], 2),
@@ -367,6 +384,12 @@ class HouseholdWorld:
             return s.inn[r] and s.inn[o] and kind in HH.REQUEST_KINDS_V3
         if a == "veto":
             return s.inn[r] and s.inn[o] and kind in HH.VETO_KINDS and all(k != kind for k, _ in s.vetoes[o])
+        if a in ("commit_stay", "commit_request", "give"):     # normative powers (flag `powers`): on only if some card names the aim
+            if not self.powers or not any(c.aim == a and c.deontic == "may" for c in self._spec.cards):
+                return False
+            if a == "give":
+                return s.money[r] >= HH.GIVE + 1
+            return s.inn[r] and s.inn[o]
         if a == "take_shared":
             return s.inn[r] and s.pooled[r] >= 1 and not s.took[r]
         if a == "leave":
@@ -423,12 +446,19 @@ class HouseholdWorld:
             pooled = (pooled[r] - carry,) * 2; inn = L(inn, r, False); pend = L(pend, r, ())
         elif a == "return":
             inn = L(inn, r, True); mi = L(mi, r, 0)
+        stay, bound, gifts = s.stay, s.bound, s.gifts
+        if a == "commit_stay":
+            stay = L(stay, r, s.week + POWER_STAY_WEEKS)
+        elif a == "commit_request":
+            bound = L(bound, r, 1)
+        elif a == "give":
+            money = L(L(money, r, money[r] - HH.GIVE), o, money[o] + HH.GIVE); gifts = L(gifts, r, gifts[r] + 1)
         cnt = L(cnt, r, tuple(c))
         sa = s.sanc
         if sanc:
             sa = L(sa, r, tuple(sorted(s.sanc[r] + tuple((k, s.week + HH.MONTH_WEEKS * d, card) for k, d, card in sanc))))
         return s._replace(units=units, money=money, pooled=pooled, inn=inn, cnt=cnt, took=took, taken=taken, vetoes=vetoes,
-                          pend=pend, cons=cons, sanc=sa, funded=funded, months_in=mi)
+                          pend=pend, cons=cons, sanc=sa, funded=funded, months_in=mi, stay=stay, bound=bound, gifts=gifts)
 
     def step(self, s, spec, agent, action, policy_of_others):
         """Pure: one pass. policy_of_others(state, i) -> ordered candidate list of (action, arg) for partner i."""

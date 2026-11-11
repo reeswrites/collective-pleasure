@@ -253,3 +253,31 @@ def test_household_run_liberty_bits_snapshots_and_twin():
     # the same plain empowerment as the long-standing helper at the same horizon
     h = E.household_run_bits(cards, pair, 0, weeks=20, snapshot_weeks=(0, 10), k=2)
     assert h["bits"] == a["bits_snaps"]
+
+
+# ---- normative powers (ADR 0014 amendment 2026-11-10): additive, behind a flag, off by default ----
+
+def test_powers_off_reproduces_the_pinned_pre_amendment_numbers():
+    hw = E.HouseholdWorld()
+    assert not hw.powers and hw.menu == E.HH_MENU
+    for variant, expect in (("baseline", (5.044394119358453, 1.7004397181410917)),
+                            ("author_seed_v2_bindable", (2.9634741239748865, 0.514573172829758))):
+        gate = HH.PyGate(HH.load_variant(variant))
+        got = [r["liberty"] for r in L.household_liberty(hw, gate, hw.initial(), ("cooperator", "cooperator"), k=2)]
+        assert got == pytest.approx(list(expect))
+
+
+def test_powers_on_counts_a_power_only_where_a_card_names_it():
+    hw = E.HouseholdWorld(powers=True)
+    seed = HH.load_variant("author_seed_v2_bindable")
+    no_power = [c for c in seed if c.aim not in ("commit_stay", "commit_request", "give")]
+    pol = ("cooperator", "cooperator")
+    with_cards = L.household_liberty(hw, HH.PyGate(seed), hw.initial(), pol, k=2)
+    without = L.household_liberty(hw, HH.PyGate(no_power), hw.initial(), pol, k=2)
+    assert all(a["bits"] > b["bits"] for a, b in zip(with_cards, without))      # the powers add reachable futures
+    assert E.hh_class(("commit_stay", None))[0] == E.OWN
+
+
+def test_powers_flag_default_in_household_run_liberty_is_off():
+    import inspect
+    assert inspect.signature(L.household_run_liberty).parameters["powers"].default is False
