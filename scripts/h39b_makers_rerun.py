@@ -252,6 +252,7 @@ def main():
     ap.add_argument("--seeds", type=int, default=4)
     ap.add_argument("--stories", nargs="?", const=STORIES, default="")
     ap.add_argument("--v2", action="store_true", help="Amendment 2: agent_values v2 and bills_hurt; runs/h39b-makers-v2/")
+    ap.add_argument("--v2nobills", action="store_true", help="descriptive: v2 with bills off, arms M0, Z, BP; runs/h39b-makers-v2-nobills/")
     a = ap.parse_args()
     global OUT
     fix = None
@@ -259,6 +260,12 @@ def main():
         OUT = ROOT / "runs" / "h39b-makers-v2"
         H39.OUT = OUT
         fix = {"agent_values": "v2", "bills_hurt": True}
+    if a.v2nobills:
+        OUT = ROOT / "runs" / "h39b-makers-v2-nobills"
+        H39.OUT = OUT
+        fix = {"agent_values": "v2"}
+        if a.arms == ",".join(H39.ARMS):
+            a.arms = "M0,Z,BP"
     OUT.mkdir(parents=True, exist_ok=True)
     if a.fidelity:
         fidelity()

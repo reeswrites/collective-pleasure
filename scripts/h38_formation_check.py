@@ -183,6 +183,10 @@ def analyze(new=None, write=True, old=None):
     dd = np.array([x - bi[k] for x, k in zip(a, ka) if k in bi])
     res["diffs"]["G-gain minus old gain"] = {"est": float(dd.mean()), "ci": H38.boot_ci(dd)}
     res["pushed_in_G"] = H38.pushed_in(rows, "G-L4", "G-L0")
+    if "C2 G-W4 - G-L0" not in res["diffs"]:          # the descriptive v2-without-bills arm set has no G-W4: no verdicts
+        if write:
+            (OUT / "analysis.json").write_text(json.dumps(res, indent=1))
+        return res
     c1 = res["diffs"]["C1 G-L4 - G-L0"]["pleasure"]
     c2 = res["diffs"]["C2 G-W4 - G-L0"]["pleasure"]
     c3 = res["diffs"]["C3 G-L0 - L0"]["pleasure"]
@@ -237,12 +241,16 @@ def main():
     ap.add_argument("--analyze", action="store_true")
     ap.add_argument("--reach", action="store_true")
     ap.add_argument("--v2", action="store_true", help="Amendment 1: agent_values v2 and bills_hurt; runs/h38-formation-v2/")
+    ap.add_argument("--v2nobills", action="store_true", help="descriptive: v2 with bills off; G-L0, G-L4, O-L0, O-L4")
     a = ap.parse_args()
     global OUT
-    if a.v2:
-        OUT = ROOT / "runs" / "h38-formation-v2"
+    if a.v2 or a.v2nobills:
+        OUT = ROOT / "runs" / ("h38-formation-v2" if a.v2 else "h38-formation-v2-nobills")
         if a.run:
-            run([*ARMS, *OLD_ARMS], OUT / "rows.jsonl", fix=V2)
+            if a.v2:
+                run([*ARMS, *OLD_ARMS], OUT / "rows.jsonl", fix=V2)
+            else:
+                run(["G-L0", "G-L4", "O-L0", "O-L4"], OUT / "rows.jsonl", fix={"agent_values": "v2"})
         if a.analyze:
             rows = H38.load(OUT / "rows.jsonl")
             new = [r for r in rows if r["arm"] in ARMS]

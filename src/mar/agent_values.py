@@ -77,6 +77,7 @@ def snapshot(world, r, w):
             s["down0"] = world._down("H", 0, w)
             s["downx"] = [world._down(r, j + 1, w) for j in range(world.nx[r])]
             s["pick"] = world._pick_bond(r)
+            s["_strand_memo"] = {}          # shared by the snapshot's advanced copies: bond quality depends on sessions and visits only
     s["extra"], s["fric"] = extra, fric
     if fx.contact:
         s["cx"] = dict(world.cx[r])
@@ -142,6 +143,14 @@ def _contact(fx, cx, n_f, n_p, cohab_pair, overlap_ab):
 
 
 def _strands(s):
+    key = (s["n_sess"], tuple(sorted(s["visits"].items())))
+    memo = s["_strand_memo"]
+    if key not in memo:
+        memo[key] = _strands_calc(s)
+    return memo[key]
+
+
+def _strands_calc(s):
     lv = s["lv"]
     g = 1.0 - ((1.0 - lv.q0_cohab) if s["both"] else 1.0) * (1.0 - lv.q0_together) ** s["n_sess"]
     q0 = 0.0 if s["down0"] else (s["q0"] + g * (1.0 - s["q0"])) * (1.0 - lv.q0_decay)

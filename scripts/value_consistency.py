@@ -51,6 +51,7 @@ LAST_START = H.WEEKS - max(VC.HORIZONS)                         # a sampled week
 MAIN = {"pairs_every": 1, "seeds": (0, 1, 2, 3), "weeks": 6, "k": 2, "harness": False}
 HARNESS = {"pairs_every": 3, "seeds": (0,), "weeks": 3, "k": 2, "harness": True}
 FIRST = {"pairs_every": 3, "seeds": (0,), "weeks": 4, "k": 0, "harness": False}
+NOBILLS = {"pairs_every": 3, "seeds": (0, 1), "weeks": 6, "k": 2, "harness": False}     # recalibration Amendment 2 (descriptive)
 
 
 def sample_weeks(a, b, seed, n):
@@ -390,6 +391,7 @@ def main():
     ap.add_argument("--analyze", action="store_true")
     ap.add_argument("--workers", type=int, default=WORKERS)
     ap.add_argument("--v2", action="store_true", help="agent values v2 and bills that hurt; rows in runs/value-consistency-v2/")
+    ap.add_argument("--v2nobills", action="store_true", help="descriptive: v2 with bills off, a smaller sample (Amendment 2)")
     ap.add_argument("--passtest", action="store_true")
     ap.add_argument("--reach", action="store_true")
     a = ap.parse_args()
@@ -397,6 +399,11 @@ def main():
     extra = None
     if a.v2:
         OUT, extra = ROOT / "runs" / "value-consistency-v2", V2
+    if a.v2nobills:
+        OUT, extra = ROOT / "runs" / "value-consistency-v2-nobills", {"agent_values": "v2"}
+        if a.run:
+            collect(NOBILLS, OUT / "rows.jsonl", a.workers, extra)
+            a.run = False
     if a.reach:
         res = reach(load(ROOT / "runs" / "value-consistency" / "rows.jsonl"))
         print(json.dumps(res, indent=1, default=str))
