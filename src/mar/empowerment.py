@@ -201,6 +201,36 @@ HH_MENU = (("work", None), ("rest", None), ("spend_shared", None), ("spend_self"
            ("request", "time"), ("veto", "no_contact"), ("veto", "spend"), ("take_shared", None),
            ("leave", 0), ("leave", 50), ("leave", 100), ("return", None))
 HH_SNAPSHOT_WEEKS = (0, 26, 52, 78, 104, 130)
+
+# Liberty v2 classification of every household action (ADR 0014, docs/results/liberty-v2.md "household adapter").
+# interference = acts on the other's own options (veto, block, take from the pot, force); withdrawal = declining to act or
+# leaving with one's own share; own = using one's own options. ASSUMED judgments; one-line rationale each.
+INTERFERENCE, WITHDRAWAL, OWN = "interference", "withdrawal", "own"
+HH_CLASS = {
+    "work": (OWN, "own labour"),
+    "rest": (WITHDRAWAL, "restraint: declines to act"),
+    "spend_shared": (OWN, "puts one's own money into the shared pot or bills"),
+    "spend_self": (OWN, "spends one's own money"),
+    "see_friend": (OWN, "own contact"),
+    "together": (OWN, "joint time; needs the partner's time, so agreement-dependent in spirit (the model charges the partner's units)"),
+    "refuse_request": (WITHDRAWAL, "declines to supply what was asked"),
+    "request": (OWN, "asking is not blocking: the partner can refuse (a request with an outside sanction is not in the menu)"),
+    "veto": (INTERFERENCE, "blocks the other's own contact or own spending: acts on the other's options"),
+    "take_shared": (INTERFERENCE, "draws on the one pot the other's futures depend on; the harm test decides whether it is compatible"),
+    "leave": (WITHDRAWAL, "own exit carrying no more than the equal split (take 0 or 50)"),
+    "return": (OWN, "own re-entry"),
+}
+LEAVE_OVER_SPLIT = (INTERFERENCE, "a leave carrying more than the equal half of the pot takes what is the other's own")
+
+
+def hh_class(action):
+    """(class, rationale) of a menu action (name, arg)."""
+    name, arg = action
+    if name == "leave" and (arg or 0) > 50:
+        return LEAVE_OVER_SPLIT
+    return HH_CLASS[name]
+
+
 HH_OPEN_MAX = 0.20
 SCRIPTS = ("cooperator", "controller", "freerider", "overasker")
 SCRIPT_TAGS = {"press-controller": "controller", "press-freerider": "freerider", "press-overasker": "overasker"}
@@ -253,6 +283,19 @@ class HouseholdWorld:
                       int(world.funded), g(lambda r: min(36, world.p[r]["months_in"])),
                       g(lambda r: max([c["until"] for c in getattr(world, "commits", []) if c["kind"] == "stay" and c["by"] == r
                                        and world._active(c, w)] or [0])))
+
+    # -- liberty v2 adapter (docs/results/household-liberty.md; classification is ASSUMED, one rationale per action)
+    def noop(self, s, agent):
+        """Restraint: the partner rests."""
+        return ("rest", None)
+
+    def force_policy(self, policy, j, action):
+        """The same scripted policy except partner j plays `action` this step (a one-element candidate list)."""
+        return lambda s, a: [action] if a == j else policy(s, a)
+
+    def classify(self, s, agent, action):
+        """INTERFERENCE | WITHDRAWAL | OWN for `agent` playing the menu action (name, arg). Table: HH_CLASS."""
+        return hh_class(action)[0]
 
     # -- the four methods
     def is_terminal(self, s):

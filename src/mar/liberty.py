@@ -305,3 +305,46 @@ class PartnerWorld:
 def partner_stays(s, i):
     """Script: A rests, B passes (stays, participates, never vetoes)."""
     return "rest" if i == 0 else "pass"
+
+
+# ---- household (slice 1 of the household evolution run; docs/results/household-liberty.md) ----
+# The adapter lives on empowerment.HouseholdWorld (noop, force_policy, classify; table E.HH_CLASS). Everything here is
+# a measurement, never a rule.
+
+HH_K = 2                       # the household liberty horizon in passes (k = 3 is the plain-empowerment horizon; ASSUMED cheaper here)
+HH_SNAPSHOTS = (0, 52)         # weeks at which liberty is measured in a run (ASSUMED)
+
+
+def household_liberty(world, gate, state, scripts, k=HH_K, w=W_DEFAULT, cap=E.HH_CAP, version=2):
+    """Both partners' liberty at `state` against the scripted others. -> list of two liberty() dicts."""
+    pol = E.scripted_policy(scripts)
+    return liberty_all(world, gate, state, pol, k, w, cap, version)
+
+
+def household_run_liberty(cards, personas, seed=0, weeks=E.HH.WEEKS, snapshots=HH_SNAPSHOTS, k=HH_K, w=W_DEFAULT,
+                          cap=E.HH_CAP, cfg=None, press=True, version=2, plain_k=None):
+    """Run one weekly household world and measure liberty (and plain empowerment) of both partners at the start of the
+    snapshot weeks. -> {"run", "snaps": [{"week", "liberty": [l0, l1], "bits": [b0, b1], "c": [..], "ado": [..], "d": [..], "open"}],
+    "liberty_min": mean over snapshots of the lower of the two partners' liberty, "bits_min": same for plain empowerment}.
+    Open snapshots (cap hit) are kept in `snaps` with open=True and left out of the means. plain_k: horizon for the plain
+    empowerment column (default = k, so the two columns are comparable)."""
+    from .hedonic import DEFAULT
+    gate = cards if isinstance(cards, E.HH.PyGate) else E.HH.PyGate(cards)
+    wk = E.HH.WeeklyWorld(gate, personas, seed, weeks, cfg or DEFAULT)
+    scripts = tuple(E.script_for(p) if press else "cooperator" for p in personas)
+    hw = E.HouseholdWorld(tuple(E.consent_for(p) for p in personas))
+    snaps = []
+
+    def hook(world, wk_):
+        if wk_ in snapshots and wk_ < weeks:
+            res = household_liberty(hw, gate, hw.snapshot(world, wk_), scripts, k, w, cap, version)
+            snaps.append({"week": wk_, "liberty": [r["liberty"] for r in res], "bits": [r["bits"] for r in res],
+                          "c": [r["c"] for r in res], "ado": [r.get("ado", 0) for r in res], "d": [r["d"] for r in res],
+                          "open": any(r["open"] for r in res)})
+    wk.hook = hook
+    run = wk.play()
+    ok = [s for s in snaps if not s["open"]]
+    mean = lambda xs: sum(xs) / len(xs) if xs else None
+    return {"run": run, "snaps": snaps, "n_open": len(snaps) - len(ok),
+            "liberty_min": mean([min(s["liberty"]) for s in ok]), "bits_min": mean([min(s["bits"]) for s in ok]),
+            "d_mean": mean([sum(s["d"]) / 2 for s in ok]), "ado_mean": mean([sum(s["ado"]) / 2 for s in ok])}

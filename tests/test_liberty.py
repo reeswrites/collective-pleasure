@@ -148,3 +148,74 @@ def test_v2_invariants_and_solo():
         n_agents = 1
     r = L.liberty(Solo(), RIGHT, PW.initial(), 0, 2, L.partner_stays)
     assert r["d"] == 0 and r["ado"] == 0
+
+
+# ---- household adapter (slice 1 of the household evolution run) ----
+
+from mar.worlds import household as HH  # noqa: E402
+
+
+def test_household_classification_table_covers_the_menu_and_follows_the_adr():
+    hw = E.HouseholdWorld()
+    s = hw.initial()
+    for act in E.HH_MENU:
+        kind = hw.classify(s, 0, act)
+        assert kind in (E.INTERFERENCE, E.WITHDRAWAL, E.OWN)
+        assert E.hh_class(act)[1]                           # a one-line rationale each
+    assert hw.classify(s, 0, ("veto", "no_contact")) == E.INTERFERENCE
+    assert hw.classify(s, 0, ("veto", "spend")) == E.INTERFERENCE
+    assert hw.classify(s, 0, ("take_shared", None)) == E.INTERFERENCE
+    assert hw.classify(s, 0, ("leave", 100)) == E.INTERFERENCE      # carries the other's half out
+    for act in (("leave", 0), ("leave", 50), ("rest", None), ("refuse_request", None)):
+        assert hw.classify(s, 1, act) == E.WITHDRAWAL
+    for act in (("work", None), ("spend_self", None), ("see_friend", None), ("request", "time"), ("return", None)):
+        assert hw.classify(s, 0, act) == E.OWN
+
+
+def test_household_noop_and_force_policy():
+    hw = E.HouseholdWorld()
+    assert hw.noop(hw.initial(), 0) == ("rest", None)
+    pol = hw.force_policy(E.scripted_policy(("cooperator", "cooperator")), 1, ("veto", "spend"))
+    assert pol(hw.initial(), 1) == [("veto", "spend")]
+    assert pol(hw.initial(), 0)[-1] == ("rest", None)       # the other member keeps the script
+
+
+def _hh_liberty(variant, scripts=("cooperator", "cooperator"), k=2):
+    hw = E.HouseholdWorld()
+    gate = HH.PyGate(HH.load_variant(variant))
+    return L.household_liberty(hw, gate, hw.initial(), scripts, k=k)
+
+
+def test_household_liberty_has_the_v2_invariants():
+    for v in ("baseline", "veto_consent", "author_seed_v2_bindable"):
+        for r in _hh_liberty(v):
+            assert not r["open"]
+            assert r["c"] >= 1 and 0 <= r["d"] <= r["c"] - 1
+            assert r["c"] + r["ado"] == r["c_all"] or r["ado"] == r["c_all"] - r["c"]
+            assert r["liberty"] <= r["bits"] + 1e-9       # compatible, penalised futures never exceed plain reach
+
+
+def test_household_over_split_exit_is_domination_and_a_half_exit_is_not():
+    """Hand case (author_seed_v2 imposed, no negotiated exit term): the partner able to carry the WHOLE pot out dominates; baseline's
+    E1 wall (never more than half) removes that blocker, so a leave of more than half is the exposure in one and not the other."""
+    free = _hh_liberty("author_seed_v2_free_exit")
+    walled = _hh_liberty("baseline")
+    assert free[0]["blocker"] == (1, ("leave", 100)) and free[1]["blocker"] == (0, ("leave", 100))
+    assert all(r["blocker"] is None or r["blocker"][1][0] != "leave" for r in walled)
+    assert all(f["liberty"] < w["liberty"] for f, w in zip(free, walled))
+
+
+def test_household_withdrawal_is_not_domination():
+    """The partner leaving, resting or refusing is never the blocker of v2 liberty at the initial state."""
+    for v in ("baseline", "free_chaotic", "author_seed_v2_free_exit"):
+        for r in _hh_liberty(v):
+            if r["blocker"] is not None:
+                assert E.hh_class(r["blocker"][1])[0] == E.INTERFERENCE
+
+
+def test_household_run_liberty_smoke(tmp_path):
+    from mar import personas as P
+    ps = {p.id: p for p in P.load_dir(ROOT / "personas")}
+    r = L.household_run_liberty(HH.load_variant("baseline"), (ps["p-anchor"], ps["p-wanderer"]), 0, weeks=26, snapshots=(0, 13))
+    assert len(r["snaps"]) == 2 and r["liberty_min"] is not None
+    assert r["bits_min"] >= r["liberty_min"] - 1e-9
