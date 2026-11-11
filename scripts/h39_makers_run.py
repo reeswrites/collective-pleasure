@@ -264,6 +264,11 @@ def analyze(rows, write=True, path=None):
     c("Z-M0 pleasure", "Z", "M0", "pleasure")
     c("BP-M0 pleasure", "BP", "M0", "pleasure")
     c("Z-M0 p_raw", "Z", "M0", "p_raw")
+    no_ext = lambda r: bool(r.get("mk")) and not ANY_EXT(r)
+    c("Z-M0 pleasure no-ext", "Z", "M0", "pleasure", None, lambda r: r["arm"] == "M0" or no_ext(r))
+    c("Z-M0 pleasure ext", "Z", "M0", "pleasure", None, lambda r: r["arm"] == "M0" or ANY_EXT(r))
+    c("BP-Z pleasure no-ext", "BP", "Z", "pleasure", None, no_ext)
+    c("BP-Z pleasure ext", "BP", "Z", "pleasure", None, ANY_EXT)
     # Holm families
     fam1 = [f"{a}-Z pleasure" for a in ("BP", "H", "P", "G", "A") if f"{a}-Z pleasure" in C and C[f"{a}-Z pleasure"].get("p") is not None]
     if fam1:
@@ -439,6 +444,150 @@ def reach():
     return out
 
 
+# ---- story spot-check (pattern-atlas recorder plus a makers line per 13-week block) ----------------------------------------------
+
+def story_run(arm, a, b, seed):
+    """Replays one run with the atlas Recorder attached (it only reads) and a weekly makers snapshot. -> (lines, row of record())."""
+    import dataclasses
+    from mar import atlas as AT
+    from mar import exit_fallback as EF
+    from mar import exit_items as EI
+    from mar import hedonic as HD
+    from mar import negotiation as NG
+    from mar.worlds import household as H
+    cfg, rule = arm_setup(arm)
+    ps = RT.personas()
+    for c in (NG._RC, NG._PC, NG._BC):
+        c.clear()
+    fx = dataclasses.replace(RT.FIXES_ON, pairing=PR.dial(0), **(rule or {}))
+    snaps = {}
+    with MK.use_makers(cfg), HD.use_levers(RT.LEVERS), HD.use_fixes(fx), EF.use_exit_fallback("F4", strip_split=True), \
+            EI.use_items(EI.GRID[H38.CELL]):
+        lived = NG.BaselineLived(ps[a], ps[b], seed, H.load_variant("baseline"), weeks=H.WEEKS, decline=True)
+        world = lived.world
+
+        def snap(wd, wk):
+            if wd is world and wd.makers:
+                st = wd.makers
+                snaps[wk] = {"blocks": dict(st["blocks"]), "credit": {r: MK.credit(wd, r) for r in "AB"},
+                             "proj": {r: (dict(st["project"][r]) if st["project"][r] else None) for r in "AB"},
+                             "h": {r: st["recv"][r]["h"] for r in "AB"}, "s": {r: st["recv"][r]["s"] for r in "AB"}}
+        world.hook = snap
+        rec = AT.Recorder(world)
+        last = {"busy": {"A": False, "B": False}}
+        for w in range(world.weeks):
+            if w and w % NG.REVIEW_EVERY == 0:
+                if lived.apart and lived.decline:
+                    lived.retry(w, last)
+                elif all(world.p[r]["in"] for r in "AB"):
+                    lived.reading(w, last)
+            if world.early_review:
+                world.ladder_reviewed(w)
+            last = {"busy": world.step_week(w, last)}
+        world.run.final = {r: {**world.p[r], "pooled": world.pool, "put": world.put[r]} for r in "AB"}
+        world.run.fix = world.fix_report()
+        world.run.exits = list(world.exit_log)
+        rec.lived(lived).finish()
+    names = {"A": a, "B": b}
+    lines = AT.story(rec.rows, rec.meta, names)
+    out = []
+    st = world.makers
+    if st:
+        t = st["traits"]
+        out.append("Makers: " + "; ".join(f"{a if r == 'A' else b} {t[r]['kind']}, {t[r]['aim']}, enjoys {t[r]['e']}, w {t[r]['w']:.2f}"
+                                           for r in "AB") + f". Rule: {st['rule']}.")
+    for i, ln in enumerate(lines):
+        out.append(ln)
+        s0, s1 = snaps.get(13 * i), snaps.get(min(13 * i + 12, 155) + 1) or snaps.get(155)
+        if st and s0 and s1:
+            mk = [f"{names[r]} made {s1['blocks'][r] - s0['blocks'][r]}" for r in "AB"]
+            ev = [f"{names[x['who']]} {x['event']} a project" + (" (protected)" if x.get("protected") else "")
+                  for x in st["proj"]["log"] if 13 * i <= x["week"] < 13 * i + 13]
+            out.append("    makers: " + ", ".join(mk) + f"; credit {s1['credit']['A']:.0f} vs {s1['credit']['B']:.0f}"
+                       + f"; tolerance {s1['h']['A']}/{s1['h']['B']}, sensitization {s1['s']['A']}/{s1['s']['B']}"
+                       + ("; " + "; ".join(ev) if ev else "") + ".")
+    return out, record(world.run, lived, arm, a, b, seed)
+
+
+def stories(picks):
+    res = {}
+    for arm, a, b, seed in picks:
+        lines, rec = story_run(arm, a, b, seed)
+        stored = [r for r in H38.load(OUT / "rows.jsonl") if (r["arm"], r["a"], r["b"], r["seed"]) == (arm, a, b, seed)]
+        same = bool(stored) and abs(stored[0]["pl"] - rec["pl"]) < 1e-12
+        res[f"{arm}|{a}|{b}|{seed}"] = {"lines": lines, "reproduces_stored_row": same, "pl": rec["pl"]}
+        print(f"\n== {arm} {a} {b} seed {seed} (pleasure {rec['pl']:.3f}; reproduces stored row: {same})")
+        print("\n".join(lines))
+    (OUT / "stories.json").write_text(json.dumps(res, indent=1))
+    return res
+
+
+# ---- observer sample: what tipped formation (observer layer, src/mar/observe.py) ------------------------------------------------
+
+def observe_run(arm, a, b, seed):
+    import dataclasses
+    from mar import exit_fallback as EF
+    from mar import exit_items as EI
+    from mar import hedonic as HD
+    from mar import negotiation as NG
+    from mar import observe as OB
+    from mar.worlds import household as H
+    cfg, rule = arm_setup(arm)
+    ps = RT.personas()
+    for c in (NG._RC, NG._PC, NG._BC):
+        c.clear()
+    fx = dataclasses.replace(RT.FIXES_ON, pairing=PR.dial(0), **(rule or {}))
+    with MK.use_makers(cfg), OB.collecting(), HD.use_levers(RT.LEVERS), HD.use_fixes(fx), \
+            EF.use_exit_fallback("F4", strip_split=True), EI.use_items(EI.GRID[H38.CELL]):
+        lived = NG.BaselineLived(ps[a], ps[b], seed, H.load_variant("baseline"), weeks=H.WEEKS, decline=True)
+        world = lived.world
+        ob = OB.Observer(world, OB.ObsConfig(), run_key=f"h39|{arm}|{a}|{b}|{seed}", meta={"family": "h39", "arm": arm}, harness=lived)
+        last = {"busy": {"A": False, "B": False}}
+        for w in range(world.weeks):
+            if w and w % NG.REVIEW_EVERY == 0:
+                if lived.apart and lived.decline:
+                    lived.retry(w, last)
+                elif all(world.p[r]["in"] for r in "AB"):
+                    lived.reading(w, last)
+            if world.early_review:
+                world.ladder_reviewed(w)
+            last = {"busy": world.step_week(w, last)}
+    ob.finish()
+    return [x for x in ob.rows if x.get("t") == "reading"], record(world.run, lived, arm, a, b, seed)
+
+
+def observe_sample(arms=("M0", "Z", "BP"), n=20, seed=0):
+    """Formation at week 0: per member, the household value minus the outside value, split into the observer's groups (net parts),
+    for members who block formation and members who do not."""
+    pairs = H38.pairings(H38.CONFIRM)[:n]
+    out = {}
+    for arm in arms:
+        agg = {"block": {}, "ok": {}}
+        cnt = {"block": 0, "ok": 0}
+        same = 0
+        for a, b in pairs:
+            rd, rec = observe_run(arm, a, b, seed)
+            stored = [r for r in H38.load(OUT / "rows.jsonl") if (r["arm"], r["a"], r["b"], r["seed"]) == (arm, a, b, seed)]
+            same += bool(stored) and abs(stored[0]["pl"] - rec["pl"]) < 1e-12
+            f0 = next((x for x in rd if x["kind"] == "formation0"), None)
+            if f0 is None:
+                continue
+            for r in "AB":
+                m = f0["m"][r]
+                if not m.get("W_parts") or not m.get("O_parts"):
+                    continue
+                k = "block" if m["margin"] < 0 else "ok"
+                cnt[k] += 1
+                for g in m["W_parts"]:
+                    agg[k][g] = agg[k].get(g, 0.0) + m["W_parts"][g] - m["O_parts"].get(g, 0.0)
+        out[arm] = {"members": cnt, "reproduces_stored_rows": f"{same} of {len(pairs)}",
+                    **{k: {g: round(v / cnt[k], 4) for g, v in sorted(agg[k].items(), key=lambda t: t[1]) if abs(v) > 1e-9}
+                       for k in agg if cnt[k]}}
+        print(arm, json.dumps(out[arm], indent=1), flush=True)
+    (OUT / "observer-sample.json").write_text(json.dumps(out, indent=1))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pilot", action="store_true")
@@ -448,6 +597,8 @@ def main():
     ap.add_argument("--arms", default=",".join(ARMS))
     ap.add_argument("--seeds", type=int, default=2)
     ap.add_argument("--analyze", action="store_true")
+    ap.add_argument("--observe", action="store_true")
+    ap.add_argument("--stories", default="", help="arm|a|b|seed;... runs to tell as stories")
     a = ap.parse_args()
     if a.pilot:
         pilot()
@@ -460,6 +611,10 @@ def main():
     if a.analyze:
         res = analyze(H38.load(OUT / "rows.jsonl"))
         print(json.dumps(res["verdicts"], indent=1))
+    if a.observe:
+        observe_sample()
+    if a.stories:
+        stories([(x.split("|")[0], x.split("|")[1], x.split("|")[2], int(x.split("|")[3])) for x in a.stories.split(";")])
 
 
 if __name__ == "__main__":
