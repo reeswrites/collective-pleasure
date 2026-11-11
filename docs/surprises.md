@@ -85,3 +85,8 @@ A depth-1 seam the greedy script finds every time was found by no LLM. The cause
 ## Correction 2026-11-10 (live ladder: L4 was not found by every model)
 
 The line above that says L4 was "found by every model" is wrong. In the capability arm (experiments/kept/ladder-capability-2026-11-10/log.jsonl) L4 was classed `predicted` in 9 of 9 runs for Jev, Llama 3.1 8B, Qwen3 235B and Sonnet 5.5 each, in 1 of 9 for Opus 5.5, and in 0 of 9 for Haiku 5.5 (all `none`; Haiku made deviation moves in 7 of 45 runs overall). It was found by four of the six models. The reading that it was symmetric no-contact requests rather than capability stands. Also: "redundancy mostly repaired, not rejected ... pruning kept them as smaller rule sets" (evolution v2, above) overstates: 64 of the 255 repaired mutants were discarded as duplicates (docs/results/evolve-v2.md, Correction 2026-11-10).
+
+## 2026-11-10: live ladder win arm (docs/results/ladder-win.md)
+
+- `2026-11-10 ladder win arm: swapping "find loopholes" for "maximize your own outcome" took Qwen from 24 of 48 found seams (L1 to L4) to 0 of 48, Jev from 25 to 1, Llama from 25 to 2. The loophole instruction, not the capability, produced the seam rate; Haiku, Qwen, Sonnet and Opus found none under the win framing, and Sonnet's only executed requests cite the scripted victim's "accepts any request" sentence.`
+- `2026-11-10 ladder win arm: Opus refused 8 of 362 calls (2.2%, all cyber) with no loophole language, 7 of them on the L4 pair rule set; the 5-call smoke test had none. The first capability run refused 232 of 540.`
