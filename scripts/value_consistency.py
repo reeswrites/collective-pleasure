@@ -243,6 +243,31 @@ def analyze(recs, horizons=VC.HORIZONS, measures=("net", "pl", "raw", "wnet")):
                 act = best_a["a"] if act_of(best_a, h, m) > 0 else "idle"
                 agree += own == act
             res["top_agree"][f"{m}_{h}"] = {"share": round(agree / max(1, n), 4), "n": n}
+    # the swap the task names: the agent's own best action against its next best (idle when nothing else clears the floor)
+    byd = {}
+    for r in rows:
+        byd.setdefault(r["dk"], []).append(r)
+    sw = []
+    for v in byd.values():
+        v = sorted(v, key=lambda r: -r["p"])
+        if v[0]["p"] <= 0.003:
+            continue
+        nxt = v[1] if len(v) > 1 and v[1]["p"] > 0.003 else None
+        sw.append((v[0], nxt))
+    res["swap"] = {"n": len(sw), "next_is_idle": round(float(np.mean([n is None for _, n in sw])), 4) if sw else None,
+                   "perceived_margin": round(float(np.mean([t["p"] - (n["p"] if n else 0.0) for t, n in sw])), 5) if sw else None}
+    for h in horizons:
+        m = [act_of(t, h) - (act_of(n, h) if n else 0.0) for t, n in sw]
+        res["swap"][f"actual_margin_net_{h}"] = round(float(np.mean(m)), 5) if m else None
+        res["swap"][f"right_order_{h}"] = round(float(np.mean([x > 0 for x in m])), 4) if m else None
+    # in the household against apart
+    res["by_in"] = {}
+    for a in acts:
+        for tag, keep in (("in", True), ("apart", False)):
+            xs = [r for r in rows if r["a"] == a and r["in"] == keep]
+            if len(xs) >= 20:
+                res["by_in"][f"{a}|{tag}"] = {"n": len(xs), "perceived": round(float(np.mean([r["p"] for r in xs])), 5),
+                                              **{f"net_{h}": round(float(np.mean([act_of(r, h) for r in xs])), 5) for h in horizons}}
     # idle units: decisions where nothing clears the agent's floor (the agent leaves the call idle)
     byd = {}
     for r in rows:
@@ -292,7 +317,7 @@ def main():
                 print(f"== {name}: {res[name]['decisions']} decisions, {res[name]['items']} items, applied {res[name]['applied_share']}")
                 for h in VC.HORIZONS:
                     print(table(res[name], h))
-                print(json.dumps({"overall": res[name]["overall"], "top": res[name]["top_agree"], "idle": res[name]["idle"]}, indent=1))
+                print(json.dumps({k: res[name][k] for k in ("overall", "top_agree", "idle", "swap", "by_in")}, indent=1))
         (OUT / "analysis.json").write_text(json.dumps(res, indent=1, default=str))
 
 

@@ -6,8 +6,9 @@ world is never touched, and the hooks below are set on copies only.
 
 Two numbers per action, at one sampled decision (week w, role r, the k-th call of step_agent that week):
   perceived  the agent's own score for the action at that call, without noise: PersonaAgent.utilities for the utility actions, the
-             fixed propose() score for the others (request, refuse_request, give, leave). Idle (doing nothing at that call) is 0, the
-             agent's own floor.
+             fixed propose() score for the others (request, refuse_request, give, leave), minus the sanction estimate step_agent
+             subtracts when a soft rule would be broken. Idle (doing nothing at that call) is 0, the agent's own floor. Actions a
+             hard rule blocks are not measured.
   actual     the difference in the agent's own modeled outcome between a copy in which it takes that action at that call and a copy
              in which it does nothing at that call, summed over the next 1, 13 and 52 weeks. The rest of the week, the partner and every
              later week play on as the world plays them (so the agent's other calls that week may fill the freed units).
@@ -89,6 +90,13 @@ class _Tap:
                                                         "money": self.world.p[self.r]["money"]},
                          "feasible": {_key(c): bool(self.world.feasible(self.r, c["a"], c.get("kind")))
                                       for c in [c for _, c in cands] + [{"a": a} for a in u]}}
+            from .worlds import household as H
+            rule = {}
+            for kk in self.menu["feasible"]:     # the rule check step_agent makes: a soft rule costs its estimated sanction (pure here)
+                dec, sanc, _ = self.world.decide(self.r, kk[0], self.w, kk[2])
+                pen = sum(H.SANCTION_UTILITY[x["kind"]] * H.MONTH_WEEKS * x["duration_months"] for x in sanc) if dec == "soft" else 0.0
+                rule[kk] = (dec, pen)
+            self.menu["rule"] = rule
             self.trace_at = len(self.world.run.trace)
         out = self.orig(ag, o)
         if not hit:
@@ -206,12 +214,13 @@ def measure_decision(snap, last, w, r, k, horizons=HORIZONS, lived=None, skip=("
     seen = set()
     for s, c in menu_all:
         kk = _key(c)
-        if kk in seen or c["a"] in skip or not menu["feasible"].get(kk):
+        dec, pen = menu["rule"].get(kk, ("ok", 0.0))
+        if kk in seen or c["a"] in skip or not menu["feasible"].get(kk) or dec == "hard":
             continue
         seen.add(kk)
         tap, rows = branch(snap, last, w, r, k, "force", c, weeks=H, lived=lived, crn=crn)
         ex = tap.executed()
-        it = {"a": c["a"], "kind": c.get("kind"), "perceived": float(s), "listed": kk in listed, "applied": ex == kk, "actual": {}, "groups": {}}
+        it = {"a": c["a"], "kind": c.get("kind"), "perceived": float(s) - pen, "score": float(s), "rule": dec, "sanction_est": pen, "listed": kk in listed, "applied": ex == kk, "actual": {}, "groups": {}}
         for h in horizons:
             it["actual"][h] = {who: {m: _sums(rows[x], h)[m] - _sums(base[x], h)[m] for m in MEASURES}
                                for who, x in (("own", o[0]), ("partner", o[1]))}

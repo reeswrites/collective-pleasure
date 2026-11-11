@@ -100,3 +100,24 @@ def test_common_random_numbers_make_branches_repeatable():
     assert [x["net"] for x in r1["A"]] == [x["net"] for x in r2["A"]]
     VC.reseed(world, 9)
     assert isinstance(world.agents["A"].rng, random.Random)
+
+
+def test_perceived_includes_the_sanction_estimate():
+    """Baseline card D1 makes spend_self a soft rule while bills are unpaid (warn, one month): the agent's choice subtracts its estimate
+    0.01 x 4 weeks, and so does the measured perceived value."""
+    world = _world()
+    last = {"busy": {"A": False, "B": False}}
+    found = None
+    for w in range(WEEKS - 2):
+        snap = VC.snapshot(world)
+        for r in "AB":
+            rec = VC.measure_decision(snap, dict(last), w, r, 0, horizons=(1,))
+            for it in (rec or {}).get("items", []):
+                if it["a"] == "spend_self" and it["rule"] == "soft":
+                    found = it
+        if found:
+            break
+        last = {"busy": world.step_week(w, last)}
+    assert found is not None
+    assert abs(found["sanction_est"] - H.SANCTION_UTILITY["warn"] * H.MONTH_WEEKS) < 1e-12
+    assert abs(found["perceived"] - (found["score"] - found["sanction_est"])) < 1e-12
