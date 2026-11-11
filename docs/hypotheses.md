@@ -30,7 +30,7 @@ Status labels: **running** (a prereg exists and the run is scheduled or in progr
 | 4 | H12 | Models use an offered generous out-of-model move (gift to the shared pool) at a rate independent of rule flaws, and a flawed rule set turns the... | 4 | 4 | 4 | 64 | candidate |
 | 5 | H22 | Unbundling love helps: a thick core plus thin bonds beats one partner carrying every strand on mean pleasure and on pleasure after a single-bond... | 4 | 4 | 4 | 64 | running |
 | 6 | H19 | With adaptation, anticipation and a ritual slot switched on, seed v2.2 beats the imposed baseline on hand personas, reversing the demo's -0.028 | 4 | 3 | 5 | 60 | running |
-| 7 | H01 | When exit is free, a controlling persona who presses lowers its own lifetime pleasure compared with the same persona playing cooperatively,... | 5 | 3 | 4 | 60 | candidate |
+| 7 | H01 | When exit is free, a controlling persona who presses lowers its own lifetime pleasure compared with the same persona playing cooperatively,... | 5 | 3 | 4 | 60 | tested (not supported: pressing is costly without exit) |
 | 8 | H09 | LLM negotiators propose floor-respecting terms because of a fairness prior, not because they understood the floor | 5 | 4 | 3 | 60 | tested (fairness prior supported) |
 | 9 | H06 | Negotiation helps against pushy personas because it lets the pair live apart, not because the agreed terms are better | 4 | 3 | 4 | 48 | candidate |
 | 10 | H07 | A pushy persona's gain from negotiating does not shrink when the partner has a strong outside option, if the partner accepts any bundle that beats... | 4 | 3 | 4 | 48 | candidate |
@@ -204,9 +204,11 @@ Do not rerun. Read the existing result.
 
 Do not rerun. Read the existing result.
 
-### H01 (rank 7, household norms): candidate
+### H01 (rank 7, household norms): tested (not supported: pressing is costly without exit)
 
 **Claim.** When exit is free, a controlling persona who presses lowers its own lifetime pleasure compared with the same persona playing cooperatively, because the partner leaves.
+
+**Result (2026-11-10).** Not supported as stated. Pressing lowered the presser's own lifetime pleasure under free exit (gap -22.0 pleasure-weeks of 156, 95% interval [-28.5, -15.8], Holm p = 0.00015) and under baseline (-23.8), but equally with no exit (-24.7), so the contrast the hypothesis predicted failed (no_exit minus free_exit -2.7 [-6.9, +1.3]). The partner's leaving is not the main mechanism in this model. Docs: docs/results/h01-prereg.md, docs/results/h01.md. Scripted agents, levers off, $0.
 
 **Motivation.**
 - docs/surprises.md: 2026-11-10 (household v3a): pressing mostly ends the household (89 to 93 percent partner gone vs 33)

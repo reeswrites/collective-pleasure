@@ -169,9 +169,15 @@ def analyze(rows, out=print, confirmatory=True):
         pr(f"== P1 free_exit gap {r1['gap']} (needs estimate <= {-P1_MARGIN:.2f} and upper bound < 0), Holm p = {ph[0]:.4g}: holds = {hold1}")
         pr(f"== P2 baseline gap {r2['gap']}, Holm p = {ph[1]:.4g}: holds = {hold2}")
         pr(f"== P3 contrast, gap(no_exit) - gap(free_exit) {ci3} (needs lower bound > 0), one-sided permutation p = {p3.p:.4g}, Holm {ph[2]:.4g}: holds = {hold3}")
+        ne = [r for r in rows if r["ruleset"] == "no_exit" and r["load"] == 0.2]
+        fe = [r for r in rows if r["ruleset"] == "author_seed_v2_free_exit" and r["load"] == 0.2]
+        mc1 = not any(r["focal_left"] or r["partner_left"] for r in ne)
+        mc2 = _m(r["partner_left"] for r in fe if r["press"]) - _m(r["partner_left"] for r in fe if not r["press"])
+        pr(f"== manipulation checks: no_exit has no leaver in {len(ne)} runs: {mc1}; free_exit pressing raises the partner-left share by {mc2:+.3f} (needs >= +0.20): {mc2 >= 0.20}")
         verdict = hold1 and hold2 and hold3
-        pr(f"== VERDICT ({'confirmatory' if confirmatory else 'EXPLORATORY, no verdict'}): H01 supported = {verdict}")
-        res.update({"p1": hold1, "p2": hold2, "p3": hold3, "ci3": ci3, "holm": ph, "supported": verdict})
+        pr(f"== VERDICT ({'confirmatory' if confirmatory else 'EXPLORATORY, no verdict'}): H01 supported = {verdict}; "
+           f"pressing costly but exit not the mechanism = {hold1 and hold2 and not hold3}")
+        res.update({"mc1": mc1, "mc2": mc2, "p1": hold1, "p2": hold2, "p3": hold3, "ci3": ci3, "holm": ph, "supported": verdict})
     # exploratory sweep of the leave load
     loads = sorted({r["load"] for r in rows})
     if len(loads) > 1:

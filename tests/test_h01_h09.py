@@ -91,3 +91,45 @@ def test_summarize_verdicts_on_synthetic_rows():
     under = [x if x["arm"] == "stated" else row("removed", x["a"], x["b"], x["seed"], True) for x in fair]
     r = H9.summarize(under, out=out.append)
     assert r["alt"] and not r["hyp"] and r["holm"][1] < 0.05
+
+
+# ---- H01 ----
+import h01_control_run as H1  # noqa: E402
+
+
+def test_h01_pairings_and_no_exit_card():
+    pr = H1.pairings()
+    assert len(pr) == 36 and len(set(pr)) == 36
+    assert all(f in H1.PRESSERS and o not in H1.PRESSERS for f, o, _ in pr)
+    ids = [c.id for c in H1.cards_for("no_exit")]
+    assert "H01-no-exit" in ids and "R8a-may-leave" in ids
+    assert "H01-no-exit" not in [c.id for c in H1.cards_for("author_seed_v2_free_exit")]
+
+
+def test_h01_twins_share_everything_but_the_press_flag_and_no_exit_blocks_leaving():
+    a = H1.run_one("no_exit", "p-controller", "p-host", "A", 0, True)
+    b = H1.run_one("no_exit", "p-controller", "p-host", "A", 0, False)
+    assert (a["focal"], a["partner"], a["role"], a["seed"]) == (b["focal"], b["partner"], b["role"], b["seed"]) and a["press"] and not b["press"]
+    assert not (a["focal_left"] or a["partner_left"] or b["focal_left"] or b["partner_left"])
+    assert 0 <= a["pleasure"] <= H1.H.WEEKS                       # a sum of weekly pleasures in [0, 1]
+    again = H1.run_one("no_exit", "p-controller", "p-host", "A", 0, True)
+    assert again == a                                              # deterministic
+
+
+def test_h01_analysis_on_synthetic_rows():
+    rows = []
+    for rs, gap_free in (("author_seed_v2_free_exit", -20.0), ("baseline", -20.0), ("no_exit", 0.0)):
+        for f, o, role in H1.pairings():
+            for sd in range(2):
+                for press in (True, False):
+                    rows.append({"ruleset": rs, "focal": f, "partner": o, "role": role, "seed": sd, "press": press, "load": 0.2,
+                                 "pleasure": 100.0 + (gap_free + (hash((f, o, role)) % 7) if press else 0.0), "wellbeing": 50.0, "partner_pleasure": 100.0,
+                                 "partner_left": press and rs != "no_exit", "focal_left": False, "partner_leave_week": None, "focal_leave_week": None,
+                                 "dissolved": press and rs != "no_exit"})
+    out = []
+    r = H1.analyze(rows, out=out.append)
+    assert r["p1"] and r["p2"] and r["p3"] and r["supported"] and r["mc1"] and r["mc2"] >= 0.2
+    # no gap under free_exit: nothing holds
+    rows2 = [dict(x, pleasure=100.0) for x in rows]
+    r2 = H1.analyze(rows2, out=out.append)
+    assert not r2["supported"]
