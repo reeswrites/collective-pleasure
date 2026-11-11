@@ -128,3 +128,33 @@ def test_h32b_ladder_mechanics():
     # exit only from the top level when e < o_B
     leave = C.transitions(p, (5, Fr(1, 2), True, 3), (0, "solo"), Fr(0))
     assert leave[0][1][2] is False
+
+
+# ---------------------------------------------------------------- v2 fixes (docs/reviews/2026-11-11-correctness.md)
+
+def test_v2_defaults_are_h32():
+    p = C.ConvParams()
+    assert p.o_leave is None and p.companion == 0 and p.est == "ema" and C.leave_at(p) == p.o_B
+
+
+def test_v2_leave_threshold_split_from_apart_payoff():
+    p = C.ConvParams(o_B=Fr(1, 4), o_leave=Fr(3, 5))
+    assert C.rewards(p, 9, False, (0, "apart"))[2] == Fr(1, 4)
+    (pr, s2), = C.transitions(p, (5, Fr(1, 2), True), (0, "solo"), Fr(1, 2))   # estimate 0.5 < 0.6: leaves although apart pays 0.25
+    assert s2[2] is False
+
+
+def test_v2_companionship_and_weekly_judging():
+    p = C.ConvParams(companion=Fr(1, 10))
+    q = C.ConvParams()
+    a = (2, "shared")
+    assert [x - y for x, y in zip(C.rewards(p, 9, True, a), C.rewards(q, 9, True, a))] == [Fr(1, 10), Fr(1, 20), Fr(1, 10)]
+    w = C.ConvParams(est="mean", window=1, o_leave=Fr(1, 4))
+    s0 = C.start_state(w)
+    assert s0[1] == (Fr(1, 2),)
+    # one bad week is enough when the partner judges each week on its own (the EMA would forgive it)
+    assert C.transitions(w, s0, (0, "solo"), Fr(1, 20))[0][1][2] is False
+    assert C.transitions(C.ConvParams(), C.start_state(C.ConvParams()), (0, "solo"), Fr(1, 20))[0][1][2] is True
+    m4 = C.ConvParams(est="mean", window=4)
+    (pr, s1), = C.transitions(m4, C.start_state(m4), (0, "solo"), Fr(0))
+    assert s1[1] == (Fr(1, 2), Fr(1, 2), Fr(1, 2), Fr(0)) and s1[2]

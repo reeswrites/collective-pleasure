@@ -79,6 +79,11 @@ class ConvParams:
     ladder: tuple = ()          # enabled rungs, a subset of RUNGS in this order; () = H32's cliff exit. ASSUMED
     rung_gap: Fr = Fr(1, 10)    # rung thresholds: check-in below o_B + 3 gap, renegotiate below o_B + 2 gap, withdraw below o_B + gap. ASSUMED
     withdraw: Fr = Fr(1, 2)     # share of the amplification bonus lost while the partner withdraws. ASSUMED
+    # v2 fixes (docs/reviews/2026-11-11-correctness.md findings 1, 2, 9). All off by default, so H32/H32b reproduce.
+    o_leave: Fr | None = None   # the partner's leave threshold; None = o_B (H32: threat and apart payoff were one number)
+    companion: Fr = Fr(0)       # companionship value per member per week together, whatever the activity. ASSUMED
+    est: str = "ema"            # partner's estimate: "ema" (H32, weight lam) or "mean" (mean of its last `window` weeks)
+    window: int = 1             # weeks the "mean" estimate remembers; 1 = judges each week on its own
 
 
 RUNGS = ("checkin", "renegotiate", "withdraw")
@@ -128,15 +133,29 @@ def rewards(p: ConvParams, last: int, together: bool, a: tuple[int, str], level:
         M = mult(p, act)
         if _level_name(p, level) == "withdraw":
             M = 1 + (1 - p.withdraw) * (M - 1)
-        own, pb = act.lA * f * M - p.kappa, act.lB * f * M - p.kappa
+        own, pb = act.lA * f * M - p.kappa + p.companion, act.lB * f * M - p.kappa + p.companion
     else:
-        own, pb = act.lA * f - p.kappa, p.sB - p.kappa
+        own, pb = act.lA * f - p.kappa + p.companion, p.sB - p.kappa + p.companion
     vic = p.g * pb if p.give_on else Fr(0)
     return own, vic, pb
 
 
 def _round_grid(p: ConvParams, x: Fr) -> Fr:
     return Fr(floor(x / p.grid + Fr(1, 2))) * p.grid
+
+
+def leave_at(p: ConvParams) -> Fr:
+    return p.o_B if p.o_leave is None else p.o_leave
+
+
+def _update(p: ConvParams, e, pb: Fr):
+    """-> (new estimate state, its value). "ema": a scalar (H32). "mean": a tuple of the last `window` weeks, each on the grid."""
+    target = p.w * pb + (1 - p.w) * p.prior
+    if p.est == "ema":
+        e2 = _round_grid(p, (1 - p.lam) * e + p.lam * target)
+        return e2, e2
+    hist = (e[1:] + (_round_grid(p, target),))
+    return hist, _round_grid(p, sum(hist, Fr(0)) / len(hist))
 
 
 def transitions(p: ConvParams, s: tuple, a: tuple[int, str], pb: Fr) -> list[tuple[Fr, tuple]]:
@@ -149,9 +168,8 @@ def transitions(p: ConvParams, s: tuple, a: tuple[int, str], pb: Fr) -> list[tup
         return [(Fr(1), (k, None, False))]
     if not p.exit_on:
         return [(Fr(1), (k, e, True))]
-    target = p.w * pb + (1 - p.w) * p.prior
-    e2 = _round_grid(p, (1 - p.lam) * e + p.lam * target)
-    leave = (1 - p.eps) if e2 < p.o_B else p.eps
+    e2, val = _update(p, e, pb)
+    leave = (1 - p.eps) if val < leave_at(p) else p.eps
     out = []
     if leave < 1:
         out.append((1 - leave, (k, e2, True)))
@@ -171,9 +189,8 @@ def _ladder_transitions(p: ConvParams, s: tuple, a: tuple[int, str], pb: Fr) -> 
     if not together:
         return [(Fr(1), (k, None, False, 0))]
     m = len(p.ladder)
-    target = p.w * pb + (1 - p.w) * p.prior
-    e2 = _round_grid(p, (1 - p.lam) * e + p.lam * target)
-    want = sum(1 for r in p.ladder if e2 < p.o_B + RUNG_STEPS[r] * p.rung_gap)
+    e2, val = _update(p, e, pb)
+    want = sum(1 for r in p.ladder if val < leave_at(p) + RUNG_STEPS[r] * p.rung_gap)
     lv = level + (1 if want > level else -1 if want < level else 0)
     breach_exit = False
     if _level_name(p, level) == "renegotiate" and not favored(p, a):
@@ -183,7 +200,7 @@ def _ladder_transitions(p: ConvParams, s: tuple, a: tuple[int, str], pb: Fr) -> 
             breach_exit = True            # renegotiation was the last rung: the demand was the condition for staying
     if breach_exit:
         leave = 1 - p.eps
-    elif level == m and e2 < p.o_B:
+    elif level == m and val < leave_at(p):
         leave = 1 - p.eps
     else:
         leave = p.eps
@@ -197,6 +214,8 @@ def _ladder_transitions(p: ConvParams, s: tuple, a: tuple[int, str], pb: Fr) -> 
 
 def start_state(p: ConvParams, solitary: bool = False) -> tuple:
     n = len(p.menu)
+    if p.est == "mean":
+        p = replace(p, e0=(p.e0,) * p.window)
     if p.ladder and p.exit_on:
         return (n, None, False, 0) if solitary else (n, p.e0, True, 0)
     return (n, None, False) if solitary else (n, p.e0, True)
