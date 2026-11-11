@@ -79,7 +79,6 @@ def snapshot(world, r, w):
             s["pick"] = world._pick_bond(r)
             s["_strand_memo"] = {}          # shared by the snapshot's advanced copies: bond quality depends on sessions and visits only
     s["extra"], s["fric"] = extra, fric
-    s["_wn_memo"] = {}               # week_net memo, shared by this snapshot's advanced copies
     if fx.contact:
         s["cx"] = dict(world.cx[r])
         s["overlap_ab"] = world.overlap_ab
@@ -162,21 +161,9 @@ def _strands_calc(s):
     return HD.strand_terms(lv, HD.strand_cover(lv, q0, qx, s["sets"]))
 
 
-_KEY = ("rests", "works", "friends", "together", "eff_fr", "eff_tog", "spent", "money", "funded", "pool", "income", "fi", "partner_tog",
-        "n_sess")
-
-
 def week_net(s, parts=None):
-    """Projected net of this week's close for the snapshot s (its counts are the week as it would end). parts: a dict to fill.
-    Memoized per snapshot family (a snapshot and its advanced copies share the memo; the key is every field advance moves)."""
-    memo = s.get("_wn_memo")
-    if memo is None or parts is not None:
-        return _week_net(s, parts)
-    key = tuple(s.get(k) for k in _KEY) + (tuple(sorted(s["visits"].items())) if "visits" in s else (),)
-    v = memo.get(key)
-    if v is None:
-        v = memo[key] = _week_net(s, None)
-    return v
+    """Projected net of this week's close for the snapshot s (its counts are the week as it would end). parts: a dict to fill."""
+    return _week_net(s, parts)
 
 
 def _c01(x):
