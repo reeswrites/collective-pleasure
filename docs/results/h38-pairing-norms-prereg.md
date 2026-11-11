@@ -88,4 +88,39 @@ Scripted agents; 38 personas, 32 of them grid personas with placeholder principl
 
 ## Amendments
 
-(none yet)
+### Amendment 1 (2026-11-11): pilot, power, reachability, two additions. Committed before any confirmatory run
+
+No prediction, threshold or verdict rule changes. The code is commit dd7d4ce plus the run script.
+
+**Exploratory pilot (EXPLORATORY; excluded; not a result).** 30 pairings drawn with sample seed 900, seeds 900 and 901, all 13 arms (`--pilot`, 404 s on 3 workers). What it showed, stated here so the reader knows what I knew before the confirmatory run:
+
+| Quantity | Pilot effect | Pilot sd of the pairing | Source |
+|---|---|---|---|
+| pleasure L0.5 − L0 | +0.0060 | 0.0229 | runs/h38-pairing/pilot_analysis.json |
+| pleasure L1 − L0 | +0.0081 | 0.0288 | same |
+| pleasure L4 − L0 | +0.0288 | 0.0451 | same |
+| P4 (Δ for v=0 minus v=1) | −0.011 | about 0.106 (from the interval) | same |
+
+The pilot's pleasure **rose** with the dial (L0 0.932, L4 0.961), so the pilot points to P1 and P2 missing. Withdrawal alone was the only part that lowered pleasure (W4 −0.011). 54% to 73% of person-weeks have unclipped pleasure above 1, which the cap hides.
+
+**Power.** `seeds_for_power(paired=True, alternative="greater")`: P1 at the pilot's L0.5 effect needs 92 pairings (margin cross-check 115); at L1, 80 (100); P2 at the pilot's L4 effect, 18 (20). **120 pairings are kept.** P4 at the pilot's effect would need about 700 pairings: **P4 is underpowered and is read as DESCRIPTIVE.** It stays in the verdict rule as written, so a P4 miss for lack of power is reported as "not shown", not as evidence against the claim.
+
+**Can every verdict happen?** (`uv run python scripts/h38_pairing_run.py --reach`)
+
+| Verdict or clause | Free check | Result |
+|---|---|---|
+| supported (P1 to P4 all hold) | synthetic records with a peak at L0.5, through the same verdict function | reached |
+| P1 negation: peak at L0 | synthetic, monotone harm | reached (verdict "partly supported") |
+| P1 negation: peak at L4 | synthetic, monotone help; and the real pilot (L* = L4) | reached |
+| P1 holds in the real model, not only in the function | a withdrawal-heavy composition (reward 0.02 per level, withdrawal 0.45 per level), 12 pairings, seed 950: pleasure 0.9253, 0.9267, 0.9210, 0.8965 at levels 0, 0.5, 1, 2 | reached: the model can peak at a low level. The preregistered dial is a different composition, so this shows the verdict is reachable in this world, not what the dial will do |
+| P2 fails | pilot (L4 − L0 = +0.029) | reached |
+| P3 fails (together falls; or more endings) | synthetic | reached |
+| P4 fails | synthetic (high valuers bear it) | reached |
+| the terms reach the primary | tests/test_pairing.py: `test_terms_reach_the_weekly_pleasure_row_and_raw_is_recorded`, `test_reward_and_intrinsic_paid_only_while_together`, `test_stigma_paid_only_while_apart`, `test_exit_stigma_paid_by_the_leaver_for_its_weeks` | pass |
+| S2 at L0 | no pressure, so nothing is "held by pressure" | cannot fail (no weight) |
+| S3 (withdrawal cuts friend contact) | built in | manipulation check (no weight) |
+
+**Two additions (descriptive only).**
+
+1. **L8**, a dial level past the preregistered top, to see whether a peak exists at all above L4. Descriptive; it is not in L* (L* is over the five preregistered levels).
+2. **The cap.** The pilot shows the cap binds on most person-weeks. Beside the primary, the same P1 to P4 are computed on unclipped weekly pleasure, as a sensitivity line with no verdict weight. And the decomposition "pleasure without the direct terms" is now computed per week as clip(unclipped pleasure − direct terms), instead of pleasure plus the terms, which overstated it for clipped weeks.
