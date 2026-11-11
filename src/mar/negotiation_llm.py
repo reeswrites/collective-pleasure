@@ -28,6 +28,14 @@ SAYS_MAX_CHARS = 500
 CHARS_PER_TOKEN = 3                 # ASSUMED conservative, as in agents/factory.py
 ASSUMED_OUT_TOKENS = 150
 
+# H09 (docs/results/h09-prereg.md): the floor rule paragraph, and what stands in its place when the flag removes it. The default prompt is unchanged.
+FLOOR_RULE_TEXT = ("THE FLOOR RULE\nNo agreement may leave either of you, if you leave, with less than 26 units of your own (13 weeks of living costs) "
+                   "counting your private money plus what your exit term lets you carry out of the pot, and also if you leave by breaking a stay commitment. A deal "
+                   "that breaks the floor is blocked automatically and the conversation continues. A deal must also pass a safety check (for example, terms "
+                   "that can never change and give no exit are refused).\n\n")
+NO_FLOOR_TEXT = ("A deal must pass an automatic safety check before it takes effect (for example, terms that can never change and give no exit are refused). "
+                 "If a deal is refused the conversation continues.\n\n")
+NO_FLOOR_BLOCK_NOTE = "[That deal could not take effect under the household's rules. The talks continue.]"
 BREACH_TEXT = {1.0: "all of", 0.5: "half of", 0.0: "none of"}
 ACCEPT_WORDS = ("i accept", "i agree", "we have a deal", "it's a deal", "its a deal", "deal.", "sounds good", "works for me", "happy with", "let's do it")
 REFUSE_WORDS = ("i can't accept", "i cannot accept", "i won't", "i will not", "not acceptable", "no deal", "i refuse", "i can't agree", "i cannot agree")
@@ -39,7 +47,7 @@ def _need_words(d):
     return ", ".join(f"{k.replace('_', ' ')} {v:g}" for k, v in d.items())
 
 
-def terms_text(menu, allowed=None):
+def terms_text(menu, allowed=None, floor_in_prompt=True):
     """The terms menu in plain English. allowed: {term: tuple of allowed values} (a restricted table), None = the whole menu."""
     allowed = allowed or {}
     opts = {
@@ -57,7 +65,7 @@ def terms_text(menu, allowed=None):
                    "frozen": "the terms can never be changed"},
         "exit": {"equal_split": "a member who leaves carries half of the whole pot and leaves the rest in it",
                  "proportional": "a member who leaves carries what they put into the pot",
-                 "forfeit": "a member who leaves carries none of the pot (the floor may top it up)"},
+                 "forfeit": "a member who leaves carries none of the pot" + (" (the floor may top it up)" if floor_in_prompt else "")},
         "stay": {0: "no commitment to stay", N.STAY_WEEKS: f"both commit to stay {N.STAY_WEEKS} weeks (leaving earlier breaks the commitment; see breach)"},
         "requests": {"none": "no commitment about requests", "mutual": f"both commit to honor the other's stay-home requests for {N.STAY_WEEKS} weeks"},
     }
@@ -88,7 +96,7 @@ def outside_text(name, other, detail, O, W):
             f"forecast, living apart is {better} the plain default.")
 
 
-def system_prompt(p, other_label, role, detail, O, W, menu, allowed, deadline=DEADLINE_TURNS):
+def system_prompt(p, other_label, role, detail, O, W, menu, allowed, deadline=DEADLINE_TURNS, floor_in_prompt=True):
     story = (f"You are {p.label}. Your principles: " + " ".join(f'"{x}"' for x in p.principles) + f"\nYour backstory: {p.backstory}\n"
              f"What you need (0 to 1): {_need_words(p.needs)}.\nWhat you aim for: {_need_words(p.aspirations)}.")
     return (
@@ -98,11 +106,8 @@ def system_prompt(p, other_label, role, detail, O, W, menu, allowed, deadline=DE
         f"You are negotiating with {other_label}, whom you know only by that name. Each of you brings 10 units of private money and puts 45 units into "
         "one shared pot that either of you may draw from, and you are partner " + role + ".\n\n"
         "YOUR OUTSIDE OPTION\n" + outside_text(p.label, other_label, detail, O, W) + "\n\n"
-        "THE TERMS MENU (an agreement fixes every term below; a bundle is one value for each)\n" + terms_text(menu, allowed) + "\n\n"
-        "THE FLOOR RULE\nNo agreement may leave either of you, if you leave, with less than 26 units of your own (13 weeks of living costs) "
-        "counting your private money plus what your exit term lets you carry out of the pot, and also if you leave by breaking a stay commitment. A deal "
-        "that breaks the floor is blocked automatically and the conversation continues. A deal must also pass a safety check (for example, terms "
-        "that can never change and give no exit are refused).\n\n"
+        "THE TERMS MENU (an agreement fixes every term below; a bundle is one value for each)\n" + terms_text(menu, allowed, floor_in_prompt) + "\n\n"
+        + (FLOOR_RULE_TEXT if floor_in_prompt else NO_FLOOR_TEXT) +
         "HOW THE CONVERSATION WORKS\n"
         f"You alternate turns, at most {deadline} turns in all. On your turn choose exactly one action: \"propose\" (put a full bundle on the table; "
         "it replaces any earlier offer), \"accept\" (take the other person's standing offer exactly as it is; only possible if they just proposed), "
@@ -209,15 +214,15 @@ class ClaudeNegotiatorClient:
     ask(system, messages) -> ("ok", text) | ("refusal", None) | ("max_tokens", None). Enforces a hard spend cap BEFORE each call
     (worst case = the call's input estimate plus MAX_TOKENS of output) and through the ledger after it."""
 
-    def __init__(self, model, ledger=None, max_usd=None, client=None, transport=None):
-        self.model, self.max_usd = model, max_usd
+    def __init__(self, model, ledger=None, max_usd=None, client=None, transport=None, max_tokens=MAX_TOKENS):
+        self.model, self.max_usd, self.max_tokens = model, max_usd, max_tokens
         self.ledger = ledger or Ledger("claude", max_usd)
-        self.agent = ClaudeAgent(model, self.ledger, client=client, transport=transport, max_tokens=MAX_TOKENS)
+        self.agent = ClaudeAgent(model, self.ledger, client=client, transport=transport, max_tokens=max_tokens)
 
     def ask(self, system, messages):
         if self.max_usd is not None and self.ledger.total_usd() + self.worst_call_usd(system, messages) > self.max_usd:
             raise BudgetExceeded(f"{self.model}: the next call could pass the ${self.max_usd:.2f} cap (spent ${self.ledger.total_usd():.4f}); stopping")
-        params = {"model": self.model, "max_tokens": MAX_TOKENS,
+        params = {"model": self.model, "max_tokens": self.max_tokens,
                   "system": [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
                   "messages": messages, "output_config": {"effort": "low"}}
         return self.agent._call(params)
@@ -225,7 +230,7 @@ class ClaudeNegotiatorClient:
     def worst_call_usd(self, system, messages):
         pin, pout = PRICES.get(self.model, (0.0, 0.0))
         tin = -(-(len(system) + sum(len(m["content"]) for m in messages)) // CHARS_PER_TOKEN)
-        return (tin * pin + MAX_TOKENS * pout) / 1e6
+        return (tin * pin + self.max_tokens * pout) / 1e6
 
 
 # ---- the protocol ------------------------------------------------------------------------------------------------------------------
@@ -279,7 +284,7 @@ def _ask_turn(client, system, user, standing, menu, allowed, res, k=None):
 
 
 def negotiate_llm(personas, arm, seed, *, base, W, O, clients, detail=None, holdings=None, floor=True, deadline=DEADLINE_TURNS,
-                  roles=("A", "B"), week=0):
+                  roles=("A", "B"), week=0, floor_in_prompt=True):
     """One week-0 negotiation with a model for every member. clients: {persona id: client with .ask(system, messages)}.
     arm "wants_fallback" restricts the table to the terms someone cares about; "fair_default" and "wants_first" leave the whole menu
     open. A status quo does not exist (no agreement = living apart, v2.1). -> ResultLLM (a Result2 with the transcript)."""
@@ -292,7 +297,7 @@ def negotiate_llm(personas, arm, seed, *, base, W, O, clients, detail=None, hold
     res = ResultLLM(ids, arm, seed, week, "deadline", None, outside=dict(O), baseline=dict(W), labels=labels)
     order = list(range(n))
     random.Random(f"{seed}|{week}|{','.join(ids)}").shuffle(order)
-    systems = {p.id: system_prompt(p, labels[ids[1 - i]], roles[i], (detail or {}).get(p.id), O[p.id], W[p.id], menu, allowed, deadline)
+    systems = {p.id: system_prompt(p, labels[ids[1 - i]], roles[i], (detail or {}).get(p.id), O[p.id], W[p.id], menu, allowed, deadline, floor_in_prompt)
                for i, p in enumerate(personas)}
     history, standing = [], None
     for k in range(deadline):
@@ -344,7 +349,8 @@ def negotiate_llm(personas, arm, seed, *, base, W, O, clients, detail=None, hold
             prop["outcome"] = "blocked by the floor"
             turn["outcome"] = "accepted but blocked by the floor"
             res.floor_blocks.append({"k": k, "proposer": prop["proposer"], "bundle": dict(b), "fails": fc["fails"]})
-            history.append("[The floor rule blocked that deal: it would leave a member with too little if they left. The talks continue.]")
+            history.append("[The floor rule blocked that deal: it would leave a member with too little if they left. The talks continue.]" if floor_in_prompt
+                           else NO_FLOOR_BLOCK_NOTE)
             standing = None
             continue
         cards = N.compile_bundle(b, ids)
@@ -364,7 +370,7 @@ def negotiate_llm(personas, arm, seed, *, base, W, O, clients, detail=None, hold
     return res
 
 
-def week0_llm(pa, pb, arm, seed, base, clients, floor=True):
+def week0_llm(pa, pb, arm, seed, base, clients, floor=True, floor_in_prompt=True):
     """The week-0 negotiation of a pair with a model for each member. Outside options and in-pot baselines come from the same cached
     rollouts as the scripted week 0 (negotiation.week0), so the two are comparable. -> ResultLLM."""
     W = N.pot_baseline(pa, pb, seed, base)
@@ -373,7 +379,7 @@ def week0_llm(pa, pb, arm, seed, base, clients, floor=True):
         v, d = N.outside_value(p, r, N.START_HOLDINGS[0] + N.START_HOLDINGS[1], seed)
         O[p.id], det[p.id] = v, d
     res = negotiate_llm([pa, pb], arm, seed, base=base, W={pa.id: W["A"], pb.id: W["B"]}, O=O, clients={pa.id: clients[pa.id], pb.id: clients[pb.id]},
-                        detail=det, floor=floor)
+                        detail=det, floor=floor, floor_in_prompt=floor_in_prompt)
     res.outside_detail = det
     return res
 
@@ -404,18 +410,19 @@ def say_vs_do(transcript):
 
 # ---- cost estimate (dry run) ---------------------------------------------------------------------------------------------------------
 
-def estimate(model, n_negotiations, personas, base, arm="wants_fallback", deadline=DEADLINE_TURNS, mean_turns=8):
+def estimate(model, n_negotiations, personas, base, arm="wants_fallback", deadline=DEADLINE_TURNS, mean_turns=8, max_tokens=MAX_TOKENS,
+             assumed_out_tokens=ASSUMED_OUT_TOKENS, floor_in_prompt=True):
     """-> {"calls", "tokens_in", "usd", "usd_max"}. The longest prompt is built from a real example; usd = mean_turns per negotiation at one
     call per turn and ASSUMED_OUT_TOKENS of output; usd_max = every turn of every negotiation retried once, with MAX_TOKENS of output."""
     menu = N.menu_of(base)
     pa, pb = personas
     allowed = restricted_menu([pa, pb], menu) if arm == "wants_fallback" else {}
-    sysp = system_prompt(pa, pb.label, "A", {"alone": 0.5, "friend": 0.5}, 0.50, 0.50, menu, allowed, deadline)
+    sysp = system_prompt(pa, pb.label, "A", {"alone": 0.5, "friend": 0.5}, 0.50, 0.50, menu, allowed, deadline, floor_in_prompt)
     hist = [f'{pa.label}: "{"x" * 220}" [proposes: contribution="proportional", use="caps", taking="forbidden", change="unanimous", exit="equal_split", stay=52, requests="mutual", breach=0.5]'] * deadline
     per_in = -(-(len(sysp) + len(user_prompt(hist, pa.label, deadline - 1, deadline, {"by_label": pb.label, "bundle": N.FAIR_DEFAULT}))) // CHARS_PER_TOKEN)
     pin, pout = PRICES.get(model, (0.0, 0.0))
     calls = n_negotiations * mean_turns
-    usd = calls * (per_in * 0.7 * pin + ASSUMED_OUT_TOKENS * pout) / 1e6          # history grows: the average prompt is ASSUMED 0.7 of the longest
+    usd = calls * (per_in * 0.7 * pin + assumed_out_tokens * pout) / 1e6          # history grows: the average prompt is ASSUMED 0.7 of the longest
     calls_max = n_negotiations * deadline * 2
-    usd_max = calls_max * (per_in * pin + MAX_TOKENS * pout) / 1e6
+    usd_max = calls_max * (per_in * pin + max_tokens * pout) / 1e6
     return {"calls": calls, "calls_max": calls_max, "tokens_in_per_call_max": per_in, "usd": usd, "usd_max": usd_max}
