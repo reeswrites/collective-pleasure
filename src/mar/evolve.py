@@ -486,6 +486,7 @@ class HConfig:
     k: int = 3                 # proof-check bound (months)
     max_rules: int = 16
     attempts_factor: int = 12
+    weeks: int | None = None   # fixed episode length for every run (None = drawn per run, the run-1 behaviour)
 
 
 def _hrank(world, pop):
@@ -546,7 +547,7 @@ def evolve_household(world, seeds, seed, config=None, log_path=None, cache=None)
     from .world_api import make_context, run_key
     names = list(seeds)
     have = {run_key(s) for s in seeds.values()}
-    ctx = make_context(seed, 0, cfg.runs)
+    ctx = make_context(seed, 0, cfg.runs, weeks=cfg.weeks)
     seed_inds = {n: _hscore(world, s, ctx, cache) for n, s in seeds.items()}
     for n, s in seeds.items():           # the seeds are fixed inputs: they must pass the filter on their own, else the run is invalid
         ok, why = world.check(s, None)
@@ -554,7 +555,7 @@ def evolve_household(world, seeds, seed, config=None, log_path=None, cache=None)
             raise ValueError(f"seed {n} fails the filter: {why}")
     pop = list(seed_inds.values())
     for gen in range(cfg.generations + 1):
-        ctx = make_context(seed, gen, cfg.runs)
+        ctx = make_context(seed, gen, cfg.runs, weeks=cfg.weeks)
         if gen:
             pop = _hrank(world, [_hscore(world, i.spec, ctx, cache, i.op) for i in pop])
         else:

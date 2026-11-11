@@ -536,12 +536,17 @@ def _draw_run(rng, pool):
                 rng.choice(TRAIN_START))
 
 
-def make_context(seed, gen, n_runs, split="train", tag="sel"):
-    """Deterministic draw of n_runs from the `split` pairing pool under the training distribution."""
+def make_context(seed, gen, n_runs, split="train", tag="sel", weeks=None):
+    """Deterministic draw of n_runs from the `split` pairing pool under the training distribution. weeks=None draws the horizon from
+    TRAIN_WEEKS (the run-1 behaviour, unchanged); an int fixes the episode length for every run (run 2: the lifetime horizon). The draw
+    sequence is the same either way, so the pairings, seeds, rates and starts of a context do not depend on `weeks`."""
     pool = [p for p in _pairing_pool() if pairing_split(p[0], p[1]) == split]
     rng = random.Random(f"{seed}|{gen}|{tag}|{split}")
     runs = tuple(_draw_run(rng, pool) for _ in range(n_runs))
-    return HContext(runs, (tag, split, seed, gen, n_runs))
+    if weeks is not None:
+        assert weeks <= max(TRAIN_WEEKS), "training horizons never exceed the 156-week household horizon"
+        runs = tuple(dataclasses.replace(r, weeks=weeks) for r in runs)
+    return HContext(runs, (tag, split, seed, gen, n_runs) + ((weeks,) if weeks is not None else ()))
 
 
 def run_key(spec):
@@ -562,13 +567,18 @@ def _with_rates(rates, fn):
 _LIB_MEMO = {}
 
 
-def hh_run_summary(gate, hr, snapshots=_L.HH_SNAPSHOTS, k=_L.HH_K, plain_k=None):
+def hh_run_summary(gate, hr, snapshots=_L.HH_SNAPSHOTS, k=_L.HH_K, plain_k=None, levers=None, powers=False):
     """Run one household (rule gate, HRun) and return the per-run scalars used everywhere (training and, with other settings, the exam)."""
     ps = hh_personas()
     d = _HD.DEFAULT
     cfg = dataclasses.replace(d, job_loss_rate=hr.rates[0], illness_rate=hr.rates[1], move_rate=hr.rates[2],
                               new_connection_rate=hr.rates[3], start=hr.start)
-    r = _with_rates(hr.rates, lambda: _L.household_run_liberty(gate, (ps[hr.a], ps[hr.b]), hr.seed, hr.weeks, snapshots, k, cfg=cfg))
+    def _go():
+        if levers is None:
+            return _L.household_run_liberty(gate, (ps[hr.a], ps[hr.b]), hr.seed, hr.weeks, snapshots, k, cfg=cfg, powers=powers)
+        with _HD.use_levers(levers):       # pleasure levers (ADR 0016) for every world built inside the block
+            return _L.household_run_liberty(gate, (ps[hr.a], ps[hr.b]), hr.seed, hr.weeks, snapshots, k, cfg=cfg, powers=powers)
+    r = _with_rates(hr.rates, _go)
     out = r["run"].outcomes
     sc, hs = _O.score(out), _O.hedonic_summary(out)
     tr = r["run"].trace
@@ -829,8 +839,11 @@ class HouseholdEvolveWorld:
     objectives = ("pleasure", "no_fail", "liberty", "cooperation")
     YIELD_FLOOR = 0.0
 
-    def __init__(self):
+    def __init__(self, levers=None, weeks=None, powers=False):
+        """levers: a hedonic.LeverConfig for every run (None = off, the run-1 behaviour); weeks: a fixed episode length (None = the
+        context's own); powers: liberty also counts normative powers (ADR 0014 amendment). Defaults reproduce run 1."""
         self._gates = {}
+        self.levers, self.weeks, self.powers = levers, weeks, powers
 
     def load_spec(self, name):
         return tuple(_H.load_variant(name))
@@ -852,7 +865,7 @@ class HouseholdEvolveWorld:
         """-> (scores dict, event summary). Objectives: pleasure (mean over runs), no_fail (share of runs with no non-offsettable-suffering
         failure), liberty (mean over runs of the lower partner's liberty v2 in bits), cooperation. Reporting: freedom, bits, up, down, left."""
         gate = self.gate(spec)
-        rows = [hh_run_summary(gate, hr) for hr in ctx.runs]
+        rows = [hh_run_summary(gate, hr, levers=self.levers, powers=self.powers) for hr in ctx.runs]
         m = lambda k: sum(float(r[k]) for r in rows if r[k] is not None) / max(1, sum(1 for r in rows if r[k] is not None))
         scores = {"pleasure": m("pleasure"), "no_fail": 1.0 - m("fail"), "liberty": m("liberty"), "cooperation": m("cooperation"),
                   "freedom": m("freedom"), "bits": m("bits"), "up": m("up"), "down": m("down"), "left": m("left")}

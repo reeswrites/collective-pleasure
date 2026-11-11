@@ -204,3 +204,21 @@ def test_loss_report_lists_powers_mechanics_and_backwards_cards():
     flipped = W._hrebuild(d1, "flip", deontic="must")
     rep2 = LR.loss_report(seed, (flipped,))
     assert [b[0] for b in rep2["backwards"]] == ["D1-needs-first"]
+
+
+def test_lifetime_horizon_and_levers_are_configurable_with_unchanged_defaults():
+    from mar import hedonic as HD
+    base = W.make_context(5, 2, 8)
+    fixed = W.make_context(5, 2, 8, weeks=156)
+    assert [(r.a, r.b, r.seed, r.rates, r.start) for r in base.runs] == [(r.a, r.b, r.seed, r.rates, r.start) for r in fixed.runs]
+    assert all(r.weeks == 156 for r in fixed.runs) and base.key != fixed.key
+    assert W.make_context(5, 2, 8).key == base.key                           # default unchanged
+    with pytest.raises(AssertionError):
+        W.make_context(5, 2, 8, weeks=max(W.TRAIN_WEEKS) + 1)
+    w0, w1 = W.HouseholdEvolveWorld(), W.HouseholdEvolveWorld(levers=HD.LeverConfig(adapt=True, ritual=True, commit=True, network=True), powers=True)
+    assert w0.levers is None and not w0.powers and w0.weeks is None
+    spec = w0.load_spec("author_seed_v2_bindable")
+    ctx = W.make_context(5, 0, 2, weeks=40)
+    a, _ = w0.score_runs(spec, ctx)
+    b, _ = w1.score_runs(spec, ctx)
+    assert a != b and EV.HConfig().weeks is None
