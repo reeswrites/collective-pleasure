@@ -52,4 +52,6 @@ How: `empowerment.HouseholdWorld(powers=True)` adds `HH_POWER_MENU` (commit_stay
 
 Guard: additive and **off by default**; with the flag off the menu, the key and every number are unchanged (pinned in `tests/test_liberty.py::test_powers_off_reproduces_the_pinned_pre_amendment_numbers`), so the run-1 liberty results reproduce. The modeling is minimal and ASSUMED: a stay promise blocks the member's own leave for 13 weeks inside the window, a gift moves 3 units, a request promise is a flag; breach, trust and fines are not modeled here (they live in the weekly world).
 
+Design note found in testing: if a power needed the partner to be present, the partner's exit or rest removed it and liberty FELL when a rule set kept the power (seed liberty 2.54 and 0.00 against 2.96 and 0.51 without the cards). A binding promise about oneself is the member's own act, so the powers need only the member to be in the household; with that, liberty rises (3.26 and 0.92). This is an ASSUMED modeling choice and the one the amendment's numbers rest on.
+
 Not decided: whether powers over *another's* position (waiving, releasing) count, and the weight of a power against an option (both count as one reachable future key, as every option does).

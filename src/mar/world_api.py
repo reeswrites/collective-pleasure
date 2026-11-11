@@ -441,6 +441,21 @@ from .worlds import household as _H
 _ROOT = Path(__file__).parent.parent.parent
 HH_RULES = _ROOT / "rules" / "household"
 DENYLIST = ("g-10010", "g-10110", "g-11101", "g-01110", "g-11000", "g-00101")   # held out of every training use (exam doc section 1)
+DENYLIST2 = ("g-00011", "g-10100", "g-01101", "g-11111", "g-10101", "g-00010")   # exam 2's held-out ids (docs/results/household-exam-2-prereg.md): denylist only
+_EXTRA_DENY = ()
+
+
+def use_extra_deny(ids):
+    """Exclude more persona ids from training (run 2: DENYLIST2). Per process; the default () reproduces run 1."""
+    global _EXTRA_DENY
+    _EXTRA_DENY = tuple(ids)
+
+
+def held_out_range(ids, lo, hi):
+    """Exam 2's mechanical rule: held out iff the first byte of SHA-256(id) is in [lo, hi)."""
+    return sorted(i for i in ids if lo <= hashlib.sha256(i.encode("utf-8")).digest()[0] < hi)
+
+
 HAND_IDS = ("p-anchor", "p-bargainer", "p-host", "p-peacekeeper", "p-steward", "p-wanderer")
 PRESSING_IDS = ("p-controller", "p-freerider", "p-overasker")
 # training distribution (the ranges the exam doc permits training to draw from; everything outside them is the exam's)
@@ -475,7 +490,7 @@ def hh_personas():
 
 
 def training_persona_ids():
-    return sorted(i for i in hh_personas() if i not in DENYLIST)
+    return sorted(i for i in hh_personas() if i not in DENYLIST and i not in _EXTRA_DENY)
 
 
 def _pairing_pool():

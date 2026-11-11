@@ -388,8 +388,8 @@ class HouseholdWorld:
             if not self.powers or not any(c.aim == a and c.deontic == "may" for c in self._spec.cards):
                 return False
             if a == "give":
-                return s.money[r] >= HH.GIVE + 1
-            return s.inn[r] and s.inn[o]
+                return s.inn[r] and s.money[r] >= HH.GIVE + 1
+            return s.inn[r]            # binding oneself is the member's own act: it does not need the partner present (else the partner's exit would count as removing it)
         if a == "take_shared":
             return s.inn[r] and s.pooled[r] >= 1 and not s.took[r]
         if a == "leave":
