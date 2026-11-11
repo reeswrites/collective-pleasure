@@ -1,6 +1,6 @@
 # Multi-agent rules: a one-page summary
 
-Date: 2026-11-11. Agents feel nothing. "Pleasure" and "suffering" are glosses for a modeled state. Every finding is about scripted agents or small models with assumed parameters, not people. Full status: [goal.md](goal.md). Every result: [results/README.md](results/README.md).
+Date: 2026-11-11. Agents feel nothing. "Pleasure" and "suffering" are glosses for a modeled state. Every finding is about scripted agents or small models with assumed parameters, not people. Full status: [goal.md](goal.md). Every result: [results/README.md](results/README.md). What results can and cannot be about: [limits.md](limits.md).
 
 ## The question
 

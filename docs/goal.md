@@ -1,6 +1,6 @@
 # Where we are and what we're aiming for (2026-11-10)
 
-Short version for outsiders: [one-pager.md](one-pager.md).
+Short version for outsiders: [one-pager.md](one-pager.md). What results can and cannot be about: [limits.md](limits.md).
 
 Findings below are about rule systems and scripted agents in toy worlds, not people. Four live ladder runs exist (about $11.83 in all). None found an inventive seam on L1 to L4, and none supports a claim about model capability (see "What we have learned"). Every result links to its file in docs/results/README.md.
 

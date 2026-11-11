@@ -4,6 +4,8 @@ Copy this file to `docs/results/<name>-prereg.md`, fill every field, and commit 
 
 Status: written and committed before the first run. Nothing here is a result. Scripted or model agents: <which>. Model API calls: <none | list with a cost cap>.
 
+**Can be about / cannot be about (required).** Name what this result can be about and what it cannot be about, using [docs/limits.md](../limits.md). List each limit there that applies, and say which are not touched.
+
 ## Purpose and claim
 
 [One paragraph. Which claim id in docs/claims.md does this test? What would change a decision?]
