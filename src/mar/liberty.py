@@ -323,22 +323,35 @@ def household_liberty(world, gate, state, scripts, k=HH_K, w=W_DEFAULT, cap=E.HH
 
 
 def household_run_liberty(cards, personas, seed=0, weeks=E.HH.WEEKS, snapshots=HH_SNAPSHOTS, k=HH_K, w=W_DEFAULT,
-                          cap=E.HH_CAP, cfg=None, press=True, version=2, plain_k=None):
+                          cap=E.HH_CAP, cfg=None, press=True, version=2, plain_k=None, bits_snapshots=()):
     """Run one weekly household world and measure liberty (and plain empowerment) of both partners at the start of the
     snapshot weeks. -> {"run", "snaps": [{"week", "liberty": [l0, l1], "bits": [b0, b1], "c": [..], "ado": [..], "d": [..], "open"}],
     "liberty_min": mean over snapshots of the lower of the two partners' liberty, "bits_min": same for plain empowerment}.
     Open snapshots (cap hit) are kept in `snaps` with open=True and left out of the means. plain_k: horizon for the plain
-    empowerment column (default = k, so the two columns are comparable)."""
+    empowerment column (default = k, so the two columns are comparable). bits_snapshots: extra weeks at which ONLY plain empowerment
+    is measured (cheap) -> "bits_snaps" [[b0, b1], ...]. press=False is the twin: the pressing persona's agent does not press and
+    every script is a cooperator (as empowerment.household_run_bits)."""
     from .hedonic import DEFAULT
     gate = cards if isinstance(cards, E.HH.PyGate) else E.HH.PyGate(cards)
     wk = E.HH.WeeklyWorld(gate, personas, seed, weeks, cfg or DEFAULT)
+    if not press:
+        for r in "AB":
+            if hasattr(wk.agents[r], "press"):
+                wk.agents[r].press = False
     scripts = tuple(E.script_for(p) if press else "cooperator" for p in personas)
     hw = E.HouseholdWorld(tuple(E.consent_for(p) for p in personas))
-    snaps = []
-
+    snaps, bits_snaps, bits_open = [], [], 0
+    pol = E.scripted_policy(scripts)
     memo = _HH_MEMO.setdefault(id(gate), (gate, {}))[1]      # same state, scripts, consents, k: same answer (the gate is kept alive here)
 
     def hook(world, wk_):
+        nonlocal bits_open
+        if wk_ in bits_snapshots and wk_ < weeks:
+            res = [E.empowerment(hw, gate, hw.snapshot(world, wk_), i, k, pol, cap) for i in (0, 1)]
+            if any(r["bound_hit"] for r in res):
+                bits_open += 1
+            else:
+                bits_snaps.append([r["bits"] for r in res])
         if wk_ in snapshots and wk_ < weeks:
             state = hw.snapshot(world, wk_)
             mk = (state, scripts, hw.consents, k, w, cap, version)
@@ -352,6 +365,6 @@ def household_run_liberty(cards, personas, seed=0, weeks=E.HH.WEEKS, snapshots=H
     run = wk.play()
     ok = [s for s in snaps if not s["open"]]
     mean = lambda xs: sum(xs) / len(xs) if xs else None
-    return {"run": run, "snaps": snaps, "n_open": len(snaps) - len(ok),
+    return {"run": run, "snaps": snaps, "bits_snaps": bits_snaps, "bits_open": bits_open, "n_open": len(snaps) - len(ok),
             "liberty_min": mean([min(s["liberty"]) for s in ok]), "bits_min": mean([min(s["bits"]) for s in ok]),
             "d_mean": mean([sum(s["d"]) / 2 for s in ok]), "ado_mean": mean([sum(s["ado"]) / 2 for s in ok])}

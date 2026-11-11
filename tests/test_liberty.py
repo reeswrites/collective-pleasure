@@ -239,3 +239,17 @@ def test_household_run_bits_accepts_cfg_and_k():
     r = E.household_run_bits(HH.load_variant("baseline"), (ps["p-anchor"], ps["p-wanderer"]), 0, weeks=14, snapshot_weeks=(0, 7), k=2,
                              cfg=replace(HD.DEFAULT, start=0.05))
     assert len(r["bits"]) == 2 and r["open"] == 0
+
+
+def test_household_run_liberty_bits_snapshots_and_twin():
+    from mar import personas as P
+    ps = {p.id: p for p in P.load_dir(ROOT / "personas") + P.load_dir(ROOT / "personas" / "pressing")}
+    pair = (ps["p-anchor"], ps["p-controller"])
+    cards = HH.load_variant("baseline")
+    a = L.household_run_liberty(cards, pair, 0, weeks=20, snapshots=(), k=2, bits_snapshots=(0, 10))
+    assert len(a["bits_snaps"]) == 2 and a["snaps"] == [] and a["liberty_min"] is None
+    t = L.household_run_liberty(cards, pair, 0, weeks=20, snapshots=(), k=2, bits_snapshots=(0, 10), press=False)
+    assert a["bits_snaps"][0] == t["bits_snaps"][0] or a["bits_snaps"][0][1] <= t["bits_snaps"][0][1] + 5
+    # the same plain empowerment as the long-standing helper at the same horizon
+    h = E.household_run_bits(cards, pair, 0, weeks=20, snapshot_weeks=(0, 10), k=2)
+    assert h["bits"] == a["bits_snaps"]

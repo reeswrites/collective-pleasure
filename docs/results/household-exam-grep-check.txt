@@ -1,0 +1,28 @@
+Recorded isolation check (exam prereg section 4c), run before the exam by scripts/household_exam_run.py --grep.
+Patterns: seeds 9001 to 9005; shock values (as written in the document) ['0.05', '0.10', '0.16', '0.174', '0.24', '0.261', '0.36']; horizon 260; starts [-0.3, 0.3]; held-out ids ['g-00101', 'g-01110', 'g-10010', 'g-10110', 'g-11000', 'g-11101'] (the denylist is allowed; any other use of them is listed).
+
+scripts/household_evolve_run.py  [shock]  2 match(es)
+    line 37: MARGINS = {"pleasure": 0.02, "no_fail": 0.05, "liberty": 0.25, "cooperation": 0.02}      # P1 margins (prereg)
+    line 38: TRADE = 0.05                                                                              # P4: normalized objective difference
+src/mar/world_api.py  [held-out id]  6 match(es)
+    line 0: g-00101 x1
+    line 0: g-01110 x1
+    line 0: g-10010 x1
+    line 0: g-10110 x1
+src/mar/world_api.py  [shock]  3 match(es)
+    line 450: TRAIN_START = (-0.1, -0.05, 0.0, 0.05, 0.1)
+    line 450: TRAIN_START = (-0.1, -0.05, 0.0, 0.05, 0.1)
+    line 695: step = max(1, round((hi - lo) * rng.choice((0.05, 0.1, 0.25))))
+tests/test_evolve_household.py  [shock]  1 match(es)
+    line 45: assert 0.15 <= nc <= 0.25 + 0.05
+
+Adjudication (by hand, 2026-11-10, before the exam run):
+- Every "shock" match is the token 0.05 and nothing else. The exam's shock-3 new-connection rate is 0.05, but these matches are unrelated uses of the number: the
+  evolution margins and trade-off threshold (scripts/household_evolve_run.py lines 37-38), the training start-position grid (-0.1, -0.05, 0, 0.05, 0.1 in
+  world_api.py; the exam document says training may use starts in [-0.1, 0.1]), the bound-step fractions of the `bound` operator (0.05, 0.1, 0.25), and
+  the arithmetic `0.25 + 0.05` in a test that checks the new-connection training range tops out at 0.30. None is a shock setting, none is read from the exam.
+- No match for the exam seeds 9001 to 9005, the horizon 260, or the starts -0.30 and +0.30, in any evolution code, test, config, log (runs/household-evolve/*.jsonl,
+  results.json) or training data (the frozen elites and the manifest).
+- The six held-out ids appear only in src/mar/world_api.py: the DENYLIST constant and its comment (allowed by the exam document, section 1: a denylist reveals
+  nothing else). They do not appear in any log, result file, elite or test (the test reads W.DENYLIST).
+- No held-out pairing list exists in any scanned file (pairings are never written to a log; the logs record cards, counts and scores only).
