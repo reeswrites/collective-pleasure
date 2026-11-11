@@ -53,3 +53,11 @@ The free-exit variant was read back card by card (docs/results/seed-v2-readback.
 > 12-13 should be negotiated exit terms  i feel like with 8 we could maybe also have implicit penalties idk
 
 Claude's reading, pending the author's confirmation at the next read-back: rules 12 and 13 (the even exit split) become "the leaver takes the exit terms negotiated beforehand, never below the floor". Rule 8 (honoring a chosen commitment) becomes a norm, not a fined rule: by default, breaking it costs the partner's trust (lower willingness to accept later requests or commitments, possible renegotiation or leaving), and an explicit penalty applies only if one was negotiated. Trust is tracked and can recover through kept commitments.
+
+## Confirmation of seed v2.2 (2026-11-10)
+
+After the v2.2 read-back (docs/results/seed-v2.2-readback.md: negotiated exit terms never below the floor; honoring a chosen commitment as a norm whose breach costs trust, with a fine only if negotiated; trust parameters assumed), the author answered, verbatim:
+
+> yes as long as it can demonstrate pleasure in relationships hedonic technology
+
+So seed v2.2 is the author's confirmed seed, on one condition: it must demonstrate pleasure in relationships. The author's framing is "hedonic technology", meaning rules as a technology for producing pleasure in relationships, not only for preventing harm.
