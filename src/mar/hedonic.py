@@ -15,6 +15,7 @@ meets needs, connects and negotiates) rises with B and falls with N. Motivation,
 upward loop, Fredrickson 2001, Am. Psychologist 56(3):218-226 and Fredrickson & Joiner 2002, Psych. Science
 13(2):172-175; downward loop, Mani et al. 2013, Science 341:976-980 and poverty-trap models.
 """
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 NEEDS = ("rest", "connection", "money", "security")
@@ -83,6 +84,150 @@ class HedonicConfig:
 DEFAULT = HedonicConfig()
 
 
+# ---- pleasure levers (docs/decisions/0016-pleasure-levers.md; docs/results/pleasure-levers-prereg.md) ----
+# Three mechanisms from the author's notes (docs/notes/hedonic-technology-synthesis.md), each behind a flag that defaults OFF.
+# With every flag off nothing below is read and runs are bit-identical to earlier results (tests/test_levers_regression.py).
+# Every number is ASSUMED and lives in this one block. Source notes are named per group.
+STRANDS = ("care", "affection", "intimacy", "logistics", "commitment", "desire")
+SHAREABLE = ("care", "affection", "logistics", "intimacy")      # strands that can move to thin bonds first (unbundling love: care first, desire last)
+
+
+@dataclass(frozen=True)
+class LeverConfig:
+    # flags
+    adapt: bool = False          # L-A: satiety and tolerance on time together and friend contacts
+    ritual: bool = False         # L-A: a ritual (scheduled weekly shared slot) can exist; negotiated by a week-0 stub, or imposed by a `must` ritual card
+    commit: bool = False         # L-B: commitment friction and compounding payoff
+    network: bool = False        # L-C: strands, bonds, coordination cost
+    # controlled-experiment switches
+    force_policy: str = ""       # "" = each persona's own policy (personas.lever_policy); "repeat" | "rotate" | "adaptive" forces everyone
+    force_ritual: bool = False   # a ritual exists regardless of persona acceptance (controlled arm)
+    ad_hoc_dose: int = 0         # control arm: this many untagged together sessions are forced each week (equal dose to a ritual)
+    force_bonds: int = -1        # external bonds for every agent (-1 = persona policy); network only
+    force_thick: int = -1        # thick external bonds (3 strands) per agent (-1 = persona policy)
+    bond_shocks: bool = False    # L-C: bonds rupture one at a time
+    # L-A adaptation (synthesis M1; notes: Optimal Stimulation and Hedonic Homeostasis, Engineering On-Demand Pleasure Technology)
+    n_variants: int = 3
+    hab_rate: float = 0.30
+    hab_recover: float = 0.15
+    tol_rate: float = 0.02
+    tol_recover: float = 0.01
+    tol_cap: float = 0.4
+    switch_cost: float = 0.05
+    # L-A anticipation (synthesis M3; notes: Engineering On-Demand Pleasure Technology, Relationships as a Hedonic Technology)
+    antic_gain: float = 0.04
+    antic_horizon: int = 4
+    ritual_period: int = 1
+    kept_window: int = 8
+    event_boost: float = 0.0     # a prepared event is richer (off in the preregistered runs)
+    # L-B commitment as a converter (synthesis M4; note: Commitment Is a Pleasure Technology)
+    commit_friction: float = 0.02
+    k_rate: float = 0.02
+    k_decay: float = 0.004
+    k_pay: float = 0.10
+    breach_loss: float = 0.5
+    # L-C unbundled networks (synthesis M5; note: unbundling love)
+    strand_weight: tuple = (0.25, 0.20, 0.20, 0.15, 0.10, 0.10)   # in STRANDS order
+    bond_capacity: float = 3.0
+    strand_pay: float = 0.20
+    care_suffer: float = 0.15
+    care_ok: float = 0.3
+    q0_start: float = 0.5
+    q0_cohab: float = 0.03
+    q0_together: float = 0.15
+    q0_decay: float = 0.06
+    qx_start: float = 0.4
+    qx_visit: float = 0.30
+    qx_decay: float = 0.05
+    coord_a: float = 0.2
+    coord_gamma: float = 1.7
+    bond_shock_rate: float = 0.20     # per bond-year
+    bond_shock_dur: tuple = (6, 20)   # weeks
+    partner_rupture_conn: float = 0.15
+
+
+ACTIVE_LEVERS = None     # module default, set by `use_levers`; WeeklyWorld(levers=None) reads it
+
+
+@contextmanager
+def use_levers(cfg):
+    """Make `cfg` the lever config of every WeeklyWorld built inside the block (also the ones negotiation builds)."""
+    global ACTIVE_LEVERS
+    saved, ACTIVE_LEVERS = ACTIVE_LEVERS, cfg
+    try:
+        yield cfg
+    finally:
+        ACTIVE_LEVERS = saved
+
+
+def levers_on(cfg):
+    return cfg is not None and (cfg.adapt or cfg.ritual or cfg.commit or cfg.network or cfg.ad_hoc_dose > 0)
+
+
+class Satiety:
+    """Satiety h per variant (fast) and tolerance t (slow) for one repeatable pleasure source (synthesis M1).
+    The scale on a session is (1 - h[variant]) x (1 - tol_cap x t), times (1 - switch_cost) if the variant differs from the last used."""
+
+    def __init__(self, cfg, n_variants=1):
+        self.cfg, self.h, self.t, self.last = cfg, [0.0] * max(1, n_variants), 0.0, None
+
+    def scale(self, k=0):
+        return (1.0 - self.h[k]) * (1.0 - self.cfg.tol_cap * self.t)
+
+    def best(self):
+        """-> variant with the highest scale (the least satiated)."""
+        return min(range(len(self.h)), key=lambda k: (self.h[k], k))
+
+    def use(self, k=0):
+        c = self.cfg
+        s = self.scale(k) * (1.0 - (c.switch_cost if self.last is not None and self.last != k else 0.0))
+        self.h[k] += c.hab_rate * (1.0 - self.h[k])
+        self.t += c.tol_rate * (1.0 - self.t)
+        self.last = k
+        return s
+
+    def week_end(self):
+        c = self.cfg
+        self.h = [x * (1.0 - c.hab_recover) for x in self.h]
+        self.t *= 1.0 - c.tol_recover
+
+
+def strand_sets(n_ext, n_thick=0):
+    """Strands held by each external bond: thick bonds 3, thin bonds 2, cycling through SHAREABLE (care first)."""
+    out, i = [], 0
+    for j in range(n_ext):
+        m = 3 if j < n_thick else 2
+        out.append(tuple(SHAREABLE[(i + t) % len(SHAREABLE)] for t in range(m)))
+        i += m
+    return out
+
+
+def strand_cover(cfg, q0, qx, sets):
+    """-> {strand: cover in [0,1]}. The partner (thick core) holds all strands; supply of a bond to a strand is its quality times
+    min(1, capacity / strands held); cover is 1 - product of (1 - supply) over the bonds that hold the strand."""
+    cover = {}
+    sup0 = q0 * min(1.0, cfg.bond_capacity / len(STRANDS))
+    for s in STRANDS:
+        miss = 1.0 - sup0
+        for q, S in zip(qx, sets):
+            if s in S:
+                miss *= 1.0 - q * min(1.0, cfg.bond_capacity / len(S))
+        cover[s] = 1.0 - miss
+    return cover
+
+
+def strand_terms(cfg, cover):
+    """-> (pleasure, suffering) from the strand cover."""
+    pay = cfg.strand_pay * sum(w * cover[s] for w, s in zip(cfg.strand_weight, STRANDS))
+    suf = cfg.care_suffer * max(0.0, cfg.care_ok - cover["care"]) / cfg.care_ok
+    return pay, suf
+
+
+def coordination_units(cfg, n_ext):
+    """Units per week a partner spends keeping n_ext external bonds going (convex: synthesis M5, 'unbundled lives cost coordination')."""
+    return cfg.coord_a * n_ext ** cfg.coord_gamma if n_ext > 0 else 0.0
+
+
 def capacity(B, N, cfg=DEFAULT):
     return _clip(1 + cfg.cap_beta * (B - cfg.tip), cfg.cap_min, cfg.cap_max) * (1 - cfg.n_cap_penalty * N)
 
@@ -140,8 +285,10 @@ class Hedonic:
         self.glow += self.cfg.new_connection_event
 
     # -- close the week
-    def close_week(self, aspiration_values, *, trapped=False, restricted=False, together_sessions=0, friction=0.0):
-        """aspiration_values: {key: value achieved} (same units as the targets). -> row dict."""
+    def close_week(self, aspiration_values, *, trapped=False, restricted=False, together_sessions=0, friction=0.0,
+                   extra_pleasure=0.0):
+        """aspiration_values: {key: value achieved} (same units as the targets). extra_pleasure: lever terms (anticipation,
+        commitment payoff, strand cover), 0 when no lever is on. -> row dict."""
         c = self.cfg
         L = self.level
         p_need = sum(self.sal[n] * _clip((L[n] - 0.5) / 0.5) for n in NEEDS)
@@ -149,7 +296,7 @@ class Hedonic:
         sat = {k: self.satisfaction(k, aspiration_values.get(k, 0.0)) for k in self.targets}
         p_asp = sum(self.asp_w[k] * sat[k] for k in sat)
         s_asp = c.unmet_aspiration * sum(self.asp_w[k] * (1 - sat[k]) for k in sat)
-        pleasure = _clip(c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * together_sessions + self.glow)
+        pleasure = _clip(c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * together_sessions + self.glow + extra_pleasure)
         self.glow *= c.glow_decay
         s_off = s_need + s_asp + friction
         active = {"trapped": (trapped, c.trapped_intensity),

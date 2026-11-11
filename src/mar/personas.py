@@ -305,3 +305,42 @@ def accepts_commitment(p, kind):
     if kind == "requests":
         return a < 0.3 and s in ("accommodating", "collaborative")
     return False
+
+
+# ---- pleasure levers (docs/decisions/0016-pleasure-levers.md). ASSUMED mapping from principles (weights and axes) to lever use ----
+def variety_policy(p):
+    """L-A. How a persona picks among variants of a repeated pleasure (synthesis M1: micro-novelty, spacing).
+      'adaptive' (rotate AND space: an action's utility falls with its satiety): risk tolerance >= 0.5
+      'rotate' (cycle variants): openness (certainty_openness >= 0.5) or adventure (security_adventure >= 0.5)
+      'repeat' (do the best one again): everyone else (a certainty-seeker with a favorite)."""
+    if p.risk_tolerance >= 0.5:
+        return "adaptive"
+    if p.axes["certainty_openness"] >= 0.5 or p.axes["security_adventure"] >= 0.5:
+        return "rotate"
+    return "repeat"
+
+
+def ritual_proposal(p):
+    """L-A. Whether a persona proposes a standing weekly shared slot: wants a fixed time (togetherness >= 0.5, security >= 0.4)."""
+    w = p.weights
+    return bool(w["togetherness"] >= 0.5 and w["security"] >= 0.4)
+
+
+def accepts_ritual(p):
+    """L-A. Whether a persona accepts a proposed ritual: a recurring slot costs some autonomy (autonomy < 0.6)."""
+    return bool(p.weights["autonomy"] < 0.6)
+
+
+def bond_policy(p):
+    """L-C. -> {"n_ext": external bonds, "n_thick": how many of them are thick (3 strands)}.
+    n_ext = 1 + round(3 x other_connections), at most 5; n_thick = 1 if togetherness >= 0.8 else 0 (a very togetherness-valuing persona
+    keeps a second close bond rather than spreading thin)."""
+    w = p.weights
+    n = min(5, 1 + int(round(3 * w["other_connections"])))
+    return {"n_ext": n, "n_thick": 1 if w["togetherness"] >= 0.8 else 0}
+
+
+def lever_policy(p):
+    """-> every lever-relevant choice of a persona, in one dict."""
+    return {"variety": variety_policy(p), "ritual_proposes": ritual_proposal(p), "ritual_accepts": accepts_ritual(p),
+            "commit": commitment_proposal(p), **bond_policy(p)}

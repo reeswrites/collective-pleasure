@@ -1,0 +1,8 @@
+id: R9-may-ritual
+attribute: partner
+deontic: may
+aim: ritual
+conditions: []
+or_else: null
+gloss: Partners may agree a ritual, a recurring scheduled time together (for example every week an evening together), as one of their negotiated terms.
+source: 'docs/notes/hedonic-technology-synthesis.md, M3 and M8 ("rule cards that create a pleasure opportunity"; Relationships as a Hedonic Technology on rituals). NEW variant for the pleasure-levers runs (docs/decisions/0016-pleasure-levers.md): seed v2.2 bindable plus this one permission. Not author-confirmed; the author-confirmed seed is author_seed_v2_bindable, unchanged. Takes effect only when the ritual lever is on.'

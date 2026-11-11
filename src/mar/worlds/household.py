@@ -51,7 +51,7 @@ PHRASES = {"pooled": "the pooled share", "money": "the private money", "other_ea
            "other_in": "the other-partner-in flag", "bound_request": "the bound-request flag",
            "take": "the share taken"}
 PARTNER_ACTIONS = ("work", "spend_shared", "spend_self", "see_friend", "refuse_request", "request", "leave", "return")
-EXTRA_ACTIONS = ("gift_pooled", "give", "commit_stay", "commit_request", "amend")   # harness-only move (side channel); the formal model in seam_depth does not have it
+EXTRA_ACTIONS = ("gift_pooled", "give", "commit_stay", "commit_request", "amend", "ritual")   # harness-only move (side channel); the formal model in seam_depth does not have it
 GIFT = 8
 FRIEND_ACTIONS = ("work", "spend_self", "see_friend", "refuse_request")
 K_DEFAULT = 3
@@ -817,6 +817,21 @@ def shock_schedule(seed, id_a, id_b, weeks=WEEKS):
     return out
 
 
+def bond_shock_schedule(seed, id_a, id_b, weeks, rate, dur, nmax=8):
+    """Pleasure levers, L-C (synthesis M5: shocks hit one bond at a time). Common random numbers: the draws depend on (seed, pair) and
+    on the bond SLOT only, never on how many bonds exist, so arms with different bond counts see the same shocks on the bonds they share.
+    -> {week: [(role, slot, duration)]}; role "H" slot 0 is the partner bond; roles "A"/"B" slots 1..nmax are external bonds."""
+    rng = random.Random(f"bond|{seed}|{id_a}|{id_b}")
+    slots = [("H", 0)] + [(r, k) for r in "AB" for k in range(1, nmax + 1)]
+    out = {}
+    for w in range(weeks):
+        for role, k in slots:
+            hit, d = rng.random() < rate / 52, rng.randint(dur[0], dur[1])
+            if hit:
+                out.setdefault(w, []).append((role, k, d))
+    return out
+
+
 def _m(L):
     return 1.5 if L < 0.5 else 0.6      # marginal value of a need: larger in the hardship region
 
@@ -898,6 +913,12 @@ class PersonaAgent:
                                  - cost_money(3))
         else:
             u["spend_shared"] = 0.0
+        lv = o.get("lever")          # pleasure levers, L-A: an adaptive agent expects a satiated source to pay less (spacing)
+        if lv and lv["adaptive"]:
+            if "together" in u:
+                u["together"] *= lv["together_scale"]
+            if "see_friend" in u:
+                u["see_friend"] *= lv["friend_scale"]
         return {a: v * self._noise() for a, v in u.items()}
 
     def together_utility(self, o):
@@ -983,8 +1004,10 @@ def make_agent(persona):
 
 
 class WeeklyWorld:
-    def __init__(self, cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT):
-        """deal (negotiated pots, docs/decisions/0013): {"pot": bool, "commits": [...]} replaces the week-0 commitment stub; with
+    def __init__(self, cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT, levers=None):
+        """levers: a hedonic.LeverConfig (pleasure levers, ADR 0016) or None; None reads hedonic.ACTIVE_LEVERS, which is None unless
+        a `use_levers` block is open, so the default is the old behaviour bit for bit.
+        deal (negotiated pots, docs/decisions/0013): {"pot": bool, "commits": [...]} replaces the week-0 commitment stub; with
         pot False the partners start with their own holdings and no share of the pot. deal=None is the old behaviour, bit for bit."""
         pa, pb = personas
         self.deal, self.breach_forfeit = deal, breach_forfeit
@@ -1036,6 +1059,158 @@ class WeeklyWorld:
                 self.negotiate()
             else:
                 self.commits = [dict(c) for c in deal["commits"]]
+        self.lv = levers if levers is not None else HD.ACTIVE_LEVERS
+        if not HD.levers_on(self.lv):
+            self.lv = None
+        if self.lv:
+            self._lever_init()
+
+    # -- pleasure levers (ADR 0016; docs/results/pleasure-levers-prereg.md). Every method below is called only when self.lv is set.
+    def _lever_init(self):
+        lv, pa, pb = self.lv, self.personas["A"], self.personas["B"]
+        self.policy = {r: lv.force_policy or PERS.variety_policy(self.personas[r]) for r in "AB"}
+        self.sat_tog, self.sat_fr, self.K, self.cur_w = HD.Satiety(lv, lv.n_variants), {}, 0.0, 0
+        self.lw = {"tog": [], "fr": {"A": [], "B": []}, "visits": {"A": {}, "B": {}}}
+        self.lstats = {"sessions": 0, "ritual_slots": 0, "ritual_kept": 0, "adhoc": 0, "bond_shock_weeks": 0}
+        cards = self.gate.cards
+        forbidden = any(c.aim == "ritual" and c.deontic == "must_not" for c in cards)
+        imposed = any(c.aim == "ritual" and c.deontic == "must" for c in cards)
+        negotiated = (self.deal is None and self.mech) or (self.deal is not None and bool(self.deal["pot"]))
+        agreed = negotiated and ((PERS.ritual_proposal(pa) and PERS.accepts_ritual(pb)) or (PERS.ritual_proposal(pb) and PERS.accepts_ritual(pa)))
+        self.ritual = {"period": lv.ritual_period, "kept": []} if (lv.ritual and not forbidden and (lv.force_ritual or imposed or agreed)) else None
+        if lv.network:
+            self.nx, self.sets, self.bdown = {}, {}, {}
+            for r in "AB":
+                bp = PERS.bond_policy(self.personas[r])
+                self.nx[r] = bp["n_ext"] if lv.force_bonds < 0 else lv.force_bonds
+                nt = bp["n_thick"] if lv.force_thick < 0 else lv.force_thick
+                self.sets[r] = HD.strand_sets(self.nx[r], min(nt, self.nx[r]))
+            self.q0, self.qx = lv.q0_start, {r: [lv.qx_start] * self.nx[r] for r in "AB"}
+            self.bshock = (bond_shock_schedule(self.seed, pa.id, pb.id, self.weeks, lv.bond_shock_rate, lv.bond_shock_dur)
+                           if lv.bond_shocks else {})
+
+    def _down(self, role, slot, w):
+        return self.bdown.get((role, slot), -1) > w
+
+    def _pick_variant(self, r):
+        return 0 if self.policy[r] == "repeat" else self.sat_tog.best()
+
+    def _pick_bond(self, r):
+        """-> index of the external bond a contact goes to, or None (no bond, or all ruptured). 'repeat' always uses the first; others the weakest."""
+        if not self.lv.network or self.nx[r] == 0:
+            return None
+        ok = [j for j in range(self.nx[r]) if not self._down(r, j + 1, self.cur_w)]
+        if not ok:
+            return None
+        return ok[0] if self.policy[r] == "repeat" else min(ok, key=lambda j: (self.qx[r][j], j))
+
+    def _friend_sat(self, r, b):
+        return self.sat_fr.setdefault((r, b), HD.Satiety(self.lv, 1))
+
+    def _lever_session(self, tag):
+        """One together session (shared by both partners) happened: its satiety-scaled strength is recorded."""
+        lv = self.lv
+        host = "A" if self.cur_w % 2 == 0 else "B"
+        sc = self.sat_tog.use(self._pick_variant(host)) if lv.adapt else 1.0
+        if tag == "ritual":
+            sc *= 1.0 + lv.event_boost
+        self.lw["tog"].append(sc)
+        self.lstats["sessions"] += 1
+
+    def _lever_visit(self, r, scaled=True):
+        lv, b = self.lv, self._pick_bond(r)
+        if scaled:
+            self.lw["fr"][r].append(self._friend_sat(r, b).use(0) if lv.adapt else 1.0)
+        if b is not None:
+            self.lw["visits"][r][b] = self.lw["visits"][r].get(b, 0) + 1
+
+    def _can_together(self):
+        a, b = self.p["A"], self.p["B"]
+        return (a["in"] and b["in"] and not a["ill"] and not b["ill"] and not self.moved
+                and all(self.units[r] >= V2_COST["together"] for r in "AB"))
+
+    def _lever_start(self, w):
+        lv = self.lv
+        self.cur_w = w
+        self.lw = {"tog": [], "fr": {"A": [], "B": []}, "visits": {"A": {}, "B": {}}}
+        if lv.commit:
+            live = any(self._active(c, w) and not c["breached"] for c in self.commits)
+            self.K = self.K + lv.k_rate * (1.0 - self.K) if live else self.K * (1.0 - lv.k_decay)
+        if lv.network:
+            for role, slot, dur in self.bshock.get(w, []):
+                if role == "H" or slot <= self.nx[role]:
+                    self.bdown[(role, slot)] = w + dur
+            for r in "AB":
+                self.units[r] = max(0.0, self.units[r] - HD.coordination_units(lv, self.nx[r]))
+        if self.ritual and w % self.ritual["period"] == 0:
+            ok = self._can_together()
+            self.ritual["kept"].append(1 if ok else 0)
+            self.lstats["ritual_slots"] += 1
+            if ok:
+                self._start_session("ritual")
+                self.lstats["ritual_kept"] += 1
+        for _ in range(lv.ad_hoc_dose):
+            if self._can_together():
+                self._start_session("adhoc")
+                self.lstats["adhoc"] += 1
+
+    def _start_session(self, tag):
+        for r in "AB":
+            self.units[r] -= V2_COST["together"]
+            self.wk[r]["together"] += 1
+        self._lever_session(tag)
+
+    def _lever_obs(self, r):
+        lv = self.lv
+        sat, rep = self.sat_tog, self.policy[r] == "repeat"
+        ts = sat.scale(0) if rep else sat.scale(sat.best())
+        b = self._pick_bond(r)
+        return {"adaptive": self.policy[r] == "adaptive", "together_scale": ts, "friend_scale": self._friend_sat(r, b).scale(0)}
+
+    def _lever_end_week(self, w):
+        """Update the slow state (satiety recovery, bond quality) after everyone has acted."""
+        lv = self.lv
+        self.sat_tog.week_end()
+        for sat in self.sat_fr.values():
+            sat.week_end()
+        if lv.network:
+            both = self.p["A"]["in"] and self.p["B"]["in"]
+            n = len(self.lw["tog"])
+            g = 1.0 - ((1.0 - lv.q0_cohab) if both else 1.0) * (1.0 - lv.q0_together) ** n
+            self.q0 = 0.0 if self._down("H", 0, w) else (self.q0 + g * (1.0 - self.q0)) * (1.0 - lv.q0_decay)
+            for r in "AB":
+                for j in range(self.nx[r]):
+                    g = 1.0 - (1.0 - lv.qx_visit) ** self.lw["visits"][r].get(j, 0)
+                    q = (self.qx[r][j] + g * (1.0 - self.qx[r][j])) * (1.0 - lv.qx_decay)
+                    self.qx[r][j] = 0.0 if self._down(r, j + 1, w) else q
+            if any(self._down(*k, w) for k in self.bdown):
+                self.lstats["bond_shock_weeks"] += 1
+
+    def _bound_n(self, r, w):
+        return sum(1 for c in self.commits if c["by"] == r and self._active(c, w) and not c["breached"])
+
+    def _lever_terms(self, r, w):
+        """-> (extra pleasure, extra offsettable friction, breakdown dict) for partner r this week."""
+        lv, pl, fr, d = self.lv, 0.0, 0.0, {}
+        both = self.p["A"]["in"] and self.p["B"]["in"]
+        if self.ritual and both:
+            per, H = self.ritual["period"], lv.antic_horizon
+            share = sum(1 for j in range(1, H + 1) if (w + j) % per == 0) / H
+            kept = self.ritual["kept"][-lv.kept_window:]
+            d["antic"] = lv.antic_gain * share * (sum(kept) / len(kept) if kept else 1.0)
+            pl += d["antic"]
+        if lv.commit:
+            d["k_pay"] = lv.k_pay * self.K if both else 0.0
+            d["commit_friction"] = lv.commit_friction * self._bound_n(r, w)
+            pl += d["k_pay"]
+            fr += d["commit_friction"]
+        if lv.network:
+            cover = HD.strand_cover(lv, self.q0, self.qx[r], self.sets[r])
+            d["strand_pay"], d["care_suffer"] = HD.strand_terms(lv, cover)
+            d["care_cover"] = cover["care"]
+            pl += d["strand_pay"]
+            fr += d["care_suffer"]
+        return pl, fr, d
 
     def other(self, r):
         return "B" if r == "A" else "A"
@@ -1107,6 +1282,8 @@ class WeeklyWorld:
         """Apply the agreed consequence of breaking a commitment; -> the (possibly changed) candidate."""
         o = self.other(r)
         self._trust_move(o, -TRUST["breach_drop"], "breach", w)     # the wronged partner trusts r less (implicit consequence)
+        if self.lv and self.lv.commit:
+            self.K *= 1.0 - self.lv.breach_loss                     # L-B: a breach resets part of the compounded payoff
         if a == "leave":
             for c in self.commits:
                 if c["kind"] == "stay" and c["by"] == r and self._active(c, w):
@@ -1270,6 +1447,8 @@ class WeeklyWorld:
               "partner_busy": self.wk[oth]["friends"] + self.wk[oth]["works"] >= 2 or last_week["busy"][oth]}
         ob.update({"veto_on_partner": set(self.vetoes[oth]), "pool": self.pool, "took_this_week": self.wk[r]["took"]})
         ob.update({"mech": self.mech, "own_money": int(me["money"]), "partner_money": int(o["money"])})
+        if self.lv and self.lv.adapt:
+            ob["lever"] = self._lever_obs(r)
         ob["partner_accepts"] = False
         if me["in"] and o["in"]:
             oo = {"hed": self.hed[oth]}
@@ -1296,9 +1475,13 @@ class WeeklyWorld:
             me["money"] -= SELF_STEP; wk["spent_self"] += SELF_STEP
         elif a == "see_friend":
             wk["friends"] += 1
+            if self.lv and (self.lv.adapt or self.lv.network):
+                self._lever_visit(r)
         elif a == "together":
             self.units[oth] -= V2_COST["together"]
             wk["together"] += 1; self.wk[oth]["together"] += 1
+            if self.lv:
+                self._lever_session("adhoc_agent")
         elif a == "refuse_request":
             self.pending[r] = set()
         elif a == "give":
@@ -1380,6 +1563,8 @@ class WeeklyWorld:
             rec["c_blocked"] += 1
         else:
             self.wk[tgt]["friend_initiated"] += 1
+            if self.lv and self.lv.network:
+                self._lever_visit(tgt, scaled=False)
 
     def start_shocks(self, w, ev):
         for s in self.shocks.get(w, []):
@@ -1415,6 +1600,8 @@ class WeeklyWorld:
                             self._trust_move(self.other(r), TRUST["honored_request"], "honored", w)
         if self.hook:
             self.hook(self, w)
+        if self.lv:
+            self._lever_start(w)
         probes = {r: self.probe(r, w) for r in "AB"}
         rec = {"blocked": {r: set() for r in "AB"}, "c_attempts": 0, "c_blocked": 0}
         for ps in range(PASSES):
@@ -1445,6 +1632,10 @@ class WeeklyWorld:
                 for r in inn:
                     self.wk[r]["sec_hit"] += 0.15
         busy = {r: self.wk[r]["friends"] + self.wk[r]["works"] >= 2 for r in "AB"}
+        lvl = self.lv
+        if lvl:
+            self._lever_end_week(w)
+            eff_t = sum(self.lw["tog"]) if lvl.adapt else None
         for r in "AB":
             me, wk, h = self.p[r], self.wk[r], self.hed[r]
             oth = self.p[self.other(r)]
@@ -1454,11 +1645,17 @@ class WeeklyWorld:
                 me["weeks_out"] += 1
             assets = me["money"] + self.share(r)
             ill = 0.3 if me["ill"] else 0.0
-            h.tick(rest_actions=wk["rests"], work_blocks=wk["works"], friend_visits=wk["friends"], together=wk["together"],
+            tog_in, fr_in, cpen = wk["together"], wk["friends"], wk["conn_hit"] + (0.1 if self.moved else 0.0)
+            if lvl:
+                if lvl.adapt:
+                    tog_in, fr_in = eff_t, sum(self.lw["fr"][r])
+                if lvl.network and self._down("H", 0, w):
+                    cpen += lvl.partner_rupture_conn
+            h.tick(rest_actions=wk["rests"], work_blocks=wk["works"], friend_visits=fr_in, together=tog_in,
                    friend_initiated=wk["friend_initiated"] + (1 if self.with_friend(r) else 0),
                    cohabiting=(me["in"] and oth["in"]) or self.with_friend(r), assets=assets,
                    money=me["money"], extra_rest_drain=ill, extra_security_drain=wk["sec_hit"],
-                   connection_penalty=wk["conn_hit"] + (0.1 if self.moved else 0.0))
+                   connection_penalty=cpen)
             pr = self.probe(r, w)
             restricted = me["in"] and not all(pr["open"][o] for o in ("work", "see_friend", "refuse")) or \
                 (me["in"] and not pr["open"]["spend"])
@@ -1472,8 +1669,16 @@ class WeeklyWorld:
             net = wk["income"] - HD.DEFAULT.living_cost - BILLS_WEEKLY - wk["spent_self"]
             asp = {"security_buffer": h.level["security"], "together_per_week": wk["together"],
                    "friends_per_week": wk["friends"], "savings_per_week": max(0, net), "autonomy": open_share}
-            hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=wk["together"],
-                                   friction=(WARN_FRICTION if warn else 0.0) + PRESS_FRICTION * wk["pressed"])
+            fric = (WARN_FRICTION if warn else 0.0) + PRESS_FRICTION * wk["pressed"]
+            if lvl:
+                xp, xf, terms = self._lever_terms(r, w)
+                hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=tog_in,
+                                       friction=fric + xf, extra_pleasure=xp)
+                hrow[r]["lever"] = {**{k: round(v, 5) for k, v in terms.items()}, "eff_together": round(tog_in, 4),
+                                    "K": round(self.K, 4), "q0": round(getattr(self, "q0", 0.0), 4)}
+            else:
+                hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=wk["together"],
+                                       friction=fric)
             me["low"] = me["low"] + 1 if h.B < -0.2 else 0
             for k in ("jobless", "ill"):
                 me[k] = max(0, me[k] - 1)
@@ -1510,9 +1715,12 @@ class WeeklyWorld:
         self.run.final = {r: {**self.p[r], "pooled": self.pool, "put": self.put[r]} for r in "AB"}   # "pooled": the one shared balance
         if self.mech:
             self.run.meta = self.commit_report()
+        if self.lv:
+            self.run.lever = {**self.lstats, "K": self.K, "ritual": bool(self.ritual), "policy": dict(self.policy),
+                              "kept": list(self.ritual["kept"]) if self.ritual else []}
         return self.run
 
 
-def run_weekly(cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT):
+def run_weekly(cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT, levers=None):
     """personas: (Partner A persona, Partner B persona). -> Run (trace, outcomes with weekly hedonic rows, final)."""
-    return WeeklyWorld(cards, personas, seed, weeks, cfg, deal, breach_forfeit).play()
+    return WeeklyWorld(cards, personas, seed, weeks, cfg, deal, breach_forfeit, levers).play()
