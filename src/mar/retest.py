@@ -210,6 +210,7 @@ def metrics(run, lived=None, world=None):
     if fix:
         rec["fix"] = {k: v for k, v in fix.items() if k not in ("events", "trust")}
         rec["leaves"] = sum(1 for _, _, k in fix.get("events", []) if k.startswith("leave_"))
+        rec["skip_N"] = [float(k.split("_")[-1]) for _, _, k in fix.get("events", []) if k.startswith("skip_N_")]
     if lived is not None:
         rec["slid"] = slid_flags(run, lived)
         if not isinstance(lived, NG.BaselineLived):

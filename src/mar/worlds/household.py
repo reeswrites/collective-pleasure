@@ -1379,7 +1379,11 @@ class WeeklyWorld:
         return menu or list(LEAVE_TAKES)
 
     def _count_menu(self, r, w):
-        if self.p[r]["in"] and not any(self.gate.check("partner", "leave", self.state(r, w), t)[0] for t in LEAVE_TAKES):
+        """Diagnostic (C9 / M10): a partner-week in which every take on the agent's leave menu is forbidden by the exit term."""
+        if not self.p[r]["in"]:
+            return
+        menu = self.leave_takes(r, w) if (self.fx and self.fx.take_menu_terms) else LEAVE_TAKES
+        if not any(self.gate.check("partner", "leave", self.state(r, w), t)[0] for t in menu):
             self.diag["menu_forbidden_weeks"] += 1
             if self.distressed(r):
                 self.diag["menu_forbidden_distressed"] += 1
@@ -1855,11 +1859,13 @@ class WeeklyWorld:
                         solo = dict(self.solo) if isinstance(self.solo, dict) else {x: self.solo for x in "AB"}
                         solo[r] = self.bar_mode[r]
                         self.solo = solo
+                if self.v23_ladders():              # M7: every leave under the v2.3 ladder, on distress or on the bar
+                    self.fstats["ladder_leaves" if self.ladder[r]["stage"] >= 3 else "skip_leaves"] += 1
+                    if self.ladder[r]["stage"] < 3:
+                        self.events.append((w, r, f"skip_N_{self.hed[r].N:.3f}"))
                 self.bar_out[r] = False
                 if hasattr(self, "bar_runs"):
                     self.bar_runs[r] = 0
-                elif self.v23_ladders():
-                    self.fstats["ladder_leaves" if self.ladder[r]["stage"] >= 3 else "skip_leaves"] += 1
                 self.events.append((w, r, f"leave_{why}"))
             me["in"], me["weeks_out"], self.pending[r] = False, 0, set()
         elif a == "return":
