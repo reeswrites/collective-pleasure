@@ -560,6 +560,126 @@ Also the natural first fidelity-battery item (a fine is a price).
 
 **Scores.** testability 5, novelty 2, decision value 2; product 20.
 
+## Added 2026-11-10 from docs/theory.md
+
+Five hypotheses from the theory doc. Not yet ranked into the table above; products are shown. H24 is owned by the regulation agent. The rest are candidates.
+
+| ID | Hypothesis (short) | T | N | D | Product | Status |
+|---|---|---|---|---|---|---|
+| H24 | Attune vs appease: the partners' regulation policy decides whether pushy personas win. Appeasers have lower li... | 3 | 4 | 5 | 60 | running (being tested by the regulation agent) |
+| H25 | Rules for imperfect agents: rule sets that close the pleasure gap for greedy or biased agents beat rule sets j... | 3 | 4 | 5 | 60 | candidate |
+| H26 | Partner choice trade-off: similarity raises the shared-pleasure gain and difference raises the specialization... | 3 | 3 | 3 | 27 | candidate |
+| H27 | Relational load is conserved: load skipped by one partner reappears as the other's vigilance or appeasement, s... | 2 | 4 | 4 | 32 | candidate |
+| H28 | Reassurance seeking is a checking cost: access you must keep checking lowers lifetime pleasure compared with a... | 2 | 4 | 3 | 24 | candidate |
+
+### H24 (theory, author's theory): running (being tested by the regulation agent)
+
+**Claim.** Attune vs appease: the partners' regulation policy decides whether pushy personas win. Appeasers have lower lifetime pleasure than attuners despite less immediate conflict, because appeasement trades long-run pleasure for less immediate pain.
+
+**Running work.** regulation agent (regulation policy as the partners' policy)
+
+**Motivation.**
+- docs/theory.md: 3. Attunement and appeasement
+- docs/results/horizon.md: 1. The lemma: greedy loses when actions leave a trace
+- docs/hypotheses.md: H01 (pressing persona, free exit)
+
+**Pre-mortem (why it might be an artifact).** Appeasement and attunement will be coded by me as two policies, so the difference may be only the pain the code attaches to refusing. A fair test gives attuners a real cost for raising a hard thing and checks that attuners still win when that cost is raised. Also report immediate conflict, so the pattern 'less conflict, less lifetime pleasure' is shown and not assumed.
+
+**Cheapest test.**
+- World: Household with pressing personas; the partner's policy is attune, appease, or avoid (owned by the regulation agent).
+- Arms: Partner policy: attune, appease, avoid; pusher persona fixed; free exit on and off.
+- Measure: Lifetime pleasure for each partner (ADR 0017); weekly conflict count; who wins terms; exit rate.
+- Named test (ADR 0015): Paired permutation across pairings with Holm; sensitivity sweep over the cost of refusing.
+- Seeds: Per the regulation agent's prereg
+- Cost: $0, scripted
+
+**Scores.** testability 3, novelty 4, decision value 5; product 60.
+
+Spec owned by the regulation agent; this row only records the claim from docs/theory.md.
+
+### H25 (theory, author's theory): candidate
+
+**Claim.** Rules for imperfect agents: rule sets that close the pleasure gap for greedy or biased agents beat rule sets judged only by perfect planners, on lifetime pleasure for the biased agents.
+
+**Motivation.**
+- docs/theory.md: 1. The umbrella thesis
+- docs/results/horizon.md: 3. How much greedy loses
+- docs/results/fidelity.md: What each failure implies: the household is a rational-agent model
+
+**Pre-mortem (why it might be an artifact).** The household has no biased agents, so the build is the cost, and I will choose the bias. A fair test uses at least two kinds of bias (present bias, wanting-driven) and checks that the winning rule set is not simply the one that forces the planner's schedule, which is a freedom cost.
+
+**Cheapest test.**
+- World: Household with scripted personas given a present-biased or wanting-driven policy (small build); the horizon MDP as a check.
+- Arms: Rule sets tuned against perfect planners vs tuned against biased agents; unbiased control agents.
+- Measure: Lifetime pleasure of biased agents; freedom score; gap to the planner's optimum.
+- Named test (ADR 0015): Paired permutation across pairings, Holm; report freedom beside pleasure.
+- Seeds: 57 pairings x 10 seeds x arms (after the build)
+- Cost: $0 after the build; the build is the cost
+
+**Scores.** testability 3, novelty 4, decision value 5; product 60.
+
+Needs the smallest biased persona first.
+
+### H26 (theory, author's theory): candidate
+
+**Claim.** Partner choice trade-off: similarity raises the shared-pleasure gain and difference raises the specialization gain, so the best match depends on which dominates for the pair.
+
+**Motivation.**
+- docs/theory.md: 3. The firm with three product lines
+- docs/results/horizon-prereg.md: Amendment 2: shared-experience amplification, overlap grid
+- docs/notes/hedonic-technology-synthesis.md: Open question 7: let agents choose who to pair with
+
+**Pre-mortem (why it might be an artifact).** Both gains are built in, so the crossover is near a definition. The informative part is where it crosses and whether burden-sharing gains need a task model the world does not have. Without tasks, only the similarity side is real.
+
+**Cheapest test.**
+- World: Household with a task layer (cost per task by persona) and amplification of shared activities (not built in the household).
+- Arms: Pairings ordered by taste overlap and by task-cost difference; free exit.
+- Measure: Lifetime pleasure by overlap and by difference; the share of the gain from shared pleasure vs slack.
+- Named test (ADR 0015): Regression with cluster bootstrap by pairing; interaction permutation test.
+- Seeds: 57 pairings x 5 seeds (after the build)
+- Cost: $0 after the build; the build is the cost
+
+**Scores.** testability 3, novelty 3, decision value 3; product 27.
+
+### H27 (theory, author's theory): candidate
+
+**Claim.** Relational load is conserved: load skipped by one partner reappears as the other's vigilance or appeasement, so total load falls only by tuning (readability, defaults) or by moving it out, not by one partner opting out.
+
+**Motivation.**
+- docs/theory.md: 3. Relational load, sender and receiver
+
+**Pre-mortem (why it might be an artifact).** Conservation is a modeling choice: if I write the receiver's cost as a function of the sender's skip, it holds by construction. The test is whether the receiver's cost shows up in pleasure and exit, and whether a default or a readability signal lowers the total, not just moves it.
+
+**Cheapest test.**
+- World: Household with sender and receiver load on three layers (not built).
+- Arms: Sender skips; sender does their part; defaults or readability signal available.
+- Measure: Receiver vigilance and appeasement; total load; pleasure of each partner.
+- Named test (ADR 0015): Paired permutation across pairings; check total load is flat when only one side changes.
+- Seeds: After the build
+- Cost: $0 after the build; the build is the cost
+
+**Scores.** testability 2, novelty 4, decision value 4; product 32.
+
+### H28 (theory, author's theory): candidate
+
+**Claim.** Reassurance seeking is a checking cost: access you must keep checking lowers lifetime pleasure compared with a secure bond that needs no checking, even when each check brings brief relief.
+
+**Motivation.**
+- docs/theory.md: 2. Three tests; test 3
+- docs/decisions/0018-hedonic-technology-tests.md: Decision 3
+
+**Pre-mortem (why it might be an artifact).** The loop (relief now, higher threshold later) is the thing I would build, so the lower lifetime pleasure is built in. The informative result is the size of the loss against the relief gain, and whether a norm that answers once and then helps the person sit with it removes the loss.
+
+**Cheapest test.**
+- World: Household or single agent with a security reading, a checking action that restores it briefly, and a falling threshold (not built).
+- Arms: Secure bond; checking available; checking with an answer-once norm.
+- Measure: Checking actions per week; lifetime pleasure net of checking time; security from history vs from checking.
+- Named test (ADR 0015): Paired permutation across personas or pairings; sensitivity over the threshold decay rate.
+- Seeds: After the build
+- Cost: $0 after the build; the build is the cost
+
+**Scores.** testability 2, novelty 4, decision value 3; product 24.
+
 ## How to promote a hypothesis to a preregistered test
 
 1. The author names the hypothesis ids to promote. Nothing is promoted by default.

@@ -86,6 +86,10 @@ All of it is on one scripted victim and one persona label per rule set, at 12 se
 
 **Hedonic technology.** The author's notes are synthesized in docs/notes/hedonic-technology-synthesis.md: the theory, the changes it implies for the model, and 13 open questions. Three levers (adaptation and anticipation, commitment as a converter, unbundled networks, ADR 0016) and a lifetime-pleasure horizon (ADR 0017) are being built from it.
 
+## The theory behind the tests
+
+docs/theory.md states the umbrella thesis this project tests: minds are poor native pursuers of pleasure, and hedonic technology (rules, rituals, relationships) closes the gaps. It sets three tests of good hedonic technology (liking over wanting, persists because worth it, lasting security over checking), treats a relationship as a firm with three product lines, and lists what the simulation does and does not model. The tests become evaluator measures in ADR 0018 (proposed). New hypotheses H24 to H28 are in docs/hypotheses.md.
+
 ## The review council
 
 Five fresh-agent reviews at commit 5852c32 are in docs/reviews/ (correctness, consistency, scope, encoding faithfulness, card-only). No result was found unsound. Many are sound with caveats, and the caveats are folded into this file, docs/pitch.md, docs/claims.md and docs/results/README.md. The faithfulness review rated 37 of 82 cards faithful, 35 partly and 10 unfaithful. Among its findings, `may` cards have no effect in the code, and the pot was coded as two shares. The author chose the single pot (correction three above). The code and card fixes are complete (the pot is one shared balance, honest labels, no hidden rules, independent Jev samples, dated corrections to the ledgers).
