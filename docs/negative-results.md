@@ -119,3 +119,8 @@ Three paid framings (capability v2, propensity, win; about $10 in all) reported 
 - `H32b B5 (2026-11-11): MISSED. Predicted renegotiation would have the largest mean rung Shapley on policy distance; it had the most negative (-0.016). Withdrawal was the only positive rung (+0.002 mean; +0.058 at alpha 1, o_B 0.6). Prereg docs/results/h32b-prereg.md.`
 - `H32b B6 (2026-11-11): MISSED on one clause. At partner sight w 0.75 the full ladder gave 1 voice-driven cell against 0 at w 1.`
 - `H32b overall (2026-11-11): the full voice ladder made the egoist converge in 0 of 30 cells (cliff exit 1). Null for "voice helps" as built.`
+
+## 2026-11-11: H35 (provisional; docs/results/h35.md)
+
+- `H35 (2026-11-11, PROVISIONAL): no run prediction missed (7 of 7). C8 (rupture with exit modes) and S2 (corrected robustness) were not run; stopped while the H32 model is fixed.`
+- `H32 and H32b noise checks (found 2026-11-11 while designing H35): the "gone under 5 percent noise" results were forced by the criterion. Requiring the utilitarian to keep the pair with probability 0.5 is impossible when noise alone leaves it 0.07 at eps 0.05. Corrected criterion used from H32-v2 on.`

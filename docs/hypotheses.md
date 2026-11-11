@@ -721,6 +721,14 @@ Group label: **Claude-proposed, from the author's conversation.** The claims and
 
 H29 and H33 come from the author's own answers (Q10 and Q12) and keep the group "author's theory".
 
+### H35 (Claude-proposed, from the author's conversation): tested (PROVISIONAL, supported on the H32 model being fixed)
+
+**Claim.** Care grows from shared good times: if the actor's giving weight rises with amplified shared weeks and decays without them, a cold-start egoist with amplification warms into full convergence with the utilitarian, while below a threshold of amplification or starting care care decays.
+
+**Result (2026-11-11, PROVISIONAL).** Exact DP on the H32 model with care as state (the model is being fixed after docs/reviews/2026-11-11-correctness.md; the parts run use no exit). 7 of 7 run predictions held. No amplification: care decays to 0. Alpha 1: a sharp threshold at starting care 0.2, then care climbs to 1 and the egoist matches the utilitarian from week 0. Alpha 0.5: converges above 0.3 but care stays flat. Alpha 1.5 and up: takes off from a cold start. Ruptures of up to 8 weeks tip no warm pair at alpha 1 or more and tip the flat alpha-0.5 pairs. A sophisticated egoist that foresees its own care takes off from 0. The exit-mode rupture was not run. Docs: docs/results/h35-prereg.md, docs/results/h35.md.
+
+**Scores.** testability 4, novelty 4, decision value 5; product 80.
+
 ## How to promote a hypothesis to a preregistered test
 
 1. The author names the hypothesis ids to promote. Nothing is promoted by default.

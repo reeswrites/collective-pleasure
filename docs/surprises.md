@@ -100,3 +100,8 @@ The line above that says L4 was "found by every model" is wrong. In the capabili
 ## 2026-11-11: H32b (docs/results/h32b.md)
 
 - `2026-11-11 H32b: withdrawal alone (no check-in, no renegotiation) made the egoist converge with the pair kept at alpha 1, o_B 0.6 (D 0.02) and 0.8 (D 0.00); the full ladder left D 0.50 and 0.17. Adding renegotiation undid it: the egoist meets a one-week demand with a week it had planned anyway, the partner calms down, and the egoist goes back to its own passion.`
+
+## 2026-11-11: H35 (provisional; docs/results/h35.md)
+
+- `2026-11-11 H35: the care threshold is a switch, not a ramp. At alpha 1 a naive egoist starting at care 0.2 matches the utilitarian from week 0 and its care climbs to 1; at 0.1 it never moves. No warm cell needed more than week 0.`
+- `2026-11-11 H35: a sophisticated egoist that foresees its own care takes off from care 0 at every alpha from 0.5. It cultivates its own care on purpose, which erases the threshold the naive egoist faces.`
