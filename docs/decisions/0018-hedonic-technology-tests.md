@@ -37,3 +37,4 @@ A rule set is not rejected by one failing test. The tests are reported beside th
 - Risk: the measures are built from assumed parameters and will show what the model puts in. Each needs a sweep and, where possible, a control with the mechanism off.
 - Build order decided by the author: test 2 first. Still not decided: thresholds for "fails a test".
 - Related hypotheses: H24 to H28 in docs/hypotheses.md.
+- Test 1 built (2026-11-10): model piece src/mar/wanting.py (standalone, flag off by default), run scripts/liking_wanting_run.py, results docs/results/liking-wanting.md. Not yet in the household world.
