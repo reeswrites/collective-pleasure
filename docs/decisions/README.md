@@ -1,6 +1,6 @@
 # Decisions
 
-One line per ADR. Status as of 2026-11-10. ADRs 0001 to 0009 and 0015 carry dated status notes where later results or reviews changed how to read them. ADRs 0010 to 0014 are amended by their owner. Overview of where the project stands: docs/goal.md. Evidence for each decision: docs/results/README.md.
+One line per ADR. Status as of 2026-11-10. ADRs 0001 to 0009 and 0015 carry dated status notes where later results or reviews changed how to read them. ADRs 0010 to 0014 are amended by their owner. ADR 0012 is being amended by the household evolution agent. Overview of where the project stands: docs/goal.md. Evidence for each decision: docs/results/README.md.
 
 | ADR | Title | Status | In one line |
 |---|---|---|---|
@@ -19,3 +19,5 @@ One line per ADR. Status as of 2026-11-10. ADRs 0001 to 0009 and 0015 carry date
 | 0013 | Negotiated pots | accepted, amended (v2, v2.1, LLM pilot) | Pot terms are negotiated by those who share the pot, not imposed. The amendments record that the disagreement point changed the conclusion |
 | 0014 | Freedom is equal liberty minus domination | accepted | Compatible options minus options held at another's sufferance; withdrawal is not domination |
 | 0015 | Formal statistics | accepted | A statistics layer (bootstrap, permutation, exact binomial, Holm, power), a retrofit of today's results, and new prereg rules. Template in docs/templates/prereg.md |
+| 0016 | Pleasure levers | in progress (another agent; the file may still be uncommitted) | Adaptation and anticipation, commitment as a converter, unbundled networks, each behind a default-off flag. Prereg committed, run in progress. Not yet verified here |
+| 0017 | Horizon: lifetime pleasure | in progress (another agent; no ADR file yet) | Lifetime pleasure as present pleasure, vividness-weighted memory and anticipation, tested against greedy play by exact dynamic programming. Prereg committed (docs/results/horizon-prereg.md) |
