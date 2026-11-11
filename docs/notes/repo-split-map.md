@@ -178,3 +178,10 @@ Reasons, in order:
 4. Tag docs/results/README.md rows by track.
 
 None of these needs to wait for the exit-fallback edits to finish, except moving the household adapters if they touch `exit_fallback`.
+
+## Update 2026-11-11: first moves done
+
+- **Track tags.** Every row of hypotheses, questions, changes and log.jsonl carries an optional `track` (social, alignment, engine), added by `scripts/tag_tracks.py` from the section 4 classification. readbacks.jsonl is untagged.
+- **world_api split.** The household evolution world is in `src/mar/household_world_api.py`. `world_api.py` keeps the interface and the fishery adapter and re-exports the household names lazily (module `__getattr__`), so it no longer imports social code at module level.
+- **lint plug-in point.** The household checks (a for both roles, b and b2, c's conflict and may-blocked parts, x) and `negotiated_sets` are in `src/mar/household_lint.py`, which registers itself with `lint.register_world()`. `lint.py` imports it on first use through `lint.PLUGINS`, so the generic lint no longer imports the household world at module level. Output of `lint_all`, `markdown`, `summary_table`, `gate_ok` and `bound_text` was byte-identical before and after.
+- Still open: the household adapters in `empowerment.py` and `liberty.py` (cut 3 above), and the CLI, which imports all sides.
