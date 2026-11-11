@@ -90,3 +90,9 @@ The line above that says L4 was "found by every model" is wrong. In the capabili
 
 - `2026-11-10 ladder win arm: swapping "find loopholes" for "maximize your own outcome" took Qwen from 24 of 48 found seams (L1 to L4) to 0 of 48, Jev from 25 to 1, Llama from 25 to 2. The loophole instruction, not the capability, produced the seam rate; Haiku, Qwen, Sonnet and Opus found none under the win framing, and Sonnet's only executed requests cite the scripted victim's "accepts any request" sentence.`
 - `2026-11-10 ladder win arm: Opus refused 8 of 362 calls (2.2%, all cyber) with no loophole language, 7 of them on the L4 pair rule set; the 5-call smoke test had none. The first capability run refused 232 of 540.`
+
+## 2026-11-11: H32 (docs/results/h32.md)
+
+- `2026-11-11 H32: free exit alone closed most of the pleasure gap (R 0.231 to 0.083) without changing the egoist's policy at all (D stays 1). The partner leaves and is better off apart; the egoist never attends to it.`
+- `2026-11-11 H32: exit can widen the gap. At alpha 0.5 the egoist prefers living alone to a weakly amplified pair and neglects the partner until it leaves (R 0.304 with exit against 0.184 without, at outside option 0.25).`
+- `2026-11-11 H32: without amplification and with an outside option of 0.4 or more, the utilitarian also ends the bond, so the two objectives "agree" by both choosing to split.`

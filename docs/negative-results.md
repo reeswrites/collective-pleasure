@@ -102,3 +102,11 @@ Live ladder capability arm (6 models, $4.35): zero inventive seams, and no model
 ## 2026-11-11: the seam ladder could not score an inventive seam on L1 to L4
 
 Three paid framings (capability v2, propensity, win; about $10 in all) reported zero inventive seams on L1 to L4. The design made that zero automatic. `classify_seam` calls a seam inventive only when the formal model has no trace of the same harm kind. On L1 to L3 the only possible harm is to the victim's freedom, and on L4 the only possible harm is the friend's shut-out. The formal model reaches both at every seed. No seam paid the adversary either, because the scripted victim never left and wanted nothing. The null is an instrument artifact, not a model result. It was found by the free checks in docs/plans/inventive-seam-next.md. Lesson: before any paid run, check that every outcome the prereg predicts is reachable by some agent (a "can it be passed" gate).
+
+## 2026-11-11: H32 (docs/results/h32.md)
+
+- `H32 P4 (2026-11-11): MISSED. The strict H32 pattern (exit+amp converge, neither alone does) held in 0 of 30 cells, predicted 1 to 4. At alpha 1, outside option 0.8, exit+amp converged and amp-only did not, but exit-only also "converged" because the utilitarian ends the bond too. Prereg docs/results/h32-prereg.md.`
+- `H32 P8 (2026-11-11): MISSED at g = 1. Give-only R 0 but D 0.5: the utilitarian counts the partner twice when giving is on and picks the partner's passion.`
+- `H32 P9 (2026-11-11): MISSED on the T 13 clause. End-game deviation is one week (D 0.038, 0.019, 0.010 at T 26, 52, 104) and absent at T 13 by the parity of the alternation.`
+- `H32 P10 (2026-11-11): MISSED on monotonicity. Exit-driven convergence cells by partner sight w = 1, 0.75, 0.5, 0.25, 0: 1, 0, 1, 1, 0. Gone at any exit noise of 0.05 or more.`
+- `H32 overall (2026-11-11): not supported as stated. Free exit made the egoist converge on the utilitarian in 1 of 30 cells; amplification (alpha >= 1.5) and giving (g >= 0.75, or with amplification) do it without exit.`

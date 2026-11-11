@@ -682,6 +682,22 @@ Needs the smallest biased persona first.
 
 **Scores.** testability 2, novelty 4, decision value 3; product 24.
 
+## Added 2026-11-11
+
+### H32 (author's theory): tested (not supported: amplification and giving close the gap, exit does not)
+
+**Claim.** Under free exit and shared-experience amplification, an agent maximizing only its own lifetime pleasure (egoist) chooses nearly the same policy as one maximizing the pair's total (utilitarian). Remove free exit or amplification and the two policies diverge.
+
+**Result (2026-11-11).** Not supported as stated. Exact dynamic programming over a two-agent model with exit, amplification and giving as switches (8 arms x 2 objectives, a 30-cell grid, and sweeps). 7 of 11 predictions held. The all-off control shows a large gap (pleasure gap 0.231, policy distance 1). Free exit made the egoist converge in 1 of 30 cells, and that cell vanished under 5 percent exit noise or a partner a quarter blind to its own pleasure. Amplification alone converges at alpha 1.5 or more; with giving, at 0.5 or more. Exit alone shrinks the pleasure gap by ending the bond, not by changing the egoist. The solitary persona beats the paired egoist only when nothing amplifies or gives. Docs: docs/results/h32-prereg.md, docs/results/h32.md. Exact, $0.
+
+**Motivation.**
+- experiments/questions.jsonl: Q6 answer 2026-11-11 and the author's essay thesis that egoistic hedonists and hedonistic utilitarians alike must attend to others' pleasure
+- docs/theory.md: relationships as hedonic technology
+
+**Pre-mortem (why it might be an artifact).** If the partner's exit rule is tied to the partner's pleasure, some convergence is built in. The informative result is the size of the gap and which mechanism closes most of it, and a control with all three off must show a large gap.
+
+**Scores.** testability 4, novelty 4, decision value 5; product 80.
+
 ## How to promote a hypothesis to a preregistered test
 
 1. The author names the hypothesis ids to promote. Nothing is promoted by default.
