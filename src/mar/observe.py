@@ -523,7 +523,10 @@ class Observer:
         if self._replays >= cfg.max_replays:
             return
         self._sampled = cfg.replay_rate > 0 and self._sampler(w).random() < cfg.replay_rate
-        leave_possible = cfg.replay_leaves and any(world.p[r]["in"] and (world.distressed(r) or world.bar_out[r]) for r in ROLES)
+        p = world.p                     # a leave can happen this week: a member in and distressed or past the bar, or out and able to
+        #                                 return (a return and a new leave can fall in the same week)
+        leave_possible = cfg.replay_leaves and any((p[r]["in"] and (world.distressed(r) or world.bar_out[r]))
+                                                   or (not p[r]["in"] and p[world.other(r)]["in"]) for r in ROLES)
         if self._sampled or leave_possible:
             self._snap = (self._copy(), {"busy": dict(last_week["busy"])})
 

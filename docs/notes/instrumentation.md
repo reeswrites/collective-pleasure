@@ -1,5 +1,7 @@
 # Instrumentation gap list (household world)
 
+Status 2026-11-11: built as the observer layer (`src/mar/observe.py`); the schema, the guarantee, the cost, what is still not recorded and an exploratory demo are in docs/notes/observer-schema.md.
+
 Written 2026-11-11 while building the pattern atlas (docs/results/pattern-atlas.md). Every item below is something the atlas wanted to measure and could not, or could only guess at. It is the build list for an opt-in observer layer on the household world. That layer must be bit-identical when off: no extra random draws, no change to iteration order, nothing written to world state that the world reads.
 
 What the atlas could already read, with no change to the world: `run.trace` (one row per proposal the world considered: role, action, kind, take, allowed or blocked, soft, breach, the gate's reasons, the gate state, the chosen utility `u`), `run.outcomes` (weekly hedonic rows; with fixes on, the H38 pressure terms), `world.events` (check-ins, review requests, new terms, leaves with a reason, lapses), `world.exit_log`, the pot and each member's money, `put` and `money_in`, trust, pending requests and the consent flag, bound requests, and the harness's own decision logs (`BaselineLived.week0`, `.retries`, `.log`; `world.bar_log`). The atlas recorder (`src/mar/atlas.Recorder`) reads these through `WeeklyWorld.hook` at the start of each week and writes one compact row per week.
