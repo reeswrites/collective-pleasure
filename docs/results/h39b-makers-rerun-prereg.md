@@ -141,4 +141,42 @@ Scripted makers on a fixed rule; three kinds, one value point each; credit only 
 
 ## Amendments
 
-(None yet.)
+### Amendment 1 (2026-11-11): the planner, the pilot, power, known answers, "Can every verdict happen?"
+
+Committed before the confirmatory run. No prediction, threshold, test, verdict rule or number in the design changed. Code: `src/mar/makers.py` (`choice="opportunity"`, `WeekPlanner`, `plan_week`, `plan_value`, `opportunity`), `scripts/h39b_makers_rerun.py`, tests in `tests/test_makers.py`.
+
+**The planner changed twice after pilot runs, stated plainly.** Both changes make the plan match how the world actually plays a week; neither touches a number, and neither was chosen by an arm's outcome. They were found by looking at why the pilot did what it did, so they are reported with all three pilots' numbers.
+
+1. *First pilot (`runs/h39b-makers/pilot-naive-plan.jsonl`).* The plan as first written ignored that a together session the partner starts also uses this agent's units. Units the plan called idle were the ones the partner's sessions would use. Fix: the partner's own planned sessions come first in the maker's plan, each worth the maker's own utility of time together (known answer K7).
+2. *Second pilot (`pilot-partner-sessions.jsonl`).* The plan held start-of-week utilities fixed, so it planned the same top action three times (three friend visits, three bill payments) and saw 4 to 7 idle units. In the world, the next observation moves after each action (friends and together counts, the week's net income, the bill gap), and the agent picks something else. Fix: `WeekPlanner` recomputes the agent's utilities after each planned action the way the world's next observation would, and drops a spending action when the money for it is gone.
+
+**Known-answer check of the planner against the world itself** (`--fidelity`, `runs/h39b-makers/fidelity.json`; makers off, 10 pilot pairings, seed 900, 52 weeks, 998 partner-weeks together, rollout worlds included). At each week's start we plan each partner's week and compare with the time actions the agent then executes. Fixed utilities: the planned actions match exactly in 6% of partner-weeks. `WeekPlanner` with the partner's sessions: 40%, and it plans 0.34 more units a week than the agent uses. The rest is the choice's ±10% noise, passes spent on requests or gifts, and the partner's units. So the plan slightly overstates what making displaces, which biases H39b toward less making, not more. This is a calibration to an external target (what the world's own agents do), not to any arm.
+
+**The three pilots** (30 pilot pairings, seeds 900 and 901; EXPLORATORY, excluded from the confirmatory data):
+
+| Plan | Z pleasure | M0 pleasure | Z formed at week 0 | M0 formed | blocks per partner-week | blocks in planned-idle units |
+|---|---|---|---|---|---|---|
+| fixed utilities, partner ignored | 0.896 | 0.942 | 0.10 | 0.55 | 2.25 | 97% |
+| plus the partner's sessions | 0.902 | 0.942 | 0.18 | 0.55 | 1.69 | 94% |
+| `WeekPlanner` (as run) | 0.909 | 0.942 | 0.23 | 0.55 | 1.90 | 78% |
+
+What I saw, plainly: at every version, makers on sits well below makers off, mainly because far fewer pairs form (0.23 against 0.55). It is lower than H39's fitted point (H39's Z − M0 was −0.014; here −0.033 on the pilot). The observer decomposition of one declined pair (g-11000 with p-wanderer, both safe cooks) shows the household rollout losing rest, friends and money to making. We stop changing the choice here, whatever the confirmatory run shows.
+
+**Known answers** (tests, all pass): K1 to K7 in `tests/test_makers.py`, the four H39 known answers under `flat_cost`, makers-off fingerprints, and H39 `flat_cost` fingerprints (`tests/data/makers_flatcost_fingerprints.json`, pinned from commit 2b8a100 before any change).
+
+**Pilot effects and the power check** (`seeds_for_power`, paired, 80%, alpha 0.05, n_max 256; `runs/h39b-makers/power.json`). Open cells in the 120 confirmatory pairings, unchanged from H39: 59 with exactly one extractive partner, 91 with at least one, 63 with an artist, 84 with a lowest-enjoyment partner.
+
+| Prediction | Pilot effect | Pilot sd | Effect used | Units for 80% | Units available | Status |
+|---|---|---|---|---|---|---|
+| P1 | −0.0007 | 0.028 | 0.003 | over 256 | 120 | **DESCRIPTIVE** |
+| P3 | +0.025 | 0.059 | 0.03 | 33 | 84 | confirmatory |
+| P5 | −0.087 | 0.126 | 0.05 | 52 | 59 | confirmatory (little weight) |
+| P5b | +0.002 | 0.024 | pilot | over 256 | 91 | **DESCRIPTIVE** |
+| P6a | −0.06 | 0.60 | 0.20 | 73 | 63 | **DESCRIPTIVE** |
+| P6b | −0.16 | 0.54 | 0.10 | 242 | 63 | **DESCRIPTIVE** |
+| P6c | −0.003 | 0.014 | pilot | 172 | 63 | **DESCRIPTIVE** |
+| P2, P7 | – | – | – | – | – | confirmatory (P2 a manipulation check); P4 DESCRIPTIVE as in H39 |
+
+Seeds stay 0 to 3 (fixed by the comparison with H39). **So the H39 verdict and the H20a verdict are DESCRIPTIVE again.**
+
+**Can every verdict happen?** (`--reach`, `runs/h39b-makers/reach.json`, on H39b pilot rows.) Reached: H39 supported, not supported and inconclusive; P1b disagreeing; P5b missing (H and P swapped; the pilot itself is weak); P6 and H20a supported (synthetic) and failing (BP-PN = BP); nobody agreeing to protect (trust threshold 2: 0 agreed); P5 failing when extractive = safe (extractive share 0.48 under H, 0.56 under P). H39b measures on the 300 pilot maker runs: 115 made nothing, the most made was 2.4 blocks per partner-week; trap share 0 in 180 runs and above 0 in 120 (never without an extractive partner); lost liking 0 in 117 and above 0 in 183. Metric sees the mechanism: traced as in the prereg table.

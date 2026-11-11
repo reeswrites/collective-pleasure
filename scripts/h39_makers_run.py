@@ -38,12 +38,13 @@ DESC_ARMS = {"BP-PI": ("bp", "imposed"), "M0": None, "Z-w0": ("zero", "off"), "B
 ARMS = {**CONFIRM_ARMS, **DESC_ARMS}
 PILOT_ARMS = ("Z", "H", "P", "BP", "BP-PN")
 MARGIN = 0.003
+BASE_OVERRIDES = {}      # H39b (scripts/h39b_makers_rerun.py) sets the opportunity choice here for the main process; workers get it in task args
 
 
 def arm_setup(arm, overrides=None):
     spec = ARMS[arm]
     rule = RULE_0 if arm.endswith("-w0") else RULE_NET if arm.endswith("-net") else RULE_W
-    cfg = None if spec is None else MK.config(spec[0], protect=spec[1], **(overrides or {}))
+    cfg = None if spec is None else MK.config(spec[0], protect=spec[1], **{**BASE_OVERRIDES, **(overrides or {})})
     return cfg, rule
 
 
@@ -91,6 +92,10 @@ def record(run, lived, arm, a, b, seed):
         "paid": sum(1 for x in works if (x["paid_count"] or 0) >= st["cfg"].paid_weeks),
         "f4_share_A": {"with": sh_with, "without": sh_without},
         "pleasure_got": dict(st["pleasure_got"]), "proc_got": dict(st["proc_got"]), "crave_got": dict(st["crave_got"]),
+        # H39b measures (also recorded for H39's choice): liking lost to tolerance, wanting trap, liking and wanting received
+        "lost_tol": dict(st["lost_tol"]), "like_got": dict(st["like_got"]), "want_got": dict(st["want_got"]),
+        "trap_weeks": dict(st["trap_weeks"]), "tol_weeks": dict(st["tol_weeks"]), "weeks_seen": st["weeks_seen"],
+        "dec": json.loads(json.dumps(st["dec"])), "choice": st["cfg"].choice,
     }
     return rec
 
@@ -188,7 +193,7 @@ def has(pred):
 ONE_EXT = has(lambda t: sum(t[x]["aim"] == "extractive" for x in "AB") == 1)
 ANY_EXT = has(lambda t: any(t[x]["aim"] == "extractive" for x in "AB"))
 ANY_ART = has(lambda t: any(t[x]["kind"] == "artist" for x in "AB"))
-ANY_E0 = has(lambda t: any(t[x]["e"] == 0.0 for x in "AB"))
+ANY_E0 = has(lambda t: any(t[x].get("e_rank", 0 if t[x]["e"] == 0.0 else 1) == 0 for x in "AB"))   # lowest-enjoyment third
 
 
 def evens(rows, arm):
@@ -471,7 +476,8 @@ def story_run(arm, a, b, seed):
                 st = wd.makers
                 snaps[wk] = {"blocks": dict(st["blocks"]), "credit": {r: MK.credit(wd, r) for r in "AB"},
                              "proj": {r: (dict(st["project"][r]) if st["project"][r] else None) for r in "AB"},
-                             "h": {r: st["recv"][r]["h"] for r in "AB"}, "s": {r: st["recv"][r]["s"] for r in "AB"}}
+                             "h": {r: st["recv"][r]["h"] for r in "AB"}, "s": {r: st["recv"][r]["s"] for r in "AB"},
+                             "lost": dict(st["lost_tol"]), "trap": dict(st["trap_weeks"])}
         world.hook = snap
         rec = AT.Recorder(world)
         last = {"busy": {"A": False, "B": False}}
@@ -505,6 +511,8 @@ def story_run(arm, a, b, seed):
                   for x in st["proj"]["log"] if 13 * i <= x["week"] < 13 * i + 13]
             out.append("    makers: " + ", ".join(mk) + f"; credit {s1['credit']['A']:.0f} vs {s1['credit']['B']:.0f}"
                        + f"; tolerance {s1['h']['A']}/{s1['h']['B']}, sensitization {s1['s']['A']}/{s1['s']['B']}"
+                       + f"; liking lost {s1['lost']['A'] - s0['lost']['A']:.3f}/{s1['lost']['B'] - s0['lost']['B']:.3f}"
+                       + f", trap weeks {s1['trap']['A'] - s0['trap']['A']}/{s1['trap']['B'] - s0['trap']['B']}"
                        + ("; " + "; ".join(ev) if ev else "") + ".")
     return out, record(world.run, lived, arm, a, b, seed)
 

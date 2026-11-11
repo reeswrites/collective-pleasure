@@ -29,15 +29,22 @@ CREDIT_RULES = ("zero", "hours", "pleasure", "bp", "gift", "agreed")
 TALLY = ("hours", "pleasure", "bp")           # rules with a running tally (the making choice sees the credit)
 AGREE_CANDIDATES = ("bp", "hours", "pleasure")  # C-agreed: the pair agrees HOW making counts (it counts); order breaks ties
 PROTECT = ("off", "negotiated", "imposed")
+CHOICES = ("flat_cost", "opportunity")      # H39's choice (a flat time cost per block) and H39b's (the agent's own best other use)
+ENJOY_H39B = (-1.0, 0.0, 1.0)                # H39b: enjoyment can be negative (effort enters here); same hash, same ranks as ENJOY
 
 
 @dataclass(frozen=True)
 class MakerConfig:
     credit: str = "zero"          # one of CREDIT_RULES
     protect: str = "off"          # one of PROTECT
+    choice: str = "flat_cost"     # one of CHOICES. "flat_cost" is H39 (bit-identical, pinned); "opportunity" is H39b (no time_cost)
+    enjoy: tuple = ENJOY          # enjoyment levels, a third each by hash rank (H39: 0, 0.5, 1; H39b: -1, 0, +1)
+    trap_h: int = 3               # H39b wanting trap: tolerance at least this (of tol_cap) ...
+    trap_s: int = 9               # ... and sensitization at least this (of sens_cap), in the same person-week
     block_units: float = 1.0      # time units per block (of the week's 10; half a rest or together session)
     max_blocks: int = 3
-    time_cost: float = 0.02       # a block's time cost in pleasure units, as the maker weighs it (calibrated, Amendment 1)
+    time_cost: float = 0.02       # H39 only (choice "flat_cost"): a flat time cost per block, FITTED so makers-on matched makers-off
+    #                               (H39 Amendment 1). Not read under "opportunity" (H39b): no fitted time cost anywhere.
     proc: float = 0.005           # process pleasure per block at enjoyment 1
     kappa: float = 0.007          # credit motive: pleasure-equivalent per money unit of credit, times the persona's money weight
     rho: float = 1.375            # replacement value of a block in money units (the wage for 1 time unit: 4 units earn 5 to 6)
@@ -102,7 +109,8 @@ def suffering_weight(persona):
 
 def traits(persona, cfg=None):
     cfg = cfg or ACTIVE or DEFAULT
-    return {"kind": KINDS[int(_u(persona.id, "kind") * 3)], "e": ENJOY[int(_u(persona.id, "enjoy") * 3)],
+    rank = int(_u(persona.id, "enjoy") * 3)
+    return {"kind": KINDS[int(_u(persona.id, "kind") * 3)], "e": cfg.enjoy[rank], "e_rank": rank,
             "aim": "extractive" if _u(persona.id, "aim") < cfg.extractive_share else "safe", "w": suffering_weight(persona)}
 
 
@@ -120,7 +128,12 @@ def init_world(world):
                      "comp_paid": 0.0, "log": []},
             "cum52": None, "weeks_made": 0, "weeks_together": 0, "by_kind": {k: 0 for k in KINDS},
             "e0_blocks": 0, "pleasure_got": {"A": 0.0, "B": 0.0}, "proc_got": {"A": 0.0, "B": 0.0},
-            "crave_got": {"A": 0.0, "B": 0.0}, "exit_shares": []}
+            "crave_got": {"A": 0.0, "B": 0.0}, "exit_shares": [],
+            # H39b measures (bookkeeping only; recorded under both choices, read by nothing in the world)
+            "like_got": {"A": 0.0, "B": 0.0}, "want_got": {"A": 0.0, "B": 0.0}, "lost_tol": {"A": 0.0, "B": 0.0},
+            "trap_weeks": {"A": 0, "B": 0}, "tol_weeks": {"A": 0, "B": 0}, "weeks_seen": 0, "w": 0,
+            "dec": {"maker_weeks": 0, "blocks": 0, "v_proc": 0.0, "v_care": 0.0, "v_own": 0.0, "v_motive": 0.0, "alt_cost": 0.0,
+                    "slack_blocks": 0, "zero_weeks": 0, "displaced": {}}}
 
 
 def _both_in(world):
@@ -169,11 +182,16 @@ def credit_per_block(rule, cfg, like):
     return 0.0
 
 
-def choose_blocks(world, m, rule=None, recv=None):
-    """The scripted weekly choice: make block k while e x proc + care x g_k (+ own share of an artist's piece) + motive - time cost
-    > 0. g_k is the receiver's liking (safe aim) or wanting (extractive aim). The motive is kappa x money weight x credit per block,
-    only under a rule with a running tally."""
+def choose_blocks(world, m, rule=None, recv=None, util=None):
+    """The scripted weekly choice -> number of blocks (0 to max_blocks).
+
+    "flat_cost" (H39): make block k while e x proc + care x g_k (+ own share of an artist's piece) + motive - time cost > 0.
+    "opportunity" (H39b): no time cost; the n that maximizes the summed block values minus what the agent's own planned week loses
+    when n units are taken away (`opportunity`). g_k is the receiver's liking (safe aim) or wanting (extractive aim). The motive is
+    kappa x money weight x credit per block, only under a rule with a running tally."""
     st, cfg = world.makers, world.makers["cfg"]
+    if cfg.choice == "opportunity":
+        return opportunity(world, m, rule, recv, util)[0]
     tr, p = st["traits"][m], world.personas[m]
     rule = st["rule"] if rule is None else rule
     care, mw = float(p.weights.get("togetherness", 0.0)), float(p.weights.get("money", 0.0))
@@ -188,6 +206,163 @@ def choose_blocks(world, m, rule=None, recv=None):
         else:
             break
     return n
+
+
+# ---- H39b: the opportunity-cost choice --------------------------------------------------------------------------------------
+
+def block_values(world, m, rule=None, recv=None):
+    """-> [(v_k, parts)] for k = 1..max_blocks: a block's value to its maker, with no time cost (H39b)."""
+    st, cfg = world.makers, world.makers["cfg"]
+    tr, p = st["traits"][m], world.personas[m]
+    rule = st["rule"] if rule is None else rule
+    care, mw = float(p.weights.get("togetherness", 0.0)), float(p.weights.get("money", 0.0))
+    out = []
+    for k in range(1, cfg.max_blocks + 1):
+        like = block_like(world, m, k, recv)
+        g = block_want(world, m, k, recv) if tr["aim"] == "extractive" else like
+        parts = {"proc": tr["e"] * cfg.proc, "care": care * g, "own": like if tr["kind"] == "artist" else 0.0,
+                 "motive": cfg.kappa * mw * credit_per_block(rule, cfg, like) if rule in TALLY else 0.0}
+        out.append((sum(parts.values()), parts))
+    return out
+
+
+def _one():
+    return 1.0
+
+
+_STEP = {"see_friend": 0, "together": 1, "work": 2, "spend_self": 3, "spend_shared": 4}     # which count an action moves
+
+
+class WeekPlanner:
+    """The agent's own valuation of each use of time, as the week goes: PersonaAgent.utilities on the start-of-week observation,
+    updated after each planned action the way the world's next observation would be (friends and together counts, the week's net
+    income, the unpaid bill gap) and with an action dropped when the money for it is gone. No noise (so no draw is made from the
+    agent's stream). Called with a state (friends, together, works, self spends, bill payments) -> {action: utility}. Memoized."""
+
+    def __init__(self, world, m, w):
+        from .worlds.household import SELF_STEP, SHARE_STEP, V2_INCOME
+        self.ag = world.agents[m]
+        self.o = world.obs(m, w, {"busy": {"A": False, "B": False}})
+        self.inc, self.share, self.self_step = V2_INCOME[m], SHARE_STEP, SELF_STEP
+        self.money = world.p[m]["money"]
+        self.gap = max(0, world.need_month() - world.funded) if (world.p[m]["in"] or world.p[world.other(m)]["in"]) else 0
+        self.memo = {}
+
+    def __call__(self, st=(0, 0, 0, 0, 0)):
+        if st in self.memo:
+            return self.memo[st]
+        f, t, wk, ss, sp = st
+        o = dict(self.o)
+        a0 = self.o["asp"]
+        o["asp"] = {"friends": a0["friends"] + f, "together": a0["together"] + t,
+                    "net": a0["net"] + self.inc * wk - self.self_step * ss}
+        o["gap"] = min(max(0, self.gap - self.share * sp), 10)
+        ag = self.ag
+        had, old = "_noise" in ag.__dict__, ag.__dict__.get("_noise")
+        ag._noise = _one
+        try:
+            u = ag.utilities(o)
+        finally:
+            if had:
+                ag._noise = old
+            else:
+                del ag._noise
+        money = self.money + self.inc * wk - self.share * sp - self.self_step * ss
+        if money < self.share:
+            u.pop("spend_shared", None)
+        if money < self.self_step:
+            u.pop("spend_self", None)
+        self.memo[st] = u
+        return u
+
+
+def week_utilities(world, m, w):
+    """The agent's start-of-week utilities (WeekPlanner at the empty state). -> {action: utility}."""
+    return WeekPlanner(world, m, w)()
+
+
+def plan_week(util, budget, cost=None, passes=None, floor=0.003, start=(0, 0, 0, 0, 0)):
+    """The week as the world plays it: `passes` passes, each taking the highest-utility action above the agent's floor that fits in
+    the units left. `util` is a WeekPlanner (utilities move after each action, as the world's do) or a fixed {action: utility}.
+    -> (summed utility, [actions])."""
+    if cost is None or passes is None:
+        from .worlds.household import PASSES, V2_COST
+        cost, passes = cost or V2_COST, passes or PASSES
+    tot, acts, b, st = 0.0, [], budget, list(start)
+    for _ in range(passes):
+        u = util(tuple(st)) if callable(util) else util
+        best = None
+        for a, v in u.items():
+            if v > floor and cost.get(a, 0) <= b + 1e-9 and (best is None or v > best[0]):
+                best = (v, a)
+        if best is None:
+            break
+        tot += best[0]
+        acts.append(best[1])
+        b -= cost[best[1]]
+        if best[1] in _STEP:
+            st[_STEP[best[1]]] += 1
+    return tot, acts
+
+
+def plan_value(util, budget, step=1, partner_sessions=0, together_cost=None):
+    """V(b): the best planned week with at most b units. The partner's planned together sessions come first (they use this agent's
+    units too, and this agent cannot plan them away), each worth this agent's own utility of time together at the start of the
+    week; the agent's own plan fills the rest. Maximized over budgets b' <= b (an agent can always leave units idle, so V never
+    falls when a unit is added). -> (value, [actions])."""
+    if together_cost is None:
+        from .worlds.household import V2_COST
+        together_cost = V2_COST["together"]
+    u0 = util() if callable(util) else util
+    u_tog = max(0.0, u0.get("together", 0.0))
+    best = (0.0, [])
+    b = budget
+    while b >= -1e-9:
+        k = min(partner_sessions, int((b + 1e-9) // together_cost))
+        v, acts = plan_week(util, b - k * together_cost, start=(0, k, 0, 0, 0))
+        v += k * u_tog
+        if v > best[0] + 1e-12:
+            best = (v, ["partner_together"] * k + acts)
+        b -= step
+    return best
+
+
+def opportunity(world, m, rule=None, recv=None, util=None, partner_util=None):
+    """H39b making choice. -> (n, info). n maximizes sum_{k<=n} v_k - [V(B) - V(B - n x block_units)], ties to fewer, where V(b)
+    is the agent's best planned week with at most b units (`plan_value` on `week_utilities`, or `util` when given), counting the
+    together sessions in the partner's own planned week (`partner_util`, computed from the world when `util` is not given)."""
+    st, cfg = world.makers, world.makers["cfg"]
+    vals = block_values(world, m, rule, recv)
+    units = getattr(world, "units", None)
+    if util is None:
+        w = st.get("w", 0)
+        util = WeekPlanner(world, m, w)
+        partner_util = WeekPlanner(world, world.other(m), w)
+    B = units[m] if units is not None else 10
+    k_tog = 0
+    if partner_util:
+        pB = units[world.other(m)] if units is not None else 10
+        k_tog = plan_week(partner_util, pB)[1].count("together")
+    V0, acts0 = plan_value(util, B, partner_sessions=k_tog)
+    best_n, best, cum, info = 0, 0.0, 0.0, {"n": 0, "alt": 0.0, "parts": {}, "displaced": [], "plan": acts0}
+    for n in range(1, cfg.max_blocks + 1):
+        if n * cfg.block_units > B + 1e-9:
+            break
+        cum += vals[n - 1][0]
+        Vn, actsn = plan_value(util, B - n * cfg.block_units, partner_sessions=k_tog)
+        net = cum - (V0 - Vn)
+        if net > best + 1e-12:
+            rest = list(actsn)
+            disp = []
+            for a in acts0:
+                if a in rest:
+                    rest.remove(a)
+                else:
+                    disp.append(a)
+            best_n, best = n, net
+            info = {"n": n, "alt": V0 - Vn, "displaced": disp, "plan": acts0,
+                    "parts": {k: sum(v[1][k] for v in vals[:n]) for k in vals[0][1]}}
+    return best_n, info
 
 
 def _agree(world):
@@ -296,6 +471,10 @@ def week_start(world, w):
         elif rv["n"] == 0:
             rv["s"] = max(0, rv["s"] - 1)
         rv["n"] = 0
+        st["tol_weeks"][r] += int(rv["h"] >= cfg.trap_h)
+        st["trap_weeks"][r] += int(rv["h"] >= cfg.trap_h and rv["s"] >= cfg.trap_s)
+    st["weeks_seen"] += 1
+    st["w"] = w
     st["pieces"] = [(m, left - 1, q) for m, left, q in st["pieces"] if left > 1]     # (maker, weeks left, quality factor)
     st["week"] = {r: {"blocks": 0, "like": 0.0, "proj": False} for r in "AB"}
     if not _both_in(world):
@@ -311,7 +490,21 @@ def week_start(world, w):
         tr = st["traits"][m]
         if tr["kind"] == "artist" and st["project"][m] is None and w % cfg.review_every == 0:
             _consider_project(world, m, w)
-        n = choose_blocks(world, m)
+        if cfg.choice == "opportunity":
+            n, info = opportunity(world, m)
+            dec = st["dec"]
+            dec["maker_weeks"] += 1
+            dec["zero_weeks"] += int(n == 0)
+            if n > 0:
+                dec["blocks"] += n
+                dec["alt_cost"] += info["alt"]
+                dec["slack_blocks"] += n if info["alt"] <= 1e-12 else 0
+                for k, v in info["parts"].items():
+                    dec["v_" + k] += v
+                for a in info["displaced"]:
+                    dec["displaced"][a] = dec["displaced"].get(a, 0) + 1
+        else:
+            n = choose_blocks(world, m)
         pj = st["project"][m]
         if pj is not None:
             n = max(1, n)
@@ -321,7 +514,7 @@ def week_start(world, w):
         world.units[m] -= n * cfg.block_units
         st["blocks"][m] += n
         st["by_kind"][tr["kind"]] += n
-        if tr["e"] == 0.0:
+        if tr["e_rank"] == 0:                 # the lowest-enjoyment third (H39: e = 0; H39b: e = -1)
             st["e0_blocks"] += n
         o = world.other(m)
         st["week"][m]["blocks"] = n
@@ -335,6 +528,10 @@ def week_start(world, w):
                 st["proj"]["log"].append({"week": w, "who": m, "event": "completed", "protected": pj["protected"]})
             continue
         likes = [block_like(world, m, k) for k in range(1, n + 1)]
+        rv0 = dict(st["recv"][o], h=0)                # H39b: liking lost to tolerance (ADR 0018 test 1, the liking side)
+        st["lost_tol"][o] += sum(block_like(world, m, k, rv0) for k in range(1, n + 1)) - sum(likes)
+        st["like_got"][o] += sum(likes)
+        st["want_got"][o] += sum(block_want(world, m, k) for k in range(1, n + 1))
         if tr["kind"] == "artist":
             st["pieces"].extend((m, cfg.art_weeks, lk / (cfg.art_weeks * cfg.art_weekly)) for lk in likes)
         else:

@@ -162,3 +162,153 @@ def test_contribution_share_includes_credit_and_protected_project():
     # B leaving: A's protected project counts for A; A leaving: it does not
     assert EF.contribution_share(w, "B", "all") == pytest.approx(50 / (113.75 + 5.5))
     assert EF.contribution_share(w, "A", "all") == pytest.approx((50 + 13.75) / 113.75)
+
+
+# ---- H39b (docs/results/h39b-makers-rerun-prereg.md) -------------------------------------------------------------------------
+
+@pytest.mark.slow
+def test_flat_cost_reproduces_h39_fingerprints():
+    """choice="flat_cost" (the default) is H39's making choice, bit-identical to commit 2b8a100."""
+    import makers_fingerprint as MF
+    pinned = json.loads((ROOT / "tests" / "data" / "makers_flatcost_fingerprints.json").read_text())
+    assert MF.flat_cost_fps() == pinned
+
+
+def _opp(**kw):
+    return MK.config("zero", choice="opportunity", enjoy=MK.ENJOY_H39B, **kw)
+
+
+def _stub(cfg, maker="p-anchor", receiver="p-host", aim="safe", kind="cook", e=0.0, care=None, money=None):
+    import copy
+    with MK.use_makers(cfg):
+        w = _W(maker, receiver, aim, kind)
+    w.makers["traits"]["A"]["e"] = e
+    if care is not None or money is not None:
+        p = copy.deepcopy(w.personas["A"])
+        if care is not None:
+            p.weights["togetherness"] = care
+        if money is not None:
+            p.weights["money"] = money
+        w.personas["A"] = p
+    w.units = {"A": 10, "B": 10}
+    return w
+
+
+IDLE = {"work": 0.05}                       # one work block planned per pass: 4 + 4 units, 2 idle
+BOOKED = {"work": 0.30, "rest": 0.25, "together": 0.20, "see_friend": 0.15, "spend_self": 0.12, "spend_shared": 0.11}
+
+
+def test_known_answer_k1_no_enjoyment_no_care_never_makes():
+    """K1: enjoyment 0, care 0, safe, no tally: never makes, even with the whole week idle."""
+    w = _stub(_opp(), e=0.0, care=0.0)
+    assert MK.choose_blocks(w, "A", util={}) == 0
+    assert MK.choose_blocks(w, "A", util=IDLE) == 0
+
+
+def test_known_answer_k2_enjoyment_and_free_time_makes():
+    """K2: enjoyment +1 and idle units: makes at least one block (here: the 2 idle units)."""
+    w = _stub(_opp(), e=1.0, care=0.0)
+    assert MK.choose_blocks(w, "A", util=IDLE) == 2
+    assert MK.choose_blocks(w, "A", util={}) == 3
+
+
+def test_known_answer_k3_booked_week_makes_nothing_flat_cost_would():
+    """K3: every unit is planned for something worth more than a block: nothing is made under "opportunity"; the flat cost,
+    which cannot see what is displaced, makes with the same values."""
+    w = _stub(_opp(), e=1.0, care=1.0)
+    assert sum(v for v, _ in MK.block_values(w, "A")[:1]) < 0.11
+    assert MK.choose_blocks(w, "A", util=BOOKED) == 0
+    wf = _stub(MK.config("zero"), e=1.0, care=1.0)
+    assert MK.choose_blocks(wf, "A") > 0
+
+
+def test_known_answer_k4_bills_unit_kept_unless_block_worth_more():
+    """K4: work twice and one unit into unpaid bills fill 9 units. A modest block takes the idle unit, and the week left keeps
+    paying into the bills; a second block costs the agent 0.1 of its own utility, so only a block worth more than that is made."""
+    util = {"work": 0.30, "spend_shared": 0.20}
+    assert MK.plan_week(util, 10)[1] == ["work", "work", "spend_shared"]
+    w = _stub(_opp(), e=1.0, care=1.0)
+    n, info = MK.opportunity(w, "A", util=util)
+    assert n == 1 and info["displaced"] == [] and info["alt"] == 0.0
+    assert "spend_shared" in MK.plan_value(util, 9)[1]
+    assert MK.plan_value(util, 8)[0] == pytest.approx(0.7)      # V never falls below what fewer units could do
+    rich = _stub(_opp(cook=0.5), e=1.0, care=1.0)
+    n, info = MK.opportunity(rich, "A", util=util)
+    assert n >= 2 and info["alt"] == pytest.approx(0.1)
+
+
+def test_known_answer_k5_trap_only_with_extractive_maker():
+    """K5: a receiver whose partner makes 3 blocks every week reaches the trap state with an extractive maker, never with a safe one."""
+    out = {}
+    for aim in ("safe", "extractive"):
+        w = _stub(_opp(), aim=aim, e=1.0, care=1.0)
+        w.agents = None
+        w.exit_log, w.bar_out, w.trust, w.weeks = [], {"A": False, "B": False}, {"A": 0.7, "B": 0.7}, 156
+        w.makers["traits"]["B"].update(kind="cook", aim="safe", e=-1.0)
+        w.personas["B"] = w.personas["B"]
+        orig = MK.opportunity
+        MK.opportunity = lambda world, m, *a, **k: ((3, {"n": 3, "alt": 0.0, "parts": {}, "displaced": [], "plan": []}) if m == "A"
+                                                    else (0, {"n": 0, "alt": 0.0, "parts": {}, "displaced": [], "plan": []}))
+        try:
+            for wk in range(20):
+                w.units = {"A": 10, "B": 10}
+                MK.week_start(w, wk)
+        finally:
+            MK.opportunity = orig
+        out[aim] = w.makers["trap_weeks"]["B"]
+    assert out["extractive"] > 0
+    assert out["safe"] == 0
+
+
+def test_known_answer_k6_lost_liking_zero_below_dose():
+    """K6: one block a week stays below the tolerance dose (2): no liking is lost; three a week raise tolerance and lose liking."""
+    out = {}
+    for n in (1, 3):
+        w = _stub(_opp(), e=1.0, care=1.0)
+        w.exit_log, w.bar_out, w.trust, w.weeks = [], {"A": False, "B": False}, {"A": 0.7, "B": 0.7}, 156
+        orig = MK.opportunity
+        MK.opportunity = lambda world, m, *a, _n=n, **k: ((_n if m == "A" else 0),
+                                                          {"n": 0, "alt": 0.0, "parts": {}, "displaced": [], "plan": []})
+        try:
+            for wk in range(10):
+                w.units = {"A": 10, "B": 10}
+                MK.week_start(w, wk)
+        finally:
+            MK.opportunity = orig
+        out[n] = w.makers["lost_tol"]["B"]
+    assert out[1] == 0.0
+    assert out[3] > 0.0
+
+
+def test_enjoyment_levels_keep_rank():
+    for pid in PS:
+        a, b = MK.traits(PS[pid], MK.DEFAULT), MK.traits(PS[pid], _opp())
+        assert a["e_rank"] == b["e_rank"] and MK.ENJOY_H39B[b["e_rank"]] == b["e"] and MK.ENJOY[a["e_rank"]] == a["e"]
+        assert {k: v for k, v in a.items() if k != "e"} == {k: v for k, v in b.items() if k != "e"}
+
+
+def test_opportunity_in_the_world_runs_and_never_reads_time_cost():
+    """In a real run, the opportunity choice gives the same run whatever time_cost says (it is not read)."""
+    a, b = "p-anchor", "p-host"
+    r1, l1 = _play(a, b, 0, _opp(), weeks=30)
+    r2, l2 = _play(a, b, 0, _opp(time_cost=5.0), weeks=30)
+    assert [o["hedonic"] for o in r1.outcomes] == [o["hedonic"] for o in r2.outcomes]
+    assert l1.world.makers["dec"]["maker_weeks"] > 0
+
+
+def test_known_answer_k7_partner_sessions_use_the_makers_units():
+    """K7: units the maker's own plan leaves idle are not free when the partner plans time together (a session uses both partners'
+    units): with the partner planning three sessions (6 of the maker's units), the maker's own work block fits only in the 4 left, so
+    taking 3 of them for making displaces the work block."""
+    mine = {"work": 0.30, "together": 0.08}
+    partner = {"together": 0.5}
+    w = _stub(_opp(), e=1.0, care=1.0)
+    n_alone, info_alone = MK.opportunity(w, "A", util=mine)
+    assert info_alone["alt"] == 0.0
+    V0 = MK.plan_value(mine, 10, partner_sessions=3)
+    assert V0[1].count("partner_together") == 3
+    V1 = MK.plan_value(mine, 7, partner_sessions=3)
+    assert V0[0] == pytest.approx(0.30 + 3 * 0.08)
+    assert V0[0] - V1[0] == pytest.approx(0.30)
+    n, info = MK.opportunity(w, "A", util=mine, partner_util=partner)
+    assert n <= n_alone
