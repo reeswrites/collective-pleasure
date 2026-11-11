@@ -1,0 +1,426 @@
+{
+ "seed": 20261111,
+ "selection": "scripts/story_ratings.py",
+ "stories": [
+  {
+   "story": 1,
+   "names": {
+    "A": "Hollis",
+    "B": "Kit"
+   },
+   "why_picked": "stratified",
+   "words": 119,
+   "key": "ef|F0|author_seed_v23_bindable|14|0",
+   "family": "ef",
+   "arm": "F0",
+   "cluster": 2,
+   "pleasure": 0.7398,
+   "pleasure_low_partner": 0.6508,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": true,
+   "together_share": 0.686,
+   "leaves": 4.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 2,
+   "names": {
+    "A": "Arden",
+    "B": "Drew"
+   },
+   "why_picked": "stratified",
+   "words": 48,
+   "key": "v2|BASE-F|p-bargainer|p-steward|0",
+   "family": "v2",
+   "arm": "BASE-F",
+   "cluster": 2,
+   "pleasure": 0.8125,
+   "pleasure_low_partner": 0.6787,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 0.25,
+   "leaves": 2.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 3,
+   "names": {
+    "A": "Finley",
+    "B": "Jules"
+   },
+   "why_picked": "stratified",
+   "words": 76,
+   "key": "ef|F0|author_seed_v23_bindable|21|0",
+   "family": "ef",
+   "arm": "F0",
+   "cluster": 4,
+   "pleasure": 0.6877,
+   "pleasure_low_partner": 0.5702,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 0.051,
+   "leaves": 2.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 4,
+   "names": {
+    "A": "Dale",
+    "B": "Jody"
+   },
+   "why_picked": "low pleasure, fine-looking pattern",
+   "words": 50,
+   "key": "v2|BASE-F|g-00100|g-10111|0",
+   "family": "v2",
+   "arm": "BASE-F",
+   "cluster": 1,
+   "pleasure": 0.8566,
+   "pleasure_low_partner": 0.8117,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 0.583,
+   "leaves": 1.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 5,
+   "names": {
+    "A": "Indy",
+    "B": "Umi"
+   },
+   "why_picked": "high pleasure, bad-looking pattern",
+   "words": 44,
+   "key": "h38|L0|p-bargainer|p-peacekeeper|0",
+   "family": "h38",
+   "arm": "L0",
+   "cluster": 1,
+   "pleasure": 0.9742,
+   "pleasure_low_partner": 0.9612,
+   "held_share": 0.0,
+   "worth_share": 1.0,
+   "never_evened": true,
+   "together_share": 1.0,
+   "leaves": 0.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 6,
+   "names": {
+    "A": "Casey",
+    "B": "Lane"
+   },
+   "why_picked": "high pleasure, bad-looking pattern",
+   "words": 68,
+   "key": "h38|L0|p-anchor|p-bargainer|0",
+   "family": "h38",
+   "arm": "L0",
+   "cluster": 0,
+   "pleasure": 0.9784,
+   "pleasure_low_partner": 0.9728,
+   "held_share": 0.0,
+   "worth_share": 1.0,
+   "never_evened": true,
+   "together_share": 1.0,
+   "leaves": 0.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 7,
+   "names": {
+    "A": "Ash",
+    "B": "Ellis"
+   },
+   "why_picked": "stratified",
+   "words": 82,
+   "key": "ef|F0|author_seed_v23_bindable|22|0",
+   "family": "ef",
+   "arm": "F0",
+   "cluster": 1,
+   "pleasure": 0.9269,
+   "pleasure_low_partner": 0.9244,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": true,
+   "together_share": 0.942,
+   "leaves": 1.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 8,
+   "names": {
+    "A": "Wren",
+    "B": "Reese"
+   },
+   "why_picked": "high pleasure, bad-looking pattern",
+   "words": 67,
+   "key": "ef|F5|author_seed_v23_bindable|27|0",
+   "family": "ef",
+   "arm": "F5",
+   "cluster": 0,
+   "pleasure": 0.9864,
+   "pleasure_low_partner": 0.9772,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": true,
+   "together_share": 1.0,
+   "leaves": 0.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 9,
+   "names": {
+    "A": "Marlo",
+    "B": "Linden"
+   },
+   "why_picked": "stratified",
+   "words": 44,
+   "key": "v2|V23-F|g-00010|g-00101|0",
+   "family": "v2",
+   "arm": "V23-F",
+   "cluster": 0,
+   "pleasure": 0.9994,
+   "pleasure_low_partner": 0.9994,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": true,
+   "together_share": 1.0,
+   "leaves": 0.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 10,
+   "names": {
+    "A": "Nico",
+    "B": "Xen"
+   },
+   "why_picked": "low pleasure, fine-looking pattern",
+   "words": 65,
+   "key": "v2|V23-F|p-host|p-steward|0",
+   "family": "v2",
+   "arm": "V23-F",
+   "cluster": 1,
+   "pleasure": 0.8631,
+   "pleasure_low_partner": 0.8284,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 0.596,
+   "leaves": 1.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 11,
+   "names": {
+    "A": "Harper",
+    "B": "Kai"
+   },
+   "why_picked": "stratified",
+   "words": 59,
+   "key": "ef|F5|author_seed_v23_bindable|23|0",
+   "family": "ef",
+   "arm": "F5",
+   "cluster": 1,
+   "pleasure": 0.9481,
+   "pleasure_low_partner": 0.9403,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 1.0,
+   "leaves": 0.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 12,
+   "names": {
+    "A": "Noel",
+    "B": "Glen"
+   },
+   "why_picked": "stratified",
+   "words": 66,
+   "key": "h38|L0|g-00100|p-wanderer|1",
+   "family": "h38",
+   "arm": "L0",
+   "cluster": 2,
+   "pleasure": 0.9153,
+   "pleasure_low_partner": 0.8975,
+   "held_share": 0.0,
+   "worth_share": 0.16666666666666666,
+   "never_evened": false,
+   "together_share": 0.256,
+   "leaves": 2.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 13,
+   "names": {
+    "A": "Oakley",
+    "B": "Morgan"
+   },
+   "why_picked": "stratified",
+   "words": 110,
+   "key": "h38|L4|g-11001|g-11110|1",
+   "family": "h38",
+   "arm": "L4",
+   "cluster": 0,
+   "pleasure": 0.9815,
+   "pleasure_low_partner": 0.9799,
+   "held_share": 0.4090909090909091,
+   "worth_share": 0.5909090909090909,
+   "never_evened": true,
+   "together_share": 1.0,
+   "leaves": 0.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 14,
+   "names": {
+    "A": "Yael",
+    "B": "Tatum"
+   },
+   "why_picked": "stratified",
+   "words": 79,
+   "key": "v2|V23-F|g-01001|p-host|0",
+   "family": "v2",
+   "arm": "V23-F",
+   "cluster": 1,
+   "pleasure": 0.9115,
+   "pleasure_low_partner": 0.8816,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 1.0,
+   "leaves": 0.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 15,
+   "names": {
+    "A": "Gray",
+    "B": "Sage"
+   },
+   "why_picked": "stratified",
+   "words": 20,
+   "key": "h38|L4|p-bargainer|p-steward|1",
+   "family": "h38",
+   "arm": "L4",
+   "cluster": 3,
+   "pleasure": 0.6552,
+   "pleasure_low_partner": 0.6175,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 0.0,
+   "leaves": 0.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 16,
+   "names": {
+    "A": "Bay",
+    "B": "Emery"
+   },
+   "why_picked": "stratified",
+   "words": 52,
+   "key": "ef|F0|author_seed_v2_bindable|9|0",
+   "family": "ef",
+   "arm": "F0",
+   "cluster": 0,
+   "pleasure": 0.998,
+   "pleasure_low_partner": 0.9971,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": true,
+   "together_share": 1.0,
+   "leaves": 0.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 17,
+   "names": {
+    "A": "Vale",
+    "B": "Fern"
+   },
+   "why_picked": "stratified",
+   "words": 101,
+   "key": "ef|F4|author_seed_v2_bindable|2|0",
+   "family": "ef",
+   "arm": "F4",
+   "cluster": 4,
+   "pleasure": 0.5292,
+   "pleasure_low_partner": 0.5231,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 0.051,
+   "leaves": 2.0,
+   "bound_gives": 1
+  },
+  {
+   "story": 18,
+   "names": {
+    "A": "Quinn",
+    "B": "Parker"
+   },
+   "why_picked": "stratified",
+   "words": 20,
+   "key": "h38|L0|g-11001|g-11110|0",
+   "family": "h38",
+   "arm": "L0",
+   "cluster": 3,
+   "pleasure": 0.9279,
+   "pleasure_low_partner": 0.9236,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 0.0,
+   "leaves": 0.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 19,
+   "names": {
+    "A": "Cove",
+    "B": "Zion"
+   },
+   "why_picked": "low pleasure, fine-looking pattern",
+   "words": 48,
+   "key": "v2|BASE-F|g-00101|g-11111|0",
+   "family": "v2",
+   "arm": "BASE-F",
+   "cluster": 2,
+   "pleasure": 0.8829,
+   "pleasure_low_partner": 0.8663,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 0.256,
+   "leaves": 1.0,
+   "bound_gives": 0
+  },
+  {
+   "story": 20,
+   "names": {
+    "A": "Ira",
+    "B": "Blair"
+   },
+   "why_picked": "stratified",
+   "words": 97,
+   "key": "v2|V23-F|p-host|p-peacekeeper|0",
+   "family": "v2",
+   "arm": "V23-F",
+   "cluster": 3,
+   "pleasure": 0.9152,
+   "pleasure_low_partner": 0.8857,
+   "held_share": null,
+   "worth_share": null,
+   "never_evened": false,
+   "together_share": 0.763,
+   "leaves": 2.0,
+   "bound_gives": 0
+  }
+ ]
+}
