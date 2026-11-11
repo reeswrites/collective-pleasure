@@ -24,6 +24,9 @@
   mar household compare --variants a,b [--pairs all|hand|pressing]   means with CIs, paired permutation tests, Holm
   mar household card add|edit --variant NEW [--base B] --id ID ... --quote "<author's words>"   new variant only; lint must pass
   mar personas list | show <id>
+  mar watch h38 "L0|g-10000|g-10011|0" [--compare "L4|g-10000|g-10011|0"] [--out page.html]   household replay page (one HTML file;
+                                         re-runs the household with the observer on if runs/ has no observer file; free)
+  mar watch --sample                     the sample replay page -> docs/viewer/household-replay.html
 
 Every run and loop appends one line to the experiment log (--note says why). Reports and traces go to
 runs/<run_id>/ (override with --runs-dir; logs with --experiments-dir). Scripted agents make no calls.
@@ -976,11 +979,29 @@ def parser():
         cp.add_argument("--source")
         cp.add_argument("--quote", required=True, help="the author's exact words, verbatim")
         cp.add_argument("--reason")
+    wt = sub.add_parser("watch", help="household replay page: week slider, moods, events, decision cards, compare (free)")
+    wt.add_argument("family", nargs="?", help="h38 (pairing norms) or ef (exit fallbacks)")
+    wt.add_argument("run", nargs="?", help="run key: h38 <arm>|<persona A>|<persona B>|<seed>; ef <arm>|<rule set>|<validation run>")
+    wt.add_argument("--compare", help="a second run key of the same family (e.g. the same pairing under another arm)")
+    wt.add_argument("--out", help="where to write the page (default runs/watch/pages/<key>.html)")
+    wt.add_argument("--sample", action="store_true", help="build the sample page (docs/viewer/household-replay.html)")
     pp = sub.add_parser("personas", help="list or show the personas").add_subparsers(dest="personas_cmd", required=True)
     pp.add_parser("list")
     ps_ = pp.add_parser("show")
     ps_.add_argument("id")
     return p
+
+
+def cmd_watch(a) -> int:
+    from . import watch as WT
+    if a.sample:
+        path, size = WT.sample(Path(a.out) if a.out else WT.SAMPLE_OUT)
+    else:
+        if not (a.family and a.run):
+            raise ValueError("give a family and a run key, or --sample")
+        path, size = WT.single(a.family, a.run, a.compare, Path(a.out) if a.out else None)
+    print(f"page: {Path(path).resolve()} ({size / 1e6:.2f} MB)")
+    return 0
 
 
 def main(argv=None) -> int:
@@ -992,7 +1013,8 @@ def main(argv=None) -> int:
                 "log": cmd_log, "keep": cmd_keep, "change": cmd_change,
                 "question": cmd_question, "timeline": cmd_timeline, "sweep": cmd_sweep,
                 "evolve": cmd_evolve, "game": cmd_game, "empower": cmd_empower, "ladder": cmd_ladder,
-                "results": cmd_results, "household": cmd_household, "personas": cmd_personas, "lint": cmd_lint}[a.cmd](a)
+                "results": cmd_results, "household": cmd_household, "personas": cmd_personas, "lint": cmd_lint,
+                "watch": cmd_watch}[a.cmd](a)
     except (ValueError, FileNotFoundError, AgentError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

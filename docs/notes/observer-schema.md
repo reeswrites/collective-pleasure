@@ -1,6 +1,6 @@
 # Observer schema (household world)
 
-Written 2026-11-11. The observer layer is the build list in docs/notes/instrumentation.md, made. Code: `src/mar/observe.py`. Tests: `tests/test_observer.py`, `tests/test_atlas_observer.py`. Demo: `scripts/observer_demo.py`.
+Written 2026-11-11. The observer layer is the build list in docs/notes/instrumentation.md, made. Code: `src/mar/observe.py`. Tests: `tests/test_observer.py`, `tests/test_atlas_observer.py`. Demo: `scripts/observer_demo.py`. Viewer: `mar watch`, docs/notes/viewer.md (a household replay page built from these files).
 
 Schema version: `mar.observer/1` (the `schema` field of every file's `run` row and of every manifest).
 

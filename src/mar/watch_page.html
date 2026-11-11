@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Household Replay</title>
+<style>
+:root{color-scheme:light;--bg:#fcfcfb;--card:#f5f4f1;--ink:#0b0b0b;--ink2:#4a4946;--line:#d6d5d0;--accent:#1f66bd;--on-accent:#fff;
+--a:#1f66bd;--b:#b5470f;--bar:#e3e2dd;--good:#1d7a33;--warn:#a35a00;--bad:#b42318;--now-bg:#fff4cc;--now-ink:#3d2e00;
+--band:#e9eef6;--chip:#ebeae6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1a1a19;--card:#242423;--ink:#f0efec;
+--ink2:#c9c8be;--line:#3d3d3a;--accent:#6aa9f0;--on-accent:#0b0b0b;--a:#6aa9f0;--b:#f2955a;--bar:#3a3a37;--good:#6fd38a;
+--warn:#f2b45a;--bad:#ff8a80;--now-bg:#4a3b00;--now-ink:#ffeaa8;--band:#26303d;--chip:#30302e}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1a1a19;--card:#242423;--ink:#f0efec;--ink2:#c9c8be;--line:#3d3d3a;--accent:#6aa9f0;
+--on-accent:#0b0b0b;--a:#6aa9f0;--b:#f2955a;--bar:#3a3a37;--good:#6fd38a;--warn:#f2b45a;--bad:#ff8a80;--now-bg:#4a3b00;
+--now-ink:#ffeaa8;--band:#26303d;--chip:#30302e}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:hidden}
+main{max-width:1240px;margin:0 auto;padding:12px 16px 48px}
+h1{font-size:1.5rem;margin:.3em 0 .1em}
+h2{font-size:1.05rem;margin:0 0 8px}
+h3{font-size:.98rem;margin:0 0 6px}
+p{margin:.3em 0}
+.sub{color:var(--ink2);font-size:.95rem;margin:0 0 10px}
+section,.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:12px 0;min-width:0}
+.picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--ink2);border-radius:8px;padding:6px 10px;
+min-height:40px;max-width:100%}
+button.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:600;min-width:84px}
+.why{color:var(--ink);margin-top:8px;font-size:.95rem}
+.controls{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:8px 0;margin:0 0 4px}
+.crow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.week{font-weight:700;font-size:1.15rem;min-width:7.5em}
+input[type=range]{display:block;width:100%;margin:6px 0 0;accent-color:var(--accent);height:32px}
+.spd{display:inline-flex;gap:6px;align-items:center;margin-left:auto}
+label.small{font-size:.92rem;color:var(--ink2)}
+.cols{display:grid;grid-template-columns:1fr;gap:0 16px}
+.cols.two{grid-template-columns:1fr 1fr}
+@media (max-width:900px){.cols.two{grid-template-columns:1fr}}
+.colhead{font-weight:700;font-size:1.05rem;margin:12px 0 0;padding:6px 10px;border-left:4px solid var(--accent);background:var(--card);
+border-radius:6px}
+.people{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cols.two .people{grid-template-columns:1fr}
+@media (min-width:1180px){.cols.two .people{grid-template-columns:1fr 1fr}}
+@media (max-width:640px){.people{grid-template-columns:1fr}}
+.person{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);min-width:0}
+.person h3 .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:0}
+.head{font-size:.95rem;margin:0 0 8px}
+.mrow{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr);gap:2px 10px;align-items:center;margin:5px 0}
+.mrow .lab{font-size:.9rem}
+.mrow .lab b{font-weight:600}
+.meter{height:12px;background:var(--bar);border-radius:6px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:6px;background:var(--ink2)}
+.meter i.good{background:var(--good)}.meter i.warn{background:var(--warn)}.meter i.bad{background:var(--bad)}
+.facts{font-size:.92rem;margin-top:8px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.note{font-size:.88rem;color:var(--ink2)}
+.chip{display:inline-block;background:var(--chip);border-radius:6px;padding:1px 8px;margin:2px 4px 2px 0;font-size:.9rem}
+.hh{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+.big{font-size:1.1rem;font-weight:700}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cols.two .charts{grid-template-columns:1fr}
+@media (max-width:640px){.charts{grid-template-columns:1fr}}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--ink2);font-size:11px;font-family:inherit}
+.key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.88rem;color:var(--ink2);margin-top:4px}
+.sw{display:inline-block;width:18px;height:3px;vertical-align:4px;margin-right:5px}
+.feed{list-style:none;margin:0;padding:0;max-height:340px;overflow-y:auto}
+.feed li{padding:5px 2px;border-bottom:1px solid var(--line);font-size:.93rem;display:flex;gap:8px}
+.feed li .w{flex:0 0 4.6em;color:var(--ink2);font-variant-numeric:tabular-nums}
+.feed li.now{background:var(--now-bg);color:var(--now-ink)}
+.feed li.now .w{color:var(--now-ink)}
+.feed li.l1 .t{font-weight:600}
+.dcards{display:grid;gap:10px}
+.dcard{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);min-width:0}
+.dcard.now{border:2px solid var(--accent)}
+.dcard .when{font-size:.88rem;color:var(--ink2)}
+.dm{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+@media (max-width:640px){.dm{grid-template-columns:1fr}}
+.cols.two .dm{grid-template-columns:1fr}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:6px;align-items:center;font-size:.88rem;margin:3px 0}
+.pbar{position:relative;height:10px;background:var(--bar);border-radius:5px}
+.pbar i{position:absolute;top:0;height:100%;border-radius:5px}
+.pbar .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--ink2)}
+.result{margin-top:6px;font-weight:600}
+.replay{margin-top:6px;padding:6px 8px;border-left:3px solid var(--accent);background:var(--card);font-size:.92rem}
+.opts{margin:4px 0 0;padding-left:1.2em;font-size:.92rem}
+.opts li.ch{font-weight:700}
+details summary{cursor:pointer;color:var(--ink);font-size:.93rem}
+.empty{color:var(--ink2);font-size:.92rem}
+footer{color:var(--ink2);font-size:.88rem;margin-top:20px}
+.theme{float:right}
+</style>
+</head>
+<body>
+<main>
+<button class="theme" id="theme" type="button" aria-label="Switch light or dark">Light / dark</button>
+<h1>Household Replay</h1>
+<p class="sub">Two scripted agents sharing (or not sharing) a home for 156 weeks, replayed week by week from the simulation's own
+records. Agents feel nothing: "lonely", "content" and "distress" are plain-word readings of modeled states.</p>
+<section class="picker-wrap">
+<div class="picker"><label for="pick"><b>Run</b></label><select id="pick"></select></div>
+<p class="why" id="why"></p>
+</section>
+<div class="controls">
+<div class="crow">
+<button class="primary" id="play" type="button">Play</button>
+<span class="week" id="weeklab">Week 0</span>
+<span class="spd"><label class="small" for="speed">Speed</label>
+<select id="speed"><option value="1">1 week a second</option><option value="3" selected>3 weeks a second</option>
+<option value="8">8 weeks a second</option><option value="20">20 weeks a second</option></select></span>
+</div>
+<input type="range" id="slider" min="0" max="155" value="0" step="1" aria-label="Week">
+</div>
+<div id="cols" class="cols"></div>
+<footer id="foot"></footer>
+</main>
+<script id="data" type="application/json">/*DATA*/</script>
+<script>
+(function(){
+"use strict";
+var DATA = JSON.parse(document.getElementById("data").textContent);
+var $ = function(id){return document.getElementById(id);};
+var state = {entry: 0, week: 0, playing: false, timer: null, routine: {}};
+function esc(s){return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function pct(v){return Math.round(Math.max(0, Math.min(1, v || 0)) * 100);}
+function fmt(v, d){return v == null ? "–" : Number(v).toFixed(d == null ? 2 : d);}
+
+// theme toggle (per viewer, optional)
+(function(){
+  var root = document.documentElement, saved = null;
+  try { saved = localStorage.getItem("hr-theme"); } catch (e) {}
+  if (saved) root.setAttribute("data-theme", saved);
+  $("theme").addEventListener("click", function(){
+    var dark = root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark"
+      : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("hr-theme", next); } catch (e) {}
+  });
+})();
+
+DATA.entries.forEach(function(e, i){
+  var o = document.createElement("option"); o.value = i; o.textContent = e.title; $("pick").appendChild(o);
+});
+if (DATA.entries.length < 2) $("pick").parentNode.parentNode.style.display = DATA.entries.length ? "" : "none";
+
+function runs(){return DATA.entries[state.entry].runs.map(function(r){return {run: DATA.runs[r.key], label: r.label};});}
+function maxWeek(){return Math.max.apply(null, runs().map(function(r){return r.run.weeks - 1;}));}
+
+function meter(v, cls){return '<div class="meter" role="img" aria-label="' + pct(v) + ' out of 100"><i class="' + (cls || "") + '" style="width:' + pct(v) + '%"></i></div>';}
+function sev(v){return v >= 0.5 ? "bad" : v >= 0.25 ? "warn" : "good";}
+function goodSev(v){return v >= 0.6 ? "good" : v >= 0.4 ? "warn" : "bad";}
+
+function personHTML(run, r, w){
+  var m = run.mood[r][Math.min(w, run.weeks - 1)], n = run.names, o = r === "A" ? "B" : "A";
+  var col = r === "A" ? "var(--a)" : "var(--b)";
+  var head = [m.content_w, m.lonely_w, m.stress_w].filter(Boolean).join(", ");
+  var h = '<div class="person"><h3><span class="dot" style="background:' + col + '"></span>' + esc(n[r]) +
+    ' <span class="note">(' + (m.in ? "at home" : "living elsewhere") + ')</span></h3>';
+  h += '<p class="head">' + esc(head.charAt(0).toUpperCase() + head.slice(1)) + '.</p>';
+  h += '<div class="mrow"><span class="lab"><b>Content</b><br>' + esc(m.content_w || "–") + '</span>' + meter(m.content, goodSev(m.content)) + '</div>';
+  h += '<div class="mrow"><span class="lab"><b>Lonely</b><br>' + esc(m.lonely_w) + '</span>' + meter(m.lonely, sev(m.lonely)) + '</div>';
+  h += '<div class="mrow"><span class="lab"><b>Money worry</b><br>' + esc(m.stress_w.replace(" about money", "")) + '</span>' + meter(m.stress, sev(m.stress)) + '</div>';
+  h += '<div class="mrow"><span class="lab"><b>Trust in ' + esc(n[o]) + '</b><br>' + esc(m.trust_w) + '</span>' + meter(m.trust, goodSev(m.trust)) + '</div>';
+  var dw = m.distress_w;
+  if (m.denied) dw += "; " + (m.short.length ? m.short.join(" and ") : "a need") + " unmet " + m.denied + " week" + (m.denied === 1 ? "" : "s") + " running";
+  else if (m.short.length) dw += "; short of " + m.short.join(" and ");
+  if (m.low >= 2) dw += "; low " + m.low + " weeks running";
+  h += '<div class="mrow"><span class="lab"><b>Distress</b><br>' + esc(dw) + '</span>' + meter(m.distress, sev(m.distress)) + '</div>';
+  if (m.trap != null) h += '<div class="mrow"><span class="lab"><b>Wanting trap</b><br>' + esc(m.trap_w) + '</span>' + meter(m.trap, sev(m.trap)) + '</div>';
+  var fr = "Friend visits this week: <b>" + m.friends + "</b>";
+  if (m.friends_want != null) fr += ' <span class="note">(wants about ' + fmt(m.friends_want, 1) + ' a week)</span>';
+  h += '<div class="facts"><span>Money: <b>' + fmt(m.money, 0) + '</b></span><span>' + fr + '</span>' +
+    (m.jobless ? '<span>Out of work</span>' : '') + (m.ill ? '<span>Ill</span>' : '') + '</div></div>';
+  return h;
+}
+
+var ITEM = {home: "Home", pet: "Pet", collection: "Collection"};
+function houseHTML(run, w){
+  var hs = run.house, n = run.names, both = hs.both_in[w], mA = run.mood.A[w], mB = run.mood.B[w];
+  var where = both ? "Living together" : (mA.in ? "Only " + n.A + " at home" : mB.in ? "Only " + n.B + " at home" : "Living apart");
+  var h = '<div class="hh"><span class="big">' + esc(where) + '</span><span>Shared pot: <b>' + fmt(hs.pot[w], 0) + '</b></span>' +
+    '<span>Time together this week: <b>' + hs.together[w] + '</b></span></div>';
+  var it = hs.items[w];
+  if (it) {
+    h += '<p>' + Object.keys(it).map(function(k){var v = it[k]; return '<span class="chip">' + esc(ITEM[k] || k) + ': ' +
+      esc(v === "both" ? "shared" : v === "none" || v == null ? "nobody" : (n[v] || v)) + '</span>';}).join("") + '</p>';
+  } else if (!run.items_on) h += '<p class="note">No shared items in this run.</p>';
+  h += run.makers ? '<p>Being made: ' + esc(run.makers) + '</p>' : '<p class="note">Making things together (H39 makers) is off in this run.</p>';
+  return h;
+}
+
+// charts ---------------------------------------------------------------------------------------------------------------------
+var CW = 520, CH = 170, PL = 34, PR = 8, PT = 10, PB = 22;
+function xpos(w, n){return PL + (CW - PL - PR) * (n <= 1 ? 0 : w / (n - 1));}
+function axisX(n){
+  var s = "", step = 26;
+  for (var w = 0; w < n; w += step) s += '<text x="' + xpos(w, n) + '" y="' + (CH - 6) + '" text-anchor="middle">' + w + '</text>';
+  return s;
+}
+function bands(run){
+  var s = "", n = run.weeks, i = 0;
+  while (i < n) { if (run.house.both_in[i]) { var j = i; while (j < n && run.house.both_in[j]) j++;
+    s += '<rect x="' + xpos(i, n) + '" y="' + PT + '" width="' + Math.max(1, xpos(j - 1, n) - xpos(i, n)) + '" height="' + (CH - PT - PB) + '" fill="var(--band)"/>'; i = j; } else i++; }
+  return s;
+}
+function line(vals, lo, hi, n, color, dash){
+  var d = "", pen = false;
+  for (var w = 0; w < vals.length; w++) { var v = vals[w];
+    if (v == null) { pen = false; continue; }
+    var y = PT + (CH - PT - PB) * (1 - (v - lo) / (hi - lo));
+    d += (pen ? "L" : "M") + xpos(w, n).toFixed(1) + " " + y.toFixed(1); pen = true; }
+  return '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2"' + (dash ? ' stroke-dasharray="5 3"' : '') + '/>';
+}
+function marker(w, n){var x = xpos(w, n); return '<line x1="' + x + '" x2="' + x + '" y1="' + PT + '" y2="' + (CH - PB) + '" stroke="var(--ink)" stroke-width="1.5"/>';}
+function ylab(v, lo, hi, t){var y = PT + (CH - PT - PB) * (1 - (v - lo) / (hi - lo)); return '<text x="' + (PL - 4) + '" y="' + (y + 4) + '" text-anchor="end">' + t + '</text><line x1="' + PL + '" x2="' + (CW - PR) + '" y1="' + y + '" y2="' + y + '" stroke="var(--line)"/>';}
+function pleasureChart(run, w){
+  var n = run.weeks, lo = 0.3, hi = 1.0;
+  var A = run.mood.A.map(function(m){return m.content == null ? null : Math.max(lo, m.content);});
+  var B = run.mood.B.map(function(m){return m.content == null ? null : Math.max(lo, m.content);});
+  return '<svg class="chart" viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="Pleasure over time for both members">' +
+    bands(run) + ylab(1, lo, hi, "1.0") + ylab(0.65, lo, hi, "0.65") + ylab(0.3, lo, hi, "0.3") + axisX(n) +
+    line(A, lo, hi, n, "var(--a)") + line(B, lo, hi, n, "var(--b)", true) + marker(w, n) + '</svg>' +
+    '<div class="key"><span><span class="sw" style="background:var(--a)"></span>' + esc(run.names.A) + '</span><span><span class="sw" style="background:var(--b)"></span>' +
+    esc(run.names.B) + ' (dashed)</span><span><span class="sw" style="background:var(--band);height:10px;vertical-align:-1px"></span>weeks together</span></div>';
+}
+function balanceChart(run, w){
+  var n = run.weeks;
+  return '<svg class="chart" viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="Who put more into the household">' +
+    bands(run) + ylab(1, -1, 1, "") + ylab(0, -1, 1, "even") + ylab(-1, -1, 1, "") + axisX(n) +
+    '<text x="' + (PL + 4) + '" y="' + (PT + 12) + '" style="fill:var(--a)">' + esc(run.names.A) + ' put in more</text>' +
+    '<text x="' + (PL + 4) + '" y="' + (CH - PB - 4) + '" style="fill:var(--b)">' + esc(run.names.B) + ' put in more</text>' +
+    line(run.balance, -1, 1, n, "var(--ink)") + marker(w, n) + '</svg>';
+}
+
+// feed and decision cards ----------------------------------------------------------------------------------------------------
+function feedHTML(run, w, ci){
+  var showAll = !!state.routine[ci];
+  var ev = run.events.filter(function(e){return e.w <= w && (showAll || e.lvl < 3);});
+  var h = '<label class="small"><input type="checkbox" data-routine="' + ci + '"' + (showAll ? " checked" : "") +
+    '> Show routine events (bills, safety net)</label>';
+  if (!ev.length) return h + '<p class="empty">Nothing has happened yet.</p>';
+  h += '<ul class="feed">';
+  for (var i = ev.length - 1; i >= 0 && i >= ev.length - 250; i--) { var e = ev[i];
+    h += '<li class="l' + e.lvl + (e.w === w ? " now" : "") + '"><span class="w">Week ' + e.w + '</span><span class="t">' + esc(e.text) + '</span></li>'; }
+  return h + '</ul>';
+}
+function partsHTML(m, opts){
+  var mx = 0.0001; m.top.forEach(function(p){mx = Math.max(mx, Math.abs(p[1]));});
+  return m.top.map(function(p){
+    var v = p[1], wd = Math.abs(v) / mx * 50, left = v >= 0 ? 50 - wd : 50;
+    var col = v >= 0 ? "var(--good)" : "var(--warn)";
+    return '<div class="prow"><span>' + esc(p[0]) + ' <span class="note">→ ' + esc(v >= 0 ? opts[0] : opts[1]) + '</span></span>' +
+      '<span class="pbar" role="img" aria-label="' + esc(p[0]) + ' ' + v.toFixed(3) + '"><i style="left:' + left + '%;width:' + wd + '%;background:' + col + '"></i><span class="mid"></span></span></div>';
+  }).join("");
+}
+var VERDICT = {worth: "wants to stay with or without the pairing pressure", leave: "would rather leave", held: "would leave without the pairing pressure (held)"};
+function cardHTML(run, c, w){
+  var n = run.names, h = '<div class="dcard' + (c.w === w ? " now" : "") + '"><div class="when">Week ' + c.w + '</div><h3>' + esc(c.title) + '</h3>';
+  if (c.kind === "leave") {
+    h += '<p><b>Why:</b> ' + esc(c.why) + (c.tip ? '. <b>What tipped it:</b> ' + esc(c.tip) : '') + '.</p>';
+    h += '<p class="note">Options on the table (score; the highest wins):</p><ol class="opts">' + c.alts.map(function(a){
+      return '<li class="' + (a.chosen ? "ch" : "") + '">' + esc(a.label) + ' (' + fmt(a.u) + ')' + (a.chosen ? " – chosen" : "") + '</li>';}).join("") + '</ol>';
+    if (c.margin != null) h += '<p class="note">Margin over the next best option: ' + fmt(c.margin) + '.</p>';
+    h += c.replay ? '<div class="replay">' + esc(c.replay) + '</div>' : '<p class="note">No "if they had stayed" replay for this one.</p>';
+  } else {
+    h += '<div class="dm">' + ["A", "B"].map(function(r){
+      var m = c.members[r]; if (!m) return "";
+      var s = '<div><p><b>' + esc(n[r]) + '</b> wants to <b>' + esc(m.wants) + '</b> <span class="note">(by ' + fmt(Math.abs(m.margin)) +
+        '; ' + esc(c.opts[0]) + ' ' + fmt(m.W) + ' vs ' + esc(c.opts[1]) + ' ' + fmt(m.O) + ')</span></p>';
+      s += '<p>What tipped it: <b>' + esc(m.tip || "no single part; several together") + '</b></p>' + partsHTML(m, c.opts);
+      if (m.stay_test) s += '<p class="note">Stay test: ' + esc(VERDICT[m.stay_test] || m.stay_test) + '.</p>';
+      return s + '</div>';}).join("") + '</div>';
+  }
+  return h + '<p class="result">' + esc(c.result) + '</p></div>';
+}
+function cardsHTML(run, w){
+  var cs = run.decisions.filter(function(c){return c.w <= w;});
+  if (!cs.length) return '<p class="empty">No big decision yet. Formation, the 13-week checks and any move-out appear here as the weeks pass.</p>';
+  var h = '<div class="dcards">' + cs.slice(-2).reverse().map(function(c){return cardHTML(run, c, w);}).join("") + '</div>';
+  if (cs.length > 2) h += '<details><summary>Earlier decisions (' + (cs.length - 2) + ')</summary><div class="dcards">' +
+    cs.slice(0, -2).reverse().map(function(c){return cardHTML(run, c, w);}).join("") + '</div></details>';
+  return h;
+}
+
+// render ---------------------------------------------------------------------------------------------------------------------
+var openDetails = {};
+function render(){
+  var rs = runs(), w = state.week, two = rs.length > 1;
+  $("cols").className = "cols" + (two ? " two" : "");
+  $("weeklab").textContent = "Week " + w;
+  $("slider").value = w;
+  var html = rs.map(function(x, ci){
+    var run = x.run, ww = Math.min(w, run.weeks - 1);
+    return '<div class="col">' + (two || x.label ? '<div class="colhead">' + esc(x.label || run.title) + '</div>' : '') +
+      '<section><h2>The two of them, week ' + ww + '</h2><div class="people">' + personHTML(run, "A", ww) + personHTML(run, "B", ww) + '</div></section>' +
+      '<section><h2>The household</h2>' + houseHTML(run, ww) + '</section>' +
+      '<section><h2>Over time</h2><div class="charts"><div><h3>Pleasure</h3>' + pleasureChart(run, ww) + '</div><div><h3>Who put more in (money, last 13 weeks)</h3>' + balanceChart(run, ww) + '</div></div></section>' +
+      '<section><h2>Big decisions</h2>' + cardsHTML(run, ww) + '</section>' +
+      '<section><h2>What happened</h2>' + feedHTML(run, ww, ci) + '</section></div>';
+  }).join("");
+  $("cols").innerHTML = html;
+  Array.prototype.forEach.call(document.querySelectorAll("[data-routine]"), function(el){
+    el.addEventListener("change", function(){state.routine[el.getAttribute("data-routine")] = el.checked; render();});
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("details"), function(d, i){
+    if (openDetails[i]) d.open = true;
+    d.addEventListener("toggle", function(){openDetails[i] = d.open;});
+  });
+}
+function selectEntry(i){
+  state.entry = i; var e = DATA.entries[i];
+  $("why").textContent = e.why || "";
+  $("slider").max = maxWeek();
+  if (state.week > maxWeek()) state.week = maxWeek();
+  openDetails = {};
+  render();
+}
+function stop(){state.playing = false; clearInterval(state.timer); state.timer = null; $("play").textContent = "Play";}
+function start(){
+  if (state.week >= maxWeek()) state.week = 0;
+  state.playing = true; $("play").textContent = "Pause";
+  clearInterval(state.timer);
+  state.timer = setInterval(function(){
+    if (state.week >= maxWeek()) { stop(); return; }
+    state.week += 1; render();
+  }, 1000 / Number($("speed").value));
+}
+$("play").addEventListener("click", function(){state.playing ? stop() : start();});
+$("speed").addEventListener("change", function(){if (state.playing) start();});
+$("slider").addEventListener("input", function(){state.week = Number(this.value); render();});
+$("pick").addEventListener("change", function(){selectEntry(Number(this.value));});
+document.addEventListener("keydown", function(ev){
+  if (ev.target && (ev.target.tagName === "SELECT" || ev.target.tagName === "INPUT" && ev.target.type !== "range")) return;
+  if (ev.key === "ArrowRight" && ev.target.type !== "range") { state.week = Math.min(maxWeek(), state.week + 1); render(); }
+  if (ev.key === "ArrowLeft" && ev.target.type !== "range") { state.week = Math.max(0, state.week - 1); render(); }
+});
+$("foot").innerHTML = esc(DATA.note || "");
+selectEntry(0);
+})();
+</script>
+</body>
+</html>
