@@ -44,6 +44,14 @@ Fix: a deliberately narrower model, ladder only. See [plans/inventive-seam-next.
 Results cannot be about felt experience, welfare of real beings, or scaling.
 Fix: none planned. See [goal.md](goal.md).
 
+**11. The household economy is a toy, and it overcharges couples.** Work is a flat money pump with near-equal pay (6 vs 5); one lumped bill; no job market, rent burden or savings buffer; and a couple pays 1.67 times a single person's bill, where HUD rents suggest about 1.03 to 1.15. Moving in looks costlier than it is, which may add to the under-forming found in [results/h38-formation-check.md](results/h38-formation-check.md).
+Results cannot be about earnings gaps, rent burden, or how cost shapes who lives together.
+Fix: a calibrated economy and housing regimes in the many-agent world (H40; [notes/economy-calibration.md](notes/economy-calibration.md), [notes/housing-research.md](notes/housing-research.md)).
+
+**12. "Pairing" means only moving in with one fixed partner.** No romance, romantic priority, exclusivity or partner choice.
+Results cannot be about amatonormativity or monogamy.
+Fix: H38b in the many-agent world. See [results/h38-pairing-norms.md](results/h38-pairing-norms.md).
+
 ## What results here CAN be about
 
 - What a rule system does to scripted agents in a stated toy world.
