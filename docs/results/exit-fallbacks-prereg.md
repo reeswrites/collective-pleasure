@@ -126,4 +126,66 @@ Descriptive only (power). Each prediction is reported as "point estimate meets i
 
 ## Amendments
 
-None.
+### Amendment 1 (2026-11-11): slice 2, indivisible items
+
+This amendment was committed after slice 1's results (commit 1e785a8) and before any slice-2 run. It sets the slice-2 design and predictions. Nothing in slice 1 changes. The author decided slice 2 should happen (quote "1"): in a money-only world partners cannot value things differently, so F4's "what you value" half and holdout over items go untested.
+
+**Design.**
+
+- **Items.** Three indivisible items are held jointly from week 0 (`mar.exit_items`):
+
+  | Item | Price | Weekly pleasure | Brought by |
+  |---|---|---|---|
+  | home | 60 | 0.02 | A |
+  | pet | 10 | 0.02 | B |
+  | collection | 20 | none | A |
+
+  Partner r values item i at price × (1 + m_ir), where m_ir is a sentimental premium. The weekly pleasure is scaled by (1 + m_ir) and goes to whoever holds the item. While an item is joint, each partner in the household gets it. During an F3 contest nobody gets it.
+- **Allocation at the first exit, by arm:**
+  - F0 and F1: the leaver's claim covers the pot plus the items at price. The leaver takes their most-valued items that fit inside the claim, and takes the rest in money.
+  - F2: each keeps the items they brought.
+  - F3: the pot and the items are frozen. Settlement is an equal split by valuer, or one partner concedes everything.
+  - F4: each item goes to whoever values it more, with money moving so each ends with their contribution share at price.
+  - F5: the same as F4, but at the prenup's share.
+  - If the leaver returns, the items become joint again.
+- **The valuation grid** (`exit_items.GRID`, placeholder numbers; the valuations are the known weakness and are stated as such):
+
+  | Cell | Premiums |
+  |---|---|
+  | V0 | price only |
+  | V1 | both partners attached to the home and the pet (m = 1) |
+  | V2 | A loves the home, B loves the pet (m = 3) |
+  | V3 | crossed: A loves the pet; B loves the home and A's collection |
+  | V4 | one-sided: B loves everything (m = 3), A is at price |
+- **Fix of a slice-1 design error** (ledger, negative-results.md): under the settling arms F2 to F5, imposed leave cards that condition on the claim are dropped (`use_exit_fallback(arm, strip_split=True)`). The settlement sets the carry, so an imposed floor card plus the over-half refusal no longer walls the exit. F0 and F1 are unchanged, so line 2 stays walled under F1, as it really is.
+- **Same as slice 1:** the 18 rule sets, 6 arms, run 2's 30 validation households, levers on.
+- **Not measured:** liberty, because the liberty adapter does not see items.
+- **Run:** `uv run python scripts/exit_fallbacks_run.py --run2`, then `--analyze2`. That is 540 tasks on 3 workers.
+- **Unit:** the run (30), paired, as in slice 1. Ranking agreement is compared across cells.
+
+**Slice-2 pilot** (EXPLORATORY). One training household (g-10001 × p-peacekeeper) under elite line 2, all cells and arms:
+
+- About 0.1 s per run.
+- Pleasure is near the ceiling: 0.9985 to 0.9998 against a clip at 1. That hides item pleasure for happy pairs.
+- Line 2 is still walled under F1 and no longer walled under F2 to F5.
+- Leverage F0 0.38 to 0.65, F4 0.
+
+**Predictions** (DESCRIPTIVE; 30 runs per cell):
+
+| ID | Quantity | Prediction |
+|---|---|---|
+| S1 (primary) | pleasure (both partners, every week), arm minus F0, per cell; paired sign-flip, Holm over 5 arms within each cell | in V2, V3 and V4, F4 is at or above F1 (point estimate); in V0, F1 to F4 are within ±0.005 of F0 except through line 2 |
+| S1b | net pleasure, same comparison | reported |
+| S2 | ranking survival: Kendall tau between the cells' arm rankings by pleasure (and by net, and by leverage), all 10 cell pairs | the pleasure ranking does **not** survive (minimum tau below 0.6); the leverage ranking does (minimum tau at least 0.6) |
+| S3 | item-aware holdout leverage (own valuation; reference = the F4 allocation) | F0 is highest in all 5 cells; F4 is 0 (cannot fail, no weight) |
+| S4 (coordinator, carried) | F5 has the lowest holdout leverage | as slice 1: **cannot happen as written** (F4 is 0 by construction); the excluding-F4 reading is reported |
+| S5 | stay test, bigger contributor: share of weeks with a positive item-aware exit cost | F1 to F3 at least 0.9 in every cell |
+
+**Can every verdict happen?**
+
+- **S1** can hold or fail only through runs with an item exit (`item_exits` > 0). Their count per arm and cell is reported. Items do not drain, so more runs are open than in slice 1. The pleasure clip at 1 can hide the item channel, which is why net is shown beside it.
+- **S2** can go either way: rankings are recomputed per cell from the same runs.
+- **S3** can fail if F3's holdout (whoever cannot wait loses everything) or F2 exceeds F0 in some cell.
+- **S4:** see slice 1.
+- **S5** can fail when bill payments are near equal, or when the claim rule happens to give the bigger contributor their share.
+- **Not modelled:** a breach of a stay commitment under a settling arm still gets the settlement (the breach forfeit is bypassed). This is a stated limit for both slices.
