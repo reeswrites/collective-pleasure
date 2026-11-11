@@ -57,7 +57,7 @@ Every result is about scripted agents with assumed parameters, not people.
 
 ## What went wrong, and what we changed
 
-- **Two designs could not produce the verdict they tested.** On the first ladder rule sets (rungs L1 to L4), the formal model already reached every harm, so no agent could be scored inventive. About $10 of live runs meant nothing for that question. The first H32 test had too few open cells to ever say "supported".
+- **Two designs could not produce the verdict they tested.** On the first ladder rule sets (rungs L1 to L4), the formal model already reached every harm, so no agent could be scored inventive. The capability and win framings (part of $5.48 in live runs) could say nothing on that question; the persona-framed arm ran on an older harness and was not shown either way. The first H32 test had too few open cells to ever say "supported".
 - **Several headlines were softened after review**, among them H32, the pleasure levers and the multiverse sweep.
 - **About a third of the swept conclusions are fragile.** Of 12, 5 were robust, 4 fragile and 3 flipped when assumed parameters moved ([multiverse.md](docs/results/multiverse.md)).
 - **Loop two is not yet measurable.** Two raters could not agree on which author answers count as corrections (kappa 0.45 against a 0.6 bar) ([loop-b-counting.md](docs/results/loop-b-counting.md)).
