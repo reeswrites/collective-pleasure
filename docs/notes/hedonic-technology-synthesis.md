@@ -173,7 +173,14 @@ M1 and M3 first (small, local, and the cheapest test of whether rules can produc
 
 ## 5. Author answers (2026-11-11 conversation)
 
-Exact words are in experiments/questions.jsonl, one row per answer. These are Claude's formalizations of the answers. The author confirmed the ones marked "confirmed". Read back on 2026-11-11: Q2 and Q4 (marked "read back" below). Not yet read back: Q6, Q7, Q8, Q9, Q10. The log records no read-back of these, so silence is not assent.
+Exact words are in experiments/questions.jsonl, one row per answer. These are Claude's formalizations of the answers. The author confirmed the ones marked "confirmed". Read back on 2026-11-11: Q2 and Q4 (marked "read back" below), then Q6 to Q10. All answered questions are now read back; Q13's notes were fetched but the "thermometer vs pleasure is the good" follow-up is open.
+
+**Read-back record for Q6 to Q10 (2026-11-11; verbatim answers in experiments/questions.jsonl):**
+- **Q6, confirmed ("yes"):** a life with no core relationship is a valid persona, expected to score lower; relationships are hedonic technology; egoists and utilitarians alike have reason to attend to others' pleasure. H32 tested one Claude-chosen mechanism, not the whole thesis.
+- **Q7, confirmed as a lean ("yes"):** agents may choose partners; the choice strategy is a tested variable (H26); fixed pairings stay the controlled lab.
+- **Q8, confirmed ("yes"), from the author's answer "i think you can enjoy giving into a void (dom sub etc) so the pleasure does not have to be real but it depends on the persons reasons for giving pleasure":** giving pleasure has an act-based part (independent of whether the receiver enjoys it) and an outcome-based part (needs the receiver's real pleasure); each persona has its own mix, set by its reasons. Claude's added consequences, confirmed with it: only outcome-based giving pulls an egoist toward the other's welfare (H32's giving term was outcome-based); act-based givers can be exploited, which the slid-into flag and test 2 should watch, and is fine when chosen.
+- **Q9, confirmed ("yes"):** money and security count only as a persona values them; security both for its own sake and as a means, per persona; money mostly through what it buys, with diminishing returns.
+- **Q10, confirmed after a revision the author prompted ("why narrowing into a partners world particular versus just in general"; then "yes that matches"):** learning to like something new is an absolute win; taste change is judged by lifetime pleasure counting the risk of losing a source; the author thinks narrowing is fine if total pleasure rises but expects broadening to win, partly because narrowing concentrates risk; narrowing through one person also raises the cost of leaving them; wanting growing without liking is craving, not taste.
 
 This section was first written at 02:04Z on 2026-11-11. Later answers that same night changed Q2, Q5 and Q12. Those entries are updated below and marked "updated". The verbatim later answers are in the block at the end of this section.
 
