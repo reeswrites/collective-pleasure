@@ -25,3 +25,4 @@ packages = ["src/mar"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not slow'"
