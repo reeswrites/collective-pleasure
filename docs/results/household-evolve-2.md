@@ -29,7 +29,7 @@ Unit: the evolution line (16). Holm over P1, P2a-c, P3, P4, P5 (P6 is an interva
 | at least one | 6 (lines 2, 5, 6, 7, 9, 15) | 0 |
 | all three | 2 (lines 7, 15) | 0 |
 
-Lines 7 and 15 (15 cards each) are the author's seed with a few conditions edited plus E1-at-most-half and D1-needs-first; one of the sixteen elites (by operator) is the unmodified seed's descendant at generation 0. The other four keepers carry one card: R5b-may-commit-requests (lines 2, 5), R8d-may-commit-stay (line 9), or the negotiated stay term N6-stay-52 (line 6). The ten elites with no power are the run-1 type: 3 to 8 cards from the hand rule sets. Elites run 3.0 to 15 cards (mean 6.5) against run 1's 4.5.
+Lines 7 and 15 (15 cards each) are the author's seed with a few conditions edited plus E1-at-most-half and D1-needs-first; line 1's elite is the unmodified `no_pressure_wall` seed (its last operator is "seed"). The other four keepers carry one card: R5b-may-commit-requests (lines 2, 5), R8d-may-commit-stay (line 9), or the negotiated stay term N6-stay-52 (line 6). The ten elites with no power are the run-1 type: 3 to 8 cards from the hand rule sets. Elites run 3 to 15 cards (mean 6.5) against run 1's 4.5.
 
 ## Loss report summary (against `author_seed_v2_bindable`; docs/results/household-loss-report.md, `--report`)
 
