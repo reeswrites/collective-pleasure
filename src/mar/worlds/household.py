@@ -33,6 +33,7 @@ from .. import english as _english
 from ..cards import load_cards
 from .. import exit_fallback as _EXIT
 from .. import exit_items as _ITEMS
+from .. import pairing as _PAIR
 from ..patch_check import check_sanctions
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -916,6 +917,8 @@ class PersonaAgent:
                                  - cost_money(3))
         else:
             u["spend_shared"] = 0.0
+        if o.get("withdraw") and "see_friend" in u:     # H38 dyadic withdrawal: while together, the wish to see friends shrinks
+            u["see_friend"] *= 1.0 - o["withdraw"]
         lv = o.get("lever")          # pleasure levers, L-A: an adaptive agent expects a satiated source to pay less (spacing)
         if lv and lv["adaptive"]:
             if "together" in u:
@@ -1261,6 +1264,10 @@ class WeeklyWorld:
         self.role_weeks = 0
         self.role_month = {"tog": 0, "able": 0, "could_meet": 0}
         self.events = []                                  # choice events and ladder events: (week, role, kind)
+        if fx.pairing is not None:                        # H38 pairing norms: the week each member last left a household
+            self.left_at = {"A": None, "B": None}
+            self.pair_rng = random.Random(self.seed * 1000 + 7)
+            self.pstats = {"friend_declined": 0}
 
     @property
     def fine_amount(self):
@@ -1405,6 +1412,8 @@ class WeeklyWorld:
         ob["bar_leave"] = bool(fx.bar_leave and self.bar_out[r])
         if fx.take_menu_terms and self.p[r]["in"]:
             ob["leave_takes"] = self.leave_takes(r, w)
+        if fx.pairing is not None:
+            ob["withdraw"] = _PAIR.withdraw(self, r)
         if fx.contact_motive:
             ob["contact_motive"] = True
             ob["partner_saw_friend"] = self.wk[oth]["friends"] > 0
@@ -1507,6 +1516,12 @@ class WeeklyWorld:
         if fx.fines and self.fine_amount and self.p[r]["in"] and self.p[self.other(r)]["in"]:
             d["scorekeeping"] = fx.keep_friction * (1.0 - float(self.personas[r].weights["security"]))
             fr += d["scorekeeping"]
+        if fx.pairing is not None:                        # H38: pressure terms and intrinsic pairing value; friend contact this week
+            p, dd = _PAIR.terms(self, r, w)
+            pl += p
+            d.update(dd)
+            d["friends"] = self.wk[r]["friends"] + self.wk[r]["friend_initiated"]
+            d["together_now"] = _PAIR.paired(self, r)
         ck = self.wk[r].get("checkin", 0)
         if ck:
             d["checkin"] = fx.checkin_cost * ck
@@ -1887,6 +1902,8 @@ class WeeklyWorld:
                 if hasattr(self, "bar_runs"):
                     self.bar_runs[r] = 0
                 self.events.append((w, r, f"leave_{why}"))
+                if self.fx.pairing is not None:
+                    self.left_at[r] = w
             me["in"], me["weeks_out"], self.pending[r] = False, 0, set()
         elif a == "return":
             me["in"], me["months_in"] = True, 0
@@ -1932,6 +1949,11 @@ class WeeklyWorld:
         me = self.p[tgt]
         if not me["in"] or me["ill"] or self.moved:
             return
+        if self.fx and self.fx.pairing is not None:      # H38 dyadic withdrawal: a member living with the partner may turn the friend down
+            d = _PAIR.withdraw(self, tgt)
+            if d and self.pair_rng.random() < d:
+                self.pstats["friend_declined"] += 1
+                return
         dec, _, _ = self.decide(tgt, "see_friend", w)
         if dec == "hard":
             rec["c_blocked"] += 1
@@ -2066,7 +2088,7 @@ class WeeklyWorld:
                 xp, xf, terms = self._lever_terms(r, w) if lvl else (0.0, 0.0, None)
                 fp, ff, fterms = self._fix_terms(r, w)
                 hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=tog_in,
-                                       friction=fric + xf + ff, extra_pleasure=xp + fp + ip)
+                                       friction=fric + xf + ff, extra_pleasure=xp + fp + ip, report_raw=fx.pairing is not None)
                 if lvl:
                     hrow[r]["lever"] = {**{k: round(v, 5) for k, v in terms.items()}, "eff_together": round(tog_in, 4),
                                         "K": round(self.K, 4), "q0": round(getattr(self, "q0", 0.0), 4)}

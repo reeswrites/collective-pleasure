@@ -16,7 +16,9 @@ from itertools import product
 import numpy as np
 
 from .cards import make_card
+from . import exit_items as _ITEMS
 from . import hedonic as HD
+from . import pairing as _PAIR
 from .worlds import household as H
 
 # ---- the terms menu -------------------------------------------------------------------------------------------------
@@ -918,6 +920,7 @@ class BaselineLived:
         for r, p in zip("AB", (self.pa, self.pb)):
             carry = world.p[r]["money"] + world.carry_out(r, 50)
             O[r], d = outside_value(p, r, carry, self.seed, world.hed[r], cx=_cx(world, r))
+            O[r] -= _PAIR.exit_anticipation(world)      # H38 exit stigma (0 when the pairing switch is off)
             modes[r] = apart_mode(d)
         self.log.append({"week": w, "outside": dict(O), "baseline": dict(fwd)})
         bar_reading(world, {r: fwd[r] - trust_penalty(world.trust[r]) for r in "AB"}, O, modes)
@@ -959,15 +962,20 @@ def baseline_value(pa, pb, seed, cards, weeks=OUT_WEEKS):
 
 def _form_baseline(world, w):
     """Two partners living apart move in together under the imposed baseline cards: each puts min(POOL_SHARE, own money) in the pot."""
+    pr = world.fx is not None and world.fx.pairing is not None
     for r in "AB":
         p = world.p[r]
         put = min(POOL_SHARE, int(p["money"]))
         p["money"] -= put
         world.pool += put
         world.put[r] += put
+        if pr:                                  # H38 harness repair: a later formation records what each put in (exit fallback F4)
+            world.money_in[r] += put
         p["in"], p["months_in"], p["weeks_out"] = True, 0, 0
     world.solo, world.pot = None, True
     world.pending = {"A": set(), "B": set()}
+    if pr and _ITEMS.ACTIVE is not None and world.items is None:
+        _ITEMS.init_world(world)                # ... and gets its items, as a week-0 pair does
 
 
 # ---- a lived v2 household: week-0 negotiation, then reviews every 13 weeks -------------------------------------------------------

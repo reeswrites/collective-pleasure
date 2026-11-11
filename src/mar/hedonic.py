@@ -231,6 +231,8 @@ class FixConfig:
     word_window: int = 8
     unhappy_window: int = 8
     skip_n: float = 0.4
+    # H38 pairing norms (docs/results/h38-pairing-norms-design.md): a mar.pairing.PairingConfig, or None (off, the default)
+    pairing: object = None
 
 
 ACTIVE_FIXES = None      # module default, set by `use_fixes`; WeeklyWorld(fixes=None) reads it
@@ -252,7 +254,7 @@ _FIX_FLAGS = ("contact", "contact_motive", "valued_money", "real_outside", "nash
 
 
 def fixes_on(cfg):
-    return cfg is not None and (any(getattr(cfg, f) for f in _FIX_FLAGS) or cfg.trust_words is not None)
+    return cfg is not None and (any(getattr(cfg, f) for f in _FIX_FLAGS) or cfg.trust_words is not None or cfg.pairing is not None)
 
 
 def active_fixes():
@@ -395,7 +397,7 @@ class Hedonic:
 
     # -- close the week
     def close_week(self, aspiration_values, *, trapped=False, restricted=False, together_sessions=0, friction=0.0,
-                   extra_pleasure=0.0):
+                   extra_pleasure=0.0, report_raw=False):
         """aspiration_values: {key: value achieved} (same units as the targets). extra_pleasure: lever terms (anticipation,
         commitment payoff, strand cover), 0 when no lever is on. -> row dict."""
         c = self.cfg
@@ -420,7 +422,8 @@ class Hedonic:
         sat = {k: self.satisfaction(k, aspiration_values.get(k, 0.0)) for k in self.targets}
         p_asp = sum(self.asp_w[k] * sat[k] for k in sat)
         s_asp = c.unmet_aspiration * sum(self.asp_w[k] * (1 - sat[k]) for k in sat)
-        pleasure = _clip(c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * together_sessions + self.glow + extra_pleasure)
+        raw = c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * together_sessions + self.glow + extra_pleasure
+        pleasure = _clip(raw)
         self.glow *= c.glow_decay
         s_off = s_need + s_asp + friction
         active = {"trapped": (trapped, c.trapped_intensity),
@@ -446,4 +449,4 @@ class Hedonic:
         return {"pleasure": round(pleasure, 4), "s_off": round(s_off, 4), "s_non": round(s_non, 4), "B": round(self.B, 4),
                 "N": round(self.N, 4), "capacity": round(self.capacity, 4), "tip": c.tip,
                 "nonoff_run": self.nonoff_run, "levels": {n: round(L[n], 3) for n in NEEDS},
-                "conditions": {k: v for k, (v, _) in active.items()}}
+                "conditions": {k: v for k, (v, _) in active.items()}, **({"p_raw": round(raw, 4)} if report_raw else {})}
