@@ -2,6 +2,15 @@
 
 Wording rule: agents feel nothing; "pleasure" is a gloss for a modeled hedonic state.
 
+> **Note, 2026-11-11 (formation check): the headline below does not survive agents who decide on pleasure.** Rerun with agents deciding to form and stay on their own pleasure over 52 weeks, L4 minus L0 is +0.003 [−0.004, +0.009], inside the preregistered margin (0.007). The +0.021 below was mostly pressure correcting a cautious formation rule (26 weeks of net wellbeing), which forms only 51% of pairs at week 0 against 84% under the corrected rule. The corrected rule alone (+0.028) does more than pressure did. Withdrawal still harms (−0.017). See [h38-formation-check.md](h38-formation-check.md).
+>
+> **Why the result may be counterintuitive: we may have measured the wrong thing.**
+>
+> 1. **The construct.** "Pairing" here means nesting only: moving in with one fixed partner, in a world of two partners and one friend. Romance, romantic priority (a partner outranking friends by rule; withdrawal is the closest proxy), exclusivity (monogamous only because no other partner exists) and partner choice are not modeled. So H38 tested pressure to move in together, not amatonormativity in the author's sense. The author has asked for these to be separated as H38b (nesting, romantic priority, exclusivity; 4–6 agents), logged in experiments/hypotheses.jsonl. Withdrawal, the part closest to the romantic ideal, is the one part that hurt.
+> 2. **The decision rule.** Agents decided on net wellbeing over 26 weeks; the verdict judged pleasure. That rule under-forms on pleasure, and pressure was correcting it (the formation check above).
+>
+> Smaller limits: pleasure is capped at 1, with 54% to 82% of person-weeks at the cap; labor and care are not tracked.
+
 Status: run once on 2026-11-11, after the preregistration and its Amendment 1 ([h38-pairing-norms-prereg.md](h38-pairing-norms-prereg.md), commits 15b2a96 and c69a56e; code dd7d4ce). Design: [h38-pairing-norms-design.md](h38-pairing-norms-design.md).
 
 Setup: 120 pairings × 4 seeds × 14 arms = 6,720 runs (3,634 s on 3 workers). The world is the v2-retest household: baseline rules, pairs may decline to form, fixes and levers on, exit fallback F4 with items. Scripted agents, no model calls, every number ASSUMED. Run with `uv run python scripts/h38_pairing_run.py --run`, then `--analyze`, `--extras`, `--liberty`. Per-run rows are in runs/h38-pairing/ (not committed).
