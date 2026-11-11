@@ -32,6 +32,7 @@ from .. import compile as _compile
 from .. import english as _english
 from ..cards import load_cards
 from .. import exit_fallback as _EXIT
+from .. import exit_items as _ITEMS
 from ..patch_check import check_sanctions
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -1084,6 +1085,9 @@ class WeeklyWorld:
         self.lv = levers if levers is not None else HD.ACTIVE_LEVERS
         if _EXIT.ACTIVE == "F5" and self.pot and _EXIT.world_arm(self) == "F5":
             _EXIT.prenup(self)           # exit fallback F5: the pair bargains its exit term at formation (or declines to form)
+        self.items = None
+        if _ITEMS.ACTIVE is not None:
+            _ITEMS.init_world(self)      # exit fallbacks slice 2: indivisible items held jointly (off by default)
         if not HD.levers_on(self.lv):
             self.lv = None
         if self.lv:
@@ -1859,11 +1863,13 @@ class WeeklyWorld:
         elif a == "leave":
             take = cand.get("take", 0)
             me["retained"] = round(self.retained_fraction(r, take), 4)
-            carry = self.carry_out(r, take)
-            me["money"] += carry
-            self.pool -= carry                   # what is not carried out stays in the pot
-            if _EXIT.ACTIVE == "F3" and _EXIT.world_arm(self) == "F3":
-                _EXIT.start_contest(self, r, w)
+            got = _ITEMS.settle_exit(self, r, take, w) if self.items else None
+            if got is None:
+                carry = self.carry_out(r, take)
+                me["money"] += carry
+                self.pool -= carry                   # what is not carried out stays in the pot
+                if _EXIT.ACTIVE == "F3" and _EXIT.world_arm(self) == "F3":
+                    _EXIT.start_contest(self, r, w)
             self.exit_log.append({"week": w, "role": r, "assets": round(me["money"], 2), "take": take, "breach": bool(cand.get("breach"))})
             if self.fx:
                 why = cand.get("why", "distress")
@@ -1958,6 +1964,8 @@ class WeeklyWorld:
         self.start_shocks(w, ev)
         if self.contest:
             _EXIT.contest_tick(self, w)
+        if self.items:
+            _ITEMS.week_start(self, w)
         if self.mech:
             for c in self.commits:       # a commitment that stands unbroken this week: the beneficiary's trust in the bound partner recovers slowly
                 if self._active(c, w) and not c["breached"]:
@@ -2049,6 +2057,7 @@ class WeeklyWorld:
             fric = (WARN_FRICTION if warn else 0.0) + PRESS_FRICTION * wk["pressed"]
             if self.contest:
                 fric += _EXIT.CONTEST_FRICTION
+            ip = _ITEMS.weekly_pleasure(self, r) if self.items else 0.0     # exit fallbacks slice 2: home and pet (0 when off)
             if self.fx:
                 fx = self.fx
                 if fx.valued_money:
@@ -2057,7 +2066,7 @@ class WeeklyWorld:
                 xp, xf, terms = self._lever_terms(r, w) if lvl else (0.0, 0.0, None)
                 fp, ff, fterms = self._fix_terms(r, w)
                 hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=tog_in,
-                                       friction=fric + xf + ff, extra_pleasure=xp + fp)
+                                       friction=fric + xf + ff, extra_pleasure=xp + fp + ip)
                 if lvl:
                     hrow[r]["lever"] = {**{k: round(v, 5) for k, v in terms.items()}, "eff_together": round(tog_in, 4),
                                         "K": round(self.K, 4), "q0": round(getattr(self, "q0", 0.0), 4)}
@@ -2065,12 +2074,12 @@ class WeeklyWorld:
             elif lvl:
                 xp, xf, terms = self._lever_terms(r, w)
                 hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=tog_in,
-                                       friction=fric + xf, extra_pleasure=xp)
+                                       friction=fric + xf, extra_pleasure=xp + ip)
                 hrow[r]["lever"] = {**{k: round(v, 5) for k, v in terms.items()}, "eff_together": round(tog_in, 4),
                                     "K": round(self.K, 4), "q0": round(getattr(self, "q0", 0.0), 4)}
             else:
                 hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=wk["together"],
-                                       friction=fric)
+                                       friction=fric, extra_pleasure=ip)
             me["low"] = me["low"] + 1 if h.B < -0.2 else 0
             for k in ("jobless", "ill"):
                 me[k] = max(0, me[k] - 1)

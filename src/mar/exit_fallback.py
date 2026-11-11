@@ -56,20 +56,24 @@ GLOSS = {
 }
 
 ACTIVE = None        # None = off (F0). Set by `use_exit_fallback`.
+STRIP_SPLIT = False  # Amendment 1 (slice 2): under the settling arms, drop imposed exit-split cards (see `apply`). Slice 1 ran without it.
 
 
 @contextmanager
-def use_exit_fallback(arm):
+def use_exit_fallback(arm, strip_split=False):
     """Every PyGate and WeeklyWorld built inside the block uses fallback `arm` ("F0" or None = off). Build gates inside the block
-    (gates built before it keep their cards; evolve worlds cache gates)."""
-    global ACTIVE
+    (gates built before it keep their cards; evolve worlds cache gates). strip_split (prereg Amendment 1, slice 2): under the
+    settling arms F2-F5, imposed leave cards that condition on the claim (`take`) are dropped too, since the settlement, not the
+    claim, sets the carry; without it an imposed floor card plus the over-half refusal can wall every exit (slice-1 elite line 2)."""
+    global ACTIVE, STRIP_SPLIT
     if arm is not None and arm not in ARMS:
         raise ValueError(f"unknown exit fallback {arm!r}; arms are {ARMS}")
-    saved, ACTIVE = ACTIVE, (None if arm in (None, "F0") else arm)
+    saved = (ACTIVE, STRIP_SPLIT)
+    ACTIVE, STRIP_SPLIT = (None if arm in (None, "F0") else arm), bool(strip_split)
     try:
         yield arm
     finally:
-        ACTIVE = saved
+        ACTIVE, STRIP_SPLIT = saved
 
 
 def negotiated(cards) -> bool:
@@ -95,6 +99,8 @@ def apply(cards, arm=None):
         return cards
     out = [c for c in cards if c.id != CAP_ID]
     if not negotiated(out):
+        if STRIP_SPLIT and arm in SETTLING:
+            out = [c for c in out if not (c.aim == "leave" and c.deontic != "may" and any(p["expr"] == "take" for p in c.conditions))]
         out.append(fallback_card(arm))
     return out
 
@@ -193,7 +199,8 @@ def _pay(world, r, amt):
 
 def contest_tick(world, w):
     """Start of week w: resolve the contest if due. Order: a returned leaver (both in again) puts the pot back; a partner short of
-    money concedes (the poorer first); at the deadline it settles at an equal split."""
+    money concedes (the poorer first); at the deadline it settles at an equal split. With items (slice 2, mar.exit_items) the frozen
+    items are resolved the same way (exit_items.contest_items)."""
     c = world.contest
     if not c:
         return
@@ -201,21 +208,27 @@ def contest_tick(world, w):
     st = world.other(lv)
     how = None
     if all(world.p[x]["in"] for x in "AB"):
-        world.pool += c["escrow"]
         how = "reunited"
     else:
         short = sorted((x for x in "AB" if world.p[x]["money"] < CAVE_MONEY), key=lambda x: world.p[x]["money"])
         if short:
-            loser = short[0]
-            _pay(world, world.other(loser), c["escrow"])
-            how = f"conceded_{loser}"
+            how = f"conceded_{short[0]}"
         elif w >= c["until"]:
-            _pay(world, lv, c["escrow"] / 2)
-            _pay(world, st, c["escrow"] / 2)
             how = "settled"
-    if how:
-        world.contest_log.append({**c, "end": w, "how": how})
-        world.contest = None
+    if how is None:
+        return
+    if c.get("items"):
+        from . import exit_items as EI
+        EI.contest_items(world, how)
+    elif how == "reunited":
+        world.pool += c["escrow"]
+    elif how.startswith("conceded_"):
+        _pay(world, world.other(how.split("_")[1]), c["escrow"])
+    else:
+        _pay(world, lv, c["escrow"] / 2)
+        _pay(world, st, c["escrow"] / 2)
+    world.contest_log.append({**c, "end": w, "how": how})
+    world.contest = None
 
 
 # ---- evaluator: holdout leverage ---------------------------------------------------------------------------------------------

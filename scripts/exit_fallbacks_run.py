@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 from mar import exit_fallback as EF  # noqa: E402
+from mar import exit_items as EI  # noqa: E402
 from mar import hedonic as HD  # noqa: E402
 from mar import stay_test as ST  # noqa: E402
 from mar import world_api as W  # noqa: E402
@@ -172,6 +173,127 @@ def summarize(rows, title):
     print("  F5 prenup terms:", {k: sum(1 for p in f5 if p and p["exit"] == k) for k in ("equal_split", "proportional", "forfeit", None)})
 
 
+# ---- slice 2: indivisible items (docs/results/exit-fallbacks-prereg.md, Amendment 1) -----------------------------------
+
+def play_items(gate, hr):
+    """One household with items on (the caller opens use_items): pleasure, net, s_non, fail, item leverage and the bigger
+    contributor's item-aware exit cost, item outcomes. No liberty (the liberty adapter does not see items)."""
+    from mar import household_oracle as O
+    ps = W.hh_personas()
+    cfg = dataclasses.replace(HD.DEFAULT, job_loss_rate=hr.rates[0], illness_rate=hr.rates[1], move_rate=hr.rates[2],
+                              new_connection_rate=hr.rates[3], start=hr.start)
+    lev, big, pools = [], [], {}
+
+    def hook(world, w):
+        pools[w] = world.pool
+        if not world.items or not all(world.p[r]["in"] for r in "AB"):
+            return
+        h = EI.holdout_leverage(world, w)
+        if h is not None:
+            lev.append(h)
+        mi = world.money_in
+        if mi["A"] != mi["B"]:
+            big.append(EI.exit_cost(world, "A" if mi["A"] > mi["B"] else "B", w))
+
+    def go():
+        with HD.use_levers(LEVERS):
+            wk = H.WeeklyWorld(gate, (ps[hr.a], ps[hr.b]), hr.seed, hr.weeks, cfg)
+            wk.hook = hook
+            run = wk.play()
+        return wk, run
+    wk, run = W._with_rates(hr.rates, go)
+    out = run.outcomes
+    hs = O.hedonic_summary(out)
+    pl = np.array([[o["hedonic"][r]["pleasure"] for r in "AB"] for o in out])
+    so = np.array([[o["hedonic"][r]["s_off"] for r in "AB"] for o in out])
+    sn = np.array([[o["hedonic"][r]["s_non"] for r in "AB"] for o in out])
+    return {"pleasure": float(pl.mean()), "net": float((pl - so - sn).mean()), "s_non": float(sn.mean()), "fail": bool(hs["fail"]),
+            "leverage": float(np.mean(lev)) if lev else None, "cost_big": float(np.mean(big)) if big else None,
+            "big_held_share": float(np.mean([c > 1e-9 for c in big])) if big else None,
+            "exits": len(wk.exit_log), "item_exits": len(getattr(wk, "item_log", []) or []),
+            "contests": [c["how"] for c in wk.contest_log] + (["open"] if wk.contest else []),
+            "holders": {n: it["holder"] for n, it in (wk.items or {}).items()}, "formed": bool(wk.pot),
+            "prenup": getattr(wk, "prenup", None) and {k: wk.prenup[k] for k in ("status", "exit")}}
+
+
+def task2(args):
+    (label, path), arm, cell = args
+    rows = []
+    t0 = time.time()
+    with EF.use_exit_fallback(arm, strip_split=True), EI.use_items(EI.GRID[cell]):
+        gate = H.PyGate(load_cards(path))
+        for i, hr in enumerate(ctx("val").runs):
+            rows.append({"cand": label, "arm": arm, "cell": cell, "run": i, "a": hr.a, "b": hr.b, **play_items(gate, hr)})
+    return label, arm, cell, rows, time.time() - t0
+
+
+def run2(workers=WORKERS):
+    workers = min(workers, 3)
+    OUT.mkdir(parents=True, exist_ok=True)
+    f = OUT / "rows2.jsonl"
+    done = set()
+    if f.exists():
+        for x in f.read_text().splitlines():
+            r = json.loads(x)
+            done.add((r["cand"], r["arm"], r["cell"]))
+    tasks = [(c, a, v) for v in EI.GRID for c in candidates() for a in ARMS if (c[0], a, v) not in done]
+    print(f"{len(tasks)} slice-2 tasks, {workers} workers", flush=True)
+    t0 = time.time()
+    with Pool(workers) as pool, f.open("a") as out:
+        for i, (label, arm, cell, rows, dt) in enumerate(pool.imap_unordered(task2, tasks, chunksize=1), 1):
+            out.write("\n".join(json.dumps(r) for r in rows) + "\n")
+            out.flush()
+            if i % 20 == 0:
+                print(f"  {i}/{len(tasks)} (wall {time.time() - t0:.0f}s)", flush=True)
+    print("done", flush=True)
+
+
+def analyze2():
+    from mar import stats as S
+    rows = [json.loads(x) for x in (OUT / "rows2.jsonl").read_text().splitlines() if x.strip()]
+    res = {"cells": {}, "rank": {}}
+    for cell in EI.GRID:
+        rc = [r for r in rows if r["cell"] == cell]
+        assert len(rc) == len(candidates()) * len(ARMS) * VAL_RUNS, (cell, len(rc))
+        c = {}
+        for key in ("pleasure", "net", "s_non", "leverage", "cost_big", "big_held_share"):
+            v = by_arm(rc, key)
+            c[key] = {a: float(np.nanmean(v[a])) for a in ARMS}
+        vp = by_arm(rc, "pleasure")
+        c["P1"] = {a: _paired(vp[a] - vp["F0"]) for a in ARMS[1:]}
+        adj = S.holm([c["P1"][a]["p"] for a in ARMS[1:]])
+        for a, h in zip(ARMS[1:], adj):
+            c["P1"][a]["p_holm"] = float(h)
+        vn = by_arm(rc, "net")
+        c["P1_net"] = {a: _paired(vn[a] - vn["F0"]) for a in ARMS[1:]}
+        c["fail"] = {a: float(np.mean([r["fail"] for r in rc if r["arm"] == a])) for a in ARMS}
+        c["item_exit_runs"] = {a: sum(1 for r in rc if r["arm"] == a and r["item_exits"]) for a in ARMS}
+        c["contests"] = {}
+        for r in rc:
+            if r["arm"] == "F3":
+                for h in r["contests"]:
+                    k = h.split("_")[0]
+                    c["contests"][k] = c["contests"].get(k, 0) + 1
+        res["cells"][cell] = c
+        res["rank"][cell] = {k: sorted(ARMS, key=lambda a: -c[k][a]) for k in ("pleasure", "net")}
+        res["rank"][cell]["leverage"] = sorted(ARMS, key=lambda a: c["leverage"][a])
+    def kendall(x, y):
+        pos = {a: i for i, a in enumerate(y)}
+        n, s_ = len(x), 0
+        for i in range(n):
+            for j in range(i + 1, n):
+                s_ += 1 if pos[x[i]] < pos[x[j]] else -1
+        return s_ / (n * (n - 1) / 2)
+    cells = list(EI.GRID)
+    res["rank_agreement"] = {k: {f"{a} vs {b}": kendall(res["rank"][a][k], res["rank"][b][k]) for i, a in enumerate(cells) for b in cells[i + 1:]}
+                             for k in ("pleasure", "net", "leverage")}
+    res["rank_min_tau"] = {k: min(v.values()) for k, v in res["rank_agreement"].items()}
+    (OUT / "analysis2.json").write_text(json.dumps(res, indent=1, default=float))
+    print(json.dumps({"rank": res["rank"], "rank_min_tau": res["rank_min_tau"],
+                      "pleasure": {c: res["cells"][c]["pleasure"] for c in cells},
+                      "leverage": {c: res["cells"][c]["leverage"] for c in cells}}, indent=1, default=float))
+
+
 NO_POWER = ("r2-line-01", "r2-line-03", "r2-line-04", "r2-line-08", "r2-line-10", "r2-line-11", "r2-line-12", "r2-line-13",
             "r2-line-14", "r2-line-16")         # the 10 run-2 elites that keep no commitment power (household-evolve-2.md)
 SEED22 = "author_seed_v2_bindable"
@@ -252,7 +374,7 @@ def analyze():
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k in ("pilot", "run", "analyze"):
+    for k in ("pilot", "run", "analyze", "run2", "analyze2", "pilot2"):
         ap.add_argument(f"--{k}", action="store_true")
     a = ap.parse_args()
     if a.pilot:
@@ -261,3 +383,16 @@ if __name__ == "__main__":
         run("val")
     if a.analyze:
         analyze()
+    if a.run2:
+        run2()
+    if a.analyze2:
+        analyze2()
+    if a.pilot2:
+        import time as _t
+        hr = ctx("pilot").runs[0]
+        for cell in EI.GRID:
+            for arm in ARMS:
+                t = _t.time()
+                with EF.use_exit_fallback(arm, strip_split=True), EI.use_items(EI.GRID[cell]):
+                    r = play_items(H.PyGate(load_cards(str(ELITES / "line-02"))), hr)
+                print(cell, arm, f"{_t.time() - t:.2f}s", round(r["pleasure"], 4), r["leverage"] and round(r["leverage"], 3), r["item_exits"], r["holders"])
