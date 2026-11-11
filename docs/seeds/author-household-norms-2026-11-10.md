@@ -113,4 +113,8 @@ On the imposed baseline:
 
 > yes pairs should be allowed to not form a househodl
 
-These change how the retest judges the v2.2 condition ("demonstrate pleasure in relationships"). Two questions follow from them and have not been put to the author: does a net-wellbeing win with no pleasure win meet the condition, and do pairs who never form a household count toward it? Until answered, the retest's verdict rule is Claude's proposal (docs/results/v2-retest-prereg-DRAFT.md).
+Then, asked whether a net-wellbeing win with no pleasure win meets the condition (2026-11-11T02:51:22Z), verbatim:
+
+> show both, judge on pleasure
+
+So the condition is judged on pleasure itself. Pleasure minus suffering and non-offsettable suffering are reported beside it but do not decide it. Still not put to the author: whether pairs who never form a household count toward the condition (docs/results/v2-retest-prereg-DRAFT.md labels that scoring as Claude's).

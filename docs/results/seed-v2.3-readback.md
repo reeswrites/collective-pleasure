@@ -23,7 +23,7 @@
 | 3. Exit last | "check in first for general unhappiness too" | Check-in first and exit last are confirmed as how agents behave, not a ban; free exit (rule 11) stands. New: the ladder covers any unhappiness, not only lapsed roles. The renegotiate step in between is Claude's (see rule 16). |
 | 4. Decency floor | "all three feel right, common ground is anyone you interact with" | All three parts confirmed. "Common ground" now means anyone the agent interacts with. |
 
-Two retest decisions came at the same time (experiments/changes.jsonl, 2026-11-11T02:22:46Z and 02:23:24Z): "pleasure minus suffering yeah i guess if that is what is commonly held" and "yes pairs should be allowed to not form a househodl". They change the retest, not the seed (docs/results/v2-retest-prereg-DRAFT.md).
+Two retest decisions came at the same time (experiments/changes.jsonl, 2026-11-11T02:22:46Z and 02:23:24Z): "pleasure minus suffering yeah i guess if that is what is commonly held" and "yes pairs should be allowed to not form a househodl". They change the retest, not the seed (docs/results/v2-retest-prereg-DRAFT.md). Later (02:51:22Z) the author set the verdict rule: "show both, judge on pleasure".
 
 Wording rule: agents feel nothing. "Pleasure" is a gloss for a modeled hedonic state (ADR 0010).
 
