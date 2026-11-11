@@ -12,8 +12,8 @@ Attribution marks used below. **Author:** the idea is in the author's words. **C
 
 **Claim (Claude-added framing, built from the author's notes).** Minds are poor native pursuers of pleasure. Several known gaps sit between what a person does and the pleasure they get over a life.
 
-- **Wanting is not liking.** The chase and the capture run on different mechanisms. **Author**, in the notes: wanting (prediction error) and liking adapt differently, and "overstimulating wanting burns out liking."
-- **Memory.** **Author:** "the experieicing self is the remembering self and depends onf vividness of memory etc." What a life is worth depends on what is kept and how vividly.
+- **Wanting is not liking.** The chase and the capture run on different mechanisms. The notes say wanting (prediction error) and liking adapt differently, and that overstimulating wanting burns out liking. This is the synthesis's paraphrase of a passage in the note that is a saved AI reply, not the author's own prose (docs/notes/hedonic-technology-synthesis.md, section 1). Do not quote it as the author's words.
+- **Memory.** **Author:** "i think the experieicing self is the remembering self and depends onf vividness of memory etc." What a life is worth depends on what is kept and how vividly.
 - **Forecasting.** People mispredict what they will like.
 - **Discounting.** The near is overweighted.
 - **Habit.** Repeated stimuli lose value and people repeat them anyway.
@@ -66,9 +66,9 @@ Everything in this section is the author's thesis extended in the conversation. 
 
 ### Support from the literature: Sinhababu (added 2026-11-11, at the author's request)
 
-The author asked what Neil Sinhababu argues and asked for both points to be added. The summaries below come from secondary sources checked by web search on 2026-11-11. They are Claude's summaries. Read the primary texts before citing.
+Claude offered two points from Neil Sinhababu, and the author said "yeah add both". Whether the author first asked about Sinhababu is not logged. The summaries below come from secondary sources checked by web search on 2026-11-11. They are Claude's summaries. Read the primary texts before citing.
 
-- **The epistemic argument for hedonism** (Sinhababu 2015; a later version in a 2024 volume; a guest essay on utilitarianism.net). Moral disagreement undermines most moral beliefs, because the processes that form them are unreliable. Phenomenal introspection is the exception. It is reliable for nonmoral facts about experience, and it reveals that pleasure is good and displeasure is bad. So the goodness of pleasure survives the skepticism. This supports the author's position that pleasure is the good. It also answers the "thermometer, not temperature" worry in the author's saved note "pleasure as the detector of value" (docs/notes/hedonic-technology-synthesis.md, Q13). Pleasure's goodness is given in the experience itself, and what misfires is desire and consequence. A known objection: if pleasure is defined as "felt goodness", the claim may be analytic.
+- **The epistemic argument for hedonism** (Sinhababu 2015; a later version in a 2024 volume; a guest essay on utilitarianism.net). Moral disagreement undermines most moral beliefs, because the processes that form them are unreliable. Phenomenal introspection is the exception. It is reliable for nonmoral facts about experience, and it reveals that pleasure is good and displeasure is bad. So the goodness of pleasure survives the skepticism. This supports the author's position that pleasure is the good. It also bears on the "thermometer, not temperature" reading. That image is from a saved AI reply under the author's note title "pleasure as the detector of value" (docs/notes/hedonic-technology-synthesis.md, Q13). It is not the author's words, and the synthesis lists it as an open tension for the author, not a worry the author holds. Pleasure's goodness is given in the experience itself, and what misfires is desire and consequence. A known objection: if pleasure is defined as "felt goodness", the claim may be analytic.
 - **Amplification by vividness** (Sinhababu, *Humean Nature*, OUP 2017). Desire drives action, and its effects grow with the vividness of sensory or imaginative representations of what is desired. This explains procrastination: a vivid temptation beats a judged-more-important but faint goal.
 
 **How the model uses this (Claude-added framing).** Vividness does two jobs that can come apart:
@@ -79,9 +79,9 @@ The middle reading of the detector worry is: liking is the good, and wanting is 
 
 ## 4. The author's one-self view and lifetime pleasure
 
-**Author:** "lifetime pleasure seems obvious to me", and the experiencing self is the remembering self. ADR 0017 records the measure: the sum over moments of present pleasure, vividness-weighted memory re-experienced now, and anticipation. Greedy scoring is the special case that is exact only when nothing carries over.
+**Author:** "lifetime pleasure seems obvious to me", and "i think the experieicing self is the remembering self". ADR 0017 records the measure: the sum over moments of present pleasure, vividness-weighted memory re-experienced now, and anticipation. Greedy scoring is the special case that is exact only when nothing carries over.
 
-The horizon study proves the author's hunch: greedy is optimal for every reward and every discount exactly when actions leave no trace the reward sees. Discounting does not remove the need to plan. In the model, planning starts to matter at a discount of 0.378.
+The author also said "idk if we can prove that somehow". The horizon study proves a narrower model result: greedy is optimal for every reward and every discount exactly when actions leave no trace the reward sees. That supports the author's hunch in the model; it does not prove it for people. Discounting does not remove the need to plan. In the model, planning starts to matter at a discount of 0.378.
 
 This is the formal home for the umbrella thesis. Memory, anticipation, adaptation and bonds are the carried-over state that makes a greedy pursuer worse than a planner. A hedonic technology works by moving a pursuer's choices toward the planner's.
 

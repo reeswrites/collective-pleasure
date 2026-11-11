@@ -24,12 +24,12 @@ Status labels: **running** (a prereg exists and the run is scheduled or in progr
 
 | Rank | ID | Hypothesis (short) | T | N | D | Product | Status |
 |---|---|---|---|---|---|---|---|
-| 1 | H20 | Commitment converts present friction into lifetime pleasure | 4 | 4 | 5 | 80 | running |
-| 2 | H21 | Vivid memory bridges the experiencing and remembering selves | 5 | 4 | 4 | 80 | running |
+| 1 | H20 | Commitment converts present friction into lifetime pleasure | 4 | 4 | 5 | 80 | tested, partly held |
+| 2 | H21 | Vivid memory bridges the experiencing and remembering selves | 5 | 4 | 4 | 80 | tested, mostly held |
 | 3 | H16 | Hand-written rule sets match or beat evolved household elites on the held-out exam | 5 | 3 | 5 | 75 | running |
 | 4 | H12 | Models use an offered generous out-of-model move (gift to the shared pool) at a rate independent of rule flaws, and a flawed rule set turns the... | 4 | 4 | 4 | 64 | candidate |
-| 5 | H22 | Unbundling love helps: a thick core plus thin bonds beats one partner carrying every strand on mean pleasure and on pleasure after a single-bond... | 4 | 4 | 4 | 64 | running |
-| 6 | H19 | With adaptation, anticipation and a ritual slot switched on, seed v2.2 beats the imposed baseline on hand personas, reversing the demo's -0.028 | 4 | 3 | 5 | 60 | running |
+| 5 | H22 | Unbundling love helps: a thick core plus thin bonds beats one partner carrying every strand on mean pleasure and on pleasure after a single-bond... | 4 | 4 | 4 | 64 | tested, partly held |
+| 6 | H19 | With adaptation, anticipation and a ritual slot switched on, seed v2.2 beats the imposed baseline on hand personas, reversing the demo's -0.028 | 4 | 3 | 5 | 60 | tested, not shown |
 | 7 | H01 | When exit is free, a controlling persona who presses lowers its own lifetime pleasure compared with the same persona playing cooperatively,... | 5 | 3 | 4 | 60 | tested (not supported: pressing is costly without exit) |
 | 8 | H09 | LLM negotiators propose floor-respecting terms because of a fairness prior, not because they understood the floor | 5 | 4 | 3 | 60 | tested (fairness prior supported) |
 | 9 | H06 | Negotiation helps against pushy personas because it lets the pair live apart, not because the agreed terms are better | 4 | 3 | 4 | 48 | candidate |
@@ -48,13 +48,13 @@ Status labels: **running** (a prereg exists and the run is scheduled or in progr
 | 22 | H23 | Rupture and repair, not only pleasure or security, is a reason people stay | 2 | 4 | 3 | 24 | not yet testable (needs version 3) |
 | 23 | H18 | The relational share of pleasure is a readout of persona weights | 5 | 2 | 2 | 20 | partly tested (pleasure demo result in) |
 
-Already covered by running work (do not duplicate): H16 (household evolution and the final exam), H19, H20, H22 (pleasure levers), H21 (horizon). The win arm has run; H10 and H12 are its follow-ups. The fidelity battery is only a backlog item; H02 is its first candidate.
+Already covered by earlier work (do not duplicate): H16 (household evolution and the final exam, still running). H19, H20, H22 (pleasure levers) and H21 (horizon) have results; see their entries. The win arm has run; H10 and H12 are its follow-ups. The fidelity battery is only a backlog item; H02 is its first candidate.
 
 Where the product ties, rows are ordered by decision value, then testability.
 
 ## Hypotheses
 
-### H20 (rank 1, author's theory): running
+### H20 (rank 1, author's theory): tested (partly held: the late gain held, LB2; the early dip missed, LB1)
 
 **Claim.** Commitment converts present friction into lifetime pleasure. Pleasure in weeks 0 to 26 is lower with a commitment and pleasure in weeks 52 to 156 and the lifetime total are higher, in at least 60 percent of pairings.
 
@@ -79,7 +79,7 @@ Where the product ties, rows are ordered by decision value, then testability.
 
 Do not rerun. Add a sensitivity sweep over payoff rate if the result is a pass.
 
-### H21 (rank 2, author's theory): running
+### H21 (rank 2, author's theory): tested (mostly held: P1, P3, P5 to P8 held; P2 and P4 each missed one clause)
 
 **Claim.** Vivid memory bridges the experiencing and remembering selves. A greedy one-step policy matches the optimal plan when memory vividness is zero and loses more as vividness, discount patience and adaptation rise. Spacing a concert beats repeating it.
 
@@ -154,7 +154,7 @@ Do not rerun. Promote nothing here; read the existing result.
 
 Tests whether the new 'no flawed rules' lint is sufficient against kind-but-harmful behaviour.
 
-### H22 (rank 5, author's theory): running
+### H22 (rank 5, author's theory): tested (partly held: the inverted U held, LC2; the shock-resilience claim had the wrong sign, LC3)
 
 **Claim.** Unbundling love helps: a thick core plus thin bonds beats one partner carrying every strand on mean pleasure and on pleasure after a single-bond shock, with an inverted U in the number of bonds.
 
@@ -179,7 +179,7 @@ Tests whether the new 'no flawed rules' lint is sufficient against kind-but-harm
 
 Do not rerun. Read the existing result.
 
-### H19 (rank 6, pleasure): running
+### H19 (rank 6, pleasure): tested (not shown: with all levers on, v2.2 is still below the baseline, D = -0.019 [-0.051, +0.009]; the ritual lever missed its +0.03 bar)
 
 **Claim.** With adaptation, anticipation and a ritual slot switched on, seed v2.2 beats the imposed baseline on hand personas, reversing the demo's -0.028. A ritual raises pleasure at equal time together through anticipation alone.
 
@@ -568,13 +568,15 @@ Five hypotheses from the theory doc. Not yet ranked into the table above; produc
 
 | ID | Hypothesis (short) | T | N | D | Product | Status |
 |---|---|---|---|---|---|---|
-| H24 | Attune vs appease: the partners' regulation policy decides whether pushy personas win. Appeasers have lower li... | 3 | 4 | 5 | 60 | running (being tested by the regulation agent) |
+| H24 | Attune vs appease: the partners' regulation policy decides whether pushy personas win. Appeasers have lower li... | 3 | 4 | 5 | 60 | tested, central clause not supported |
 | H25 | Rules for imperfect agents: rule sets that close the pleasure gap for greedy or biased agents beat rule sets j... | 3 | 4 | 5 | 60 | candidate |
 | H26 | Partner choice trade-off: similarity raises the shared-pleasure gain and difference raises the specialization... | 3 | 3 | 3 | 27 | candidate |
 | H27 | Relational load is conserved: load skipped by one partner reappears as the other's vigilance or appeasement, s... | 2 | 4 | 4 | 32 | candidate |
 | H28 | Reassurance seeking is a checking cost: access you must keep checking lowers lifetime pleasure compared with a... | 2 | 4 | 3 | 24 | candidate |
 
-### H24 (theory, author's theory): running (being tested by the regulation agent)
+### H24 (theory, author's theory): tested (central clause not supported: appeasers' lifetime pleasure was not lower, R2a +1.11 [-3.64, 6.58], wrong direction; R4 pressing acts held robustly)
+
+**Result.** docs/results/regulation.md. Appeasers' lifetime pleasure was not lower (R2a wrong direction). Pressing acts borne by an appeasing partner were higher and held robustly (R4).
 
 **Claim.** Attune vs appease: the partners' regulation policy decides whether pushy personas win. Appeasers have lower lifetime pleasure than attuners despite less immediate conflict, because appeasement trades long-run pleasure for less immediate pain.
 
@@ -692,6 +694,8 @@ Needs the smallest biased persona first.
 
 **Follow-up H32b (2026-11-11).** A graded voice ladder (check-in, renegotiate, withdraw, then exit) in place of the cliff converged in 0 of 30 cells (cliff 1). Withdrawal alone converged in 2 cells with the pair kept; renegotiation undid it, because the egoist meets a one-week demand and goes back to its own passion. Docs: docs/results/h32b-prereg.md, docs/results/h32b.md.
 
+**What this tested (note added 2026-11-11).** H32 tested a mechanism Claude chose: that egoist and utilitarian optima converge under free exit. It did not test the author's essay thesis as a whole. The thesis is normative (egoists and utilitarians alike must attend to others' pleasure). "Not supported" applies to the free-exit mechanism. docs/results/h32.md finds a narrower form of the thesis holds through amplification and giving.
+
 **Motivation.**
 - experiments/questions.jsonl: Q6 answer 2026-11-11 and the author's essay thesis that egoistic hedonists and hedonistic utilitarians alike must attend to others' pleasure
 - docs/theory.md: relationships as hedonic technology
@@ -699,6 +703,19 @@ Needs the smallest biased persona first.
 **Pre-mortem (why it might be an artifact).** If the partner's exit rule is tied to the partner's pleasure, some convergence is built in. The informative result is the size of the gap and which mechanism closes most of it, and a control with all three off must show a large gap.
 
 **Scores.** testability 4, novelty 4, decision value 5; product 80.
+
+### Other rows added 2026-11-11 (full fields in experiments/hypotheses.jsonl)
+
+Group label: **Claude-proposed, from the author's conversation.** The claims and mechanisms are Claude's. The author's words only prompted or accepted them.
+
+| ID | Hypothesis (short) | Author's words behind it | Status |
+|---|---|---|---|
+| H30 | Layered bonds (each layer about 3x the last) emerge from a contact budget plus per-bond decay | Shared a claude.ai chat on Dunbar layers (not archived). The claims may come from Claude's turns in it. | candidate |
+| H31 | Chronic vacancy is a downward spiral: vigilance raises the cost of bonding | Same shared chat. Motivated by Hawkley and Cacioppo 2010; the lower-bonding step is the hypothesis, not an established result. | candidate |
+| H34 | Vivid cues amplify wanting without raising liking | "yeah add both", accepting Claude's offer of the Sinhababu points | candidate |
+| H35 | Care grows from shared good times (an up or down spiral) | "yeah add the spiral as the next hypothesis", accepting Claude's proposal | candidate |
+
+H29 and H33 come from the author's own answers (Q10 and Q12) and keep the group "author's theory".
 
 ## How to promote a hypothesis to a preregistered test
 

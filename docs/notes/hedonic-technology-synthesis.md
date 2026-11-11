@@ -173,27 +173,38 @@ M1 and M3 first (small, local, and the cheapest test of whether rules can produc
 
 ## 5. Author answers (2026-11-11 conversation)
 
-Exact words are in experiments/questions.jsonl, one row per answer. These are Claude's read-backs. The author confirmed the ones marked "confirmed". The rest were read back with no objection.
+Exact words are in experiments/questions.jsonl, one row per answer. These are Claude's formalizations of the answers. The author confirmed the ones marked "confirmed". Not yet read back: Q2, Q4, Q6, Q7, Q8, Q9, Q10. The log records no read-back of these, so silence is not assent.
 
-- **Q1 (horizon):** settled earlier. Pleasure counts over a lifetime, and the experiencing self is the remembering self (ADR 0017).
-- **Q2 (enforcement vs reliance):** reliance is fine. It comes from negotiated roles (specialization). Guilt, scorekeeping and penalties are the objection. When a role lapses, the response ladder is a soft check-in, then renegotiation, with exit last. What a person does is the strongest signal, so trust updates from actions, not words. This is a candidate for seed v2.3. Seed v2.2 is not changed.
+This section was first written at 02:04Z on 2026-11-11. Later answers that same night changed Q2, Q5 and Q12. Those entries are updated below and marked "updated". The verbatim later answers are in the block at the end of this section.
+
+- **Q1 (horizon):** answered earlier (ADR 0017). Pleasure counts over a lifetime. The author said "i think the experieicing self is the remembering self". That is the author's view, given with "i think"; it is not a settled fact.
+- **Q2 (enforcement vs reliance), updated:** reliance is fine. It comes from negotiated roles (specialization). The author's objection is to guilt and scorekeeping ("its the guilt and scorekeeping i dont like"). An earlier version of this entry added "penalties"; the author did not say that. Later the author said fines on a lapsed role are "allowed only by mutual choice i think". When a role lapses, the author said "renegotiate or a soft check in i think not leaving right away". Later: "check in first for general unhappiness too". So check-in first and exit last are the author's. Renegotiation as a fixed second step is Claude's ordering; the author wrote "or". On trust, the author first said what a person does is "the sterongest signal", then, at the v2.3 read-back, "maybe we have to test? but my intutions is mostly actions". So trust moves mostly on actions, with a test of the alternatives. The v2.3 read-back (docs/results/seed-v2.3-readback.md) carries the four points the author answered. Seed v2.2 is not changed.
 - **Q3 (chosen friction):** mostly settled by Q1. The recall term credits it.
-- **Q4 (lopsided stretches):** lopsided is normal for a while. Each partner must end up better off within the relationship than outside it, over time, counting the pleasure of giving. Equal gains are not required. The evaluator reports the size of the gap between partners' gains as information, not as a failure.
-- **Q6 (unbundling):** a life with no core relationship is a valid persona, expected to score lower. The author's essay thesis is that relationships are hedonic technology, and that egoists and utilitarians alike must attend to others' pleasure. That thesis became H32. The author also shared the "Dunbar's number and valence electrons" chat, which is cited here, not archived. It led to H30 (layers emerge from a contact budget) and H31 (chronic vacancy spiral).
-- **Q7 (partner choice):** agents should choose partners, and the choice strategy is an experimental variable (H26). Fixed pairings stay as the controlled lab.
+- **Q4 (lopsided stretches):** lopsided is normal for a while. The author: "idk if they need similkar gains but i guess they just need to be better off within the rleatiniship maybe?" Claude's formalization, not read back: each partner may need to end up better off within the relationship than outside it, over time, counting the pleasure of giving, and equal gains may not be required. Claude's design choice, not the author's: the evaluator reports the size of the gap between partners' gains as information, not as a failure.
+- **Q6 (unbundling):** a life with no core relationship is a valid persona; the author said "i think it would score lower". The author's essay thesis is that relationships are hedonic technology, and that egoists and utilitarians alike must attend to others' pleasure. H32 tested one mechanism for this that Claude chose (convergence under free exit). It did not test the thesis as a whole. The author also shared the "Dunbar's number and valence electrons" chat, which is cited here, not archived. It led to H30 (layers emerge from a contact budget) and H31 (chronic vacancy spiral).
+- **Q7 (partner choice):** the author leans toward agents choosing partners ("yeah why wouldnt an agent choose their partner?"), then said "i mean maybe we test different strategies". So the choice strategy is an experimental variable (H26). Fixed pairings stay as the controlled lab.
 - **Q8 (giving):** giving can be a pleasure in itself, and how much varies by persona (from the Q4 answer).
 - **Q9 (money and security):** these count only to the extent that a persona values them, either for their own sake or as a means to pleasure. This is a queued model change. Results driven by money need a rerun after it.
-- **Q10 (taste shaping):** learning to like something new is an absolute win. Narrowing is acceptable if total pleasure rises, but the author expects broadening to win (H29).
+- **Q10 (taste shaping):** learning to like something new is an absolute win. The author said "i think narrowing is fine" if total pleasure rises, but expects broadening to win (H29).
 - **Q11 (stimulation rules of thumb):** these are not fixed parameters. They are the centers of sweeps, and we test whether the optimizer reproduces them.
 - **Q12 (safe vs spicy), confirmed:** replace the two modes with three lenses: an arousal dial, tension and release, and explore vs exploit. Model novelty from biology:
   - a fast spike of wanting that habituates;
   - a liking curve over exposures that rises, then falls, with complexity extending the rise;
   - a learning-progress term underneath.
 
-  Cheap novelty is all spike. Deep novelty keeps producing learning. This is the next piece after test 1 (liking vs wanting) lands. Literature is from memory: Berridge, Zajonc, Berlyne, Oudeyer and Gottlieb, Schmidhuber. Verify before citing.
-- **Q5 (how much we owe):** open.
+  Cheap novelty is all spike (Claude's phrase; see the update below). Deep novelty keeps producing learning. This is the next piece after test 1 (liking vs wanting) lands.
+
+  **Updated (later answer, 02:04:45Z):** "well a nwe thing is exicitng unto itself also when you like it as well there is no replacable thing of being suprrised or exp smth for first time". So for the author, novelty also carries liking, not only wanting. And first times are a pleasure that cannot be replaced (H33). The line "cheap novelty is all spike" is Claude's, and it is narrower than the author's view.
+
+  Literature, checked 2026-11-11 (docs/references-check-2026-11-11.md):
+  - The rise in liking with exposure is Zajonc 1968 (mere exposure). Zajonc does not support the fall.
+  - The fall, and the inverted U, come from Berlyne (1960 book; 1970 paper).
+  - "Complexity extends the rise" is better sourced to Bornstein's 1989 meta-analysis.
+  - The learning-progress term is Oudeyer and Kaplan 2007 and Schmidhuber 2010. Gottlieb's part is the neural and attention side.
+  - "A fast spike of wanting that habituates" is not Berridge's claim. Berridge's work shows wanting can sensitize, which is the opposite direction. Treat the habituating spike as Claude's modeling assumption, with hedonic adaptation (Frederick and Loewenstein 1999) as the nearest source.
+- **Q5 (how much we owe), updated: answered.** From the author's essay excerpt: "At the very least we owe politeness and common decency if we are both on common ground. However beyond that I feel like it becomes tricky. Each person's internal calculus will be different". At the v2.3 read-back: "all three feel right, common ground is anyone you interact with". So there is a decency floor toward anyone you interact with. Beyond the floor, the author called it "tricky" and person-specific. That region is still open. It is not "nobody owes anything".
 - **Q13:** fetched 2026-11-11 from Notion (Apple Notes import). Provenance: the note titles and a few lines are the author's own ("human flourishing is just the right delivery schedule for a unique...", "what is the shape? lets work out the delivery schedule shape based on our biology", "the value is our end to reproduce i guess: our telos is evolution"). The rest of the note bodies are saved AI replies, not the author's prose. Do not quote them as the author's words.
-  - **Delivery schedule** (the author's thesis; the AI elaboration was saved): flourishing comes from spacing, contrast and effort more than from content. There is a shared substrate (relationships, health, autonomy, meaningful effort, contribution) with personal tuning. The saved reply's parameters are:
+  - **Delivery schedule.** The author's line: "human flourishing is just the right delivery schedule for a unique...". The rest is the saved AI reply. Its gloss is that flourishing comes from spacing, contrast and effort more than from content. There is a shared substrate (relationships, health, autonomy, meaningful effort, contribution) with personal tuning. The saved reply's parameters are:
     - recovery time of the taxed system as the master variable;
     - dose;
     - interval;
@@ -206,4 +217,17 @@ Exact words are in experiments/questions.jsonl, one row per answer. These are Cl
     - "variable in content, reliable in frame" matches pleasure-levers LA1 (rotate beats repeat) and LA2 (ritual beats ad hoc);
     - adaptation in hedonic.py already applies only to positives;
     - "subtraction beats addition", "effort as ingredient", "rising beats flat" and "peak-end memory" are untested candidates.
-  - **Pleasure as detector of value** (title is the author's; body is a saved AI reply): pleasure is a thermometer, not the temperature. It is indispensable but can misfire, because it was calibrated for an ancestral environment and now meets superstimuli. This maps onto test 1: wanting without liking is a miscalibrated detector. Open, for the author: the "thermometer" reading implies a standard beyond pleasure, while the author's current position is that pleasure is the good.
+  - **Pleasure as detector of value** (title is the author's; body is a saved AI reply). The saved AI reply says pleasure is a thermometer, not the temperature. It is indispensable but can misfire, because it was calibrated for an ancestral environment and now meets superstimuli. This maps onto test 1: wanting without liking is a miscalibrated detector. Open, for the author: the "thermometer" reading implies a standard beyond pleasure, while the author's current position is that pleasure is the good.
+
+  Also open, for the author: the author's own line "the value is our end to reproduce i guess: our telos is evolution" sits beside the position that pleasure is the good. No formalization uses the telos line yet.
+
+### Later answers, 2026-11-11 (verbatim, after this section was first written)
+
+These came after 02:04Z. The entries above that they change are marked "updated".
+
+- 02:04:45Z, Q12: "well a nwe thing is exicitng unto itself also when you like it as well there is no replacable thing of being suprrised or exp smth for first time"
+- 02:05:59Z, Q5, essay excerpt: "At the very least we owe politeness and common decency if we are both on common ground. However beyond that I feel like it becomes tricky." The same excerpt also says some partners "may not have the abilities to consider or take seriously your pleasure". That is queued as a persona trait (capacity to regard the other's pleasure). No model has it yet.
+- 02:33:56Z, trust: "maybe we have to test? but my intutions is mostly actions"
+- 02:34:43Z, fines on lapsed roles: "allowed only by mutual choice i think"
+- 02:37:30Z, exit last: "check in first for general unhappiness too"
+- 02:38:17Z, decency floor: "all three feel right, common ground is anyone you interact with"
