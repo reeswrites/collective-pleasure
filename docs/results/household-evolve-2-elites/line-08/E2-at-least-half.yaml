@@ -1,0 +1,11 @@
+id: E2-at-least-half
+attribute: partner
+deontic: may
+aim: leave
+conditions:
+- {expr: pooled, op: gt, value: 0}
+- {expr: take, op: lt, value: 50}
+or_else: null
+gloss: A partner may leave when the pooled share is more than 0 and the share taken
+  is less than 50.
+source: evolved (flip) from E2-at-least-half

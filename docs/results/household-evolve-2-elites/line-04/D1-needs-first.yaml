@@ -1,0 +1,9 @@
+id: D1-needs-first
+attribute: partner
+deontic: must
+aim: spend_self
+conditions:
+- {expr: need_gap, op: gt, value: 3}
+or_else: null
+gloss: A partner must spend self only when the unfunded need is more than 3.
+source: evolved (bound) from D1-needs-first

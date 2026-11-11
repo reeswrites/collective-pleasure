@@ -1,0 +1,14 @@
+id: R1-may-keep
+attribute: partner
+deontic: may
+aim: spend_self
+conditions: []
+or_else: null
+gloss: A partner may keep their own money and things.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back"
+  (2026-11-10), the author''s words: "people can own things to themselkves but choose
+  to give htme to someone on any conditions". Seed v2 rule R1, read back to the author,
+  who left the wording unchanged (corrected 2026-11-10: that is not an explicit acceptance;
+  the seed doc records only that the wording was not changed). Encoded as a permission
+  (own money is private). Seed v2.2 (2026-11-10, pending author read-back): R3b stays
+  removed; pot terms are negotiated by everyone who shares the pot (docs/decisions/0013-negotiated-pots.md).'

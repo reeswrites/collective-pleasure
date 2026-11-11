@@ -1,0 +1,10 @@
+id: N6-stay-52
+attribute: partner
+deontic: may
+aim: commit_stay
+conditions: []
+or_else: null
+gloss: Every member commits to stay for 52 weeks; leaving earlier forfeits the breach
+  share of what the exit term would let them carry (the breach cost term sets that
+  share; the whole of it by default).
+source: negotiated, week 0, members imposed

@@ -1,0 +1,16 @@
+id: R8b-exit-terms-negotiated
+attribute: partner
+deontic: may
+aim: leave
+conditions: []
+or_else: null
+gloss: A partner who leaves takes the exit terms the members negotiated beforehand
+  (the exit term of their agreed bundle), and never less than the exit floor; if no
+  agreement exists there is no shared pot to split.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, the author''s words: "it
+  triggers exit conditions that wer enegotiated before" and, at the read-back of seed
+  v2, "12-13 should be negotiated exit terms". Seed v2.2 (2026-11-10, pending author
+  read-back): replaces the two even-split stand-in cards R8b and R8c (kept in git
+  history). This card sets no split of its own: the split is the exit term of the
+  negotiated bundle (cards N5), and the floor is card FLOOR-exit-floor (see rules/README.md);
+  with no agreement the partners live apart and there is no pot.'

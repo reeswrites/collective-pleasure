@@ -1,0 +1,11 @@
+id: R5c-honor-bound-request
+attribute: partner
+deontic: must_not
+aim: refuse_request
+conditions:
+- {expr: bound_request, op: eq, value: 1}
+- {expr: money, op: le, value: 7}
+or_else: {kind: cap_halve, duration_months: 2, sanctioner: household}
+gloss: When the bound-request flag is exactly 1 and the private money is at most 7,
+  a partner must not refuse request. Breaking it brings a cap halve for 2 month(s).
+source: evolved (sanction) from R5c-honor-bound-request

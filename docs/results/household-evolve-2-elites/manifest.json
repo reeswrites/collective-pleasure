@@ -1,0 +1,672 @@
+{
+ "selection_rule": "mar.evolve.pick_elite_h (rank-0, highest mean of the four normalized objectives, ties by fewer cards)",
+ "lines": {
+  "line-01": {
+   "cards": [
+    "W1-no-veto",
+    "W2-no-request",
+    "W3-no-take"
+   ],
+   "train": {
+    "pleasure": 0.8763193376068377,
+    "no_fail": 0.6666666666666667,
+    "liberty": 0.7889115143199673,
+    "cooperation": 0.8614316239316239,
+    "freedom": 1.0,
+    "bits": 5.216240354542868,
+    "up": 0.6666666666666666,
+    "down": 0.3333333333333333,
+    "left": 0.5
+   },
+   "val": {
+    "pleasure": 0.8808416666666667,
+    "no_fail": 0.8333333333333334,
+    "liberty": 0.7719609822550371,
+    "cooperation": 0.8666880341880342,
+    "freedom": 1.0,
+    "bits": 5.185167712888765,
+    "up": 0.7666666666666667,
+    "down": 0.16666666666666666,
+    "left": 0.3
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-02": {
+   "cards": [
+    "W1-no-veto",
+    "W2-no-request",
+    "W3-no-take",
+    "E2-at-least-half",
+    "R5b-may-commit-requests"
+   ],
+   "train": {
+    "pleasure": 0.8817958333333333,
+    "no_fail": 0.6666666666666667,
+    "liberty": 4.52507088424601,
+    "cooperation": 0.8013888888888889,
+    "freedom": 0.9735377670940171,
+    "bits": 4.919165868543176,
+    "up": 0.8333333333333334,
+    "down": 0.16666666666666666,
+    "left": 0.6666666666666666
+   },
+   "val": {
+    "pleasure": 0.9014497863247863,
+    "no_fail": 0.8666666666666667,
+    "liberty": 4.573863661558788,
+    "cooperation": 0.8540064102564102,
+    "freedom": 0.9727326495726495,
+    "bits": 4.949494155638849,
+    "up": 0.8333333333333334,
+    "down": 0.13333333333333333,
+    "left": 0.26666666666666666
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": true,
+    "give": false
+   }
+  },
+  "line-03": {
+   "cards": [
+    "W1-no-veto",
+    "W2-no-request",
+    "W3-no-take",
+    "V2-stay-home-if-agreed",
+    "E1-at-most-half"
+   ],
+   "train": {
+    "pleasure": 0.9127545405982906,
+    "no_fail": 0.8333333333333334,
+    "liberty": 4.516992558403566,
+    "cooperation": 0.9223824786324787,
+    "freedom": 1.0,
+    "bits": 4.887752225058629,
+    "up": 0.8333333333333334,
+    "down": 0.0,
+    "left": 0.16666666666666666
+   },
+   "val": {
+    "pleasure": 0.8808416666666667,
+    "no_fail": 0.8333333333333334,
+    "liberty": 4.465032276196829,
+    "cooperation": 0.8666880341880342,
+    "freedom": 0.9999358974358974,
+    "bits": 4.891023922867968,
+    "up": 0.7666666666666667,
+    "down": 0.16666666666666666,
+    "left": 0.3
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-04": {
+   "cards": [
+    "B4-may-see",
+    "D1-needs-first",
+    "E1-at-most-half",
+    "E2-at-least-half"
+   ],
+   "train": {
+    "pleasure": 0.8751795405982906,
+    "no_fail": 0.8333333333333334,
+    "liberty": 1.5889299371417682,
+    "cooperation": 0.8753739316239315,
+    "freedom": 1.0,
+    "bits": 5.558351409495507,
+    "up": 0.8333333333333334,
+    "down": 0.16666666666666666,
+    "left": 0.16666666666666666
+   },
+   "val": {
+    "pleasure": 0.8372133867521367,
+    "no_fail": 0.6333333333333333,
+    "liberty": 1.6374441439614575,
+    "cooperation": 0.8043803418803418,
+    "freedom": 0.9998372649572649,
+    "bits": 5.350136711243179,
+    "up": 0.6333333333333333,
+    "down": 0.3333333333333333,
+    "left": 0.5666666666666667
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-05": {
+   "cards": [
+    "W1-no-veto",
+    "W2-no-request",
+    "W3-no-take",
+    "N1-contribution-none",
+    "D1-needs-first",
+    "S5-may-share",
+    "R5b-may-commit-requests",
+    "E1-at-most-half"
+   ],
+   "train": {
+    "pleasure": 0.9430119123931625,
+    "no_fail": 0.8333333333333334,
+    "liberty": 4.93032383626553,
+    "cooperation": 0.8982371794871794,
+    "freedom": 0.9726569978632479,
+    "bits": 5.197406633048877,
+    "up": 0.8333333333333334,
+    "down": 0.0,
+    "left": 0.16666666666666666
+   },
+   "val": {
+    "pleasure": 0.8959353952991453,
+    "no_fail": 0.8333333333333334,
+    "liberty": 4.901432789623017,
+    "cooperation": 0.877542735042735,
+    "freedom": 0.9725878205128206,
+    "bits": 5.188890662955983,
+    "up": 0.8,
+    "down": 0.16666666666666666,
+    "left": 0.3333333333333333
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": true,
+    "give": false
+   }
+  },
+  "line-06": {
+   "cards": [
+    "D1-needs-first",
+    "E1-at-most-half",
+    "E2-at-least-half",
+    "R4-may-ask",
+    "N6-stay-52"
+   ],
+   "train": {
+    "pleasure": 0.9025098824786325,
+    "no_fail": 1.0,
+    "liberty": 1.9084506263392764,
+    "cooperation": 0.9096153846153846,
+    "freedom": 1.0,
+    "bits": 6.060424672531041,
+    "up": 1.0,
+    "down": 0.0,
+    "left": 0.0
+   },
+   "val": {
+    "pleasure": 0.8175108012820512,
+    "no_fail": 0.6,
+    "liberty": 1.9252317277848134,
+    "cooperation": 0.7763461538461538,
+    "freedom": 0.9684084508547008,
+    "bits": 5.7285430565970925,
+    "up": 0.6,
+    "down": 0.4,
+    "left": 0.7
+   },
+   "powers": {
+    "commit_stay": true,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-07": {
+   "cards": [
+    "R1-may-keep",
+    "R2-may-give",
+    "R3a-pot-use",
+    "R3a2-pot-put",
+    "R4-may-ask",
+    "R5-may-refuse",
+    "R5b-may-commit-requests",
+    "R5c-honor-bound-request",
+    "R6-no-veto",
+    "R7-may-see",
+    "R8a-may-leave",
+    "R8b-exit-terms-negotiated",
+    "R8d-may-commit-stay",
+    "E1-at-most-half",
+    "D1-needs-first"
+   ],
+   "train": {
+    "pleasure": 0.9150192841880341,
+    "no_fail": 0.8333333333333334,
+    "liberty": 5.659076508153909,
+    "cooperation": 0.9134615384615384,
+    "freedom": 1.0,
+    "bits": 6.0276197399471885,
+    "up": 0.8333333333333334,
+    "down": 0.16666666666666666,
+    "left": 0.16666666666666666
+   },
+   "val": {
+    "pleasure": 0.8166017841880342,
+    "no_fail": 0.6,
+    "liberty": 4.864422309192639,
+    "cooperation": 0.7776282051282052,
+    "freedom": 0.9701329914529915,
+    "bits": 5.686058659397282,
+    "up": 0.6,
+    "down": 0.4,
+    "left": 0.7
+   },
+   "powers": {
+    "commit_stay": true,
+    "commit_request": true,
+    "give": true
+   }
+  },
+  "line-08": {
+   "cards": [
+    "B4-may-see",
+    "D1-needs-first",
+    "E1-at-most-half",
+    "E2-at-least-half",
+    "N2-use-needs_only",
+    "R5-may-refuse",
+    "W1-no-veto"
+   ],
+   "train": {
+    "pleasure": 0.8232651175213674,
+    "no_fail": 0.6666666666666667,
+    "liberty": 4.574053651767766,
+    "cooperation": 0.7921474358974359,
+    "freedom": 1.0,
+    "bits": 5.05324328691022,
+    "up": 0.6666666666666666,
+    "down": 0.3333333333333333,
+    "left": 0.6666666666666666
+   },
+   "val": {
+    "pleasure": 0.8341238247863247,
+    "no_fail": 0.6,
+    "liberty": 4.376155358970496,
+    "cooperation": 0.8276495726495726,
+    "freedom": 0.9999726175213675,
+    "bits": 5.167471404085235,
+    "up": 0.6,
+    "down": 0.4,
+    "left": 0.5666666666666667
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-09": {
+   "cards": [
+    "B4-may-see",
+    "D1-needs-first",
+    "E1-at-most-half",
+    "E2-at-least-half",
+    "W1-no-veto",
+    "R8d-may-commit-stay",
+    "W2-no-request"
+   ],
+   "train": {
+    "pleasure": 0.9204616452991453,
+    "no_fail": 0.8333333333333334,
+    "liberty": 5.002091886036804,
+    "cooperation": 0.9423076923076924,
+    "freedom": 0.9726368589743589,
+    "bits": 5.413365673586481,
+    "up": 0.8333333333333334,
+    "down": 0.0,
+    "left": 0.3333333333333333
+   },
+   "val": {
+    "pleasure": 0.8749083333333334,
+    "no_fail": 0.7666666666666666,
+    "liberty": 4.530553349075865,
+    "cooperation": 0.8719017094017094,
+    "freedom": 0.9725878205128206,
+    "bits": 5.355602808869915,
+    "up": 0.7666666666666667,
+    "down": 0.23333333333333334,
+    "left": 0.36666666666666664
+   },
+   "powers": {
+    "commit_stay": true,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-10": {
+   "cards": [
+    "B4-may-see",
+    "D1-needs-first",
+    "E1-at-most-half",
+    "E2-at-least-half",
+    "R3a-pot-use",
+    "W1-no-veto",
+    "R8d-no-commit-stay"
+   ],
+   "train": {
+    "pleasure": 0.8564577991452992,
+    "no_fail": 0.8333333333333334,
+    "liberty": 4.058499044770248,
+    "cooperation": 0.8287393162393162,
+    "freedom": 1.0,
+    "bits": 4.907035684162337,
+    "up": 0.8333333333333334,
+    "down": 0.16666666666666666,
+    "left": 0.3333333333333333
+   },
+   "val": {
+    "pleasure": 0.8373472863247863,
+    "no_fail": 0.6333333333333333,
+    "liberty": 4.11813418880275,
+    "cooperation": 0.8092094017094017,
+    "freedom": 0.9996430448717948,
+    "bits": 4.890684545093607,
+    "up": 0.6333333333333333,
+    "down": 0.36666666666666664,
+    "left": 0.6333333333333333
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-11": {
+   "cards": [
+    "B4-may-see",
+    "D1-needs-first",
+    "E1-at-most-half",
+    "E2-at-least-half",
+    "W2-no-request"
+   ],
+   "train": {
+    "pleasure": 0.8716325854700854,
+    "no_fail": 0.8333333333333334,
+    "liberty": 1.7452222542473521,
+    "cooperation": 0.8601495726495726,
+    "freedom": 1.0,
+    "bits": 5.818878368884403,
+    "up": 0.8333333333333334,
+    "down": 0.16666666666666666,
+    "left": 0.3333333333333333
+   },
+   "val": {
+    "pleasure": 0.8236796260683761,
+    "no_fail": 0.6333333333333333,
+    "liberty": 1.818764678470387,
+    "cooperation": 0.8057585470085471,
+    "freedom": 0.9993160576923077,
+    "bits": 5.604424995078802,
+    "up": 0.6333333333333333,
+    "down": 0.36666666666666664,
+    "left": 0.5333333333333333
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-12": {
+   "cards": [
+    "W1-no-veto",
+    "W2-no-request",
+    "W3-no-take",
+    "E1-at-most-half"
+   ],
+   "train": {
+    "pleasure": 0.8197412927350428,
+    "no_fail": 0.5,
+    "liberty": 4.224477314548914,
+    "cooperation": 0.8163995726495726,
+    "freedom": 1.0,
+    "bits": 4.799703597694765,
+    "up": 0.5,
+    "down": 0.5,
+    "left": 0.8333333333333334
+   },
+   "val": {
+    "pleasure": 0.8808416666666667,
+    "no_fail": 0.8333333333333334,
+    "liberty": 4.465032276196829,
+    "cooperation": 0.8666880341880342,
+    "freedom": 0.9999358974358974,
+    "bits": 4.891023922867968,
+    "up": 0.7666666666666667,
+    "down": 0.16666666666666666,
+    "left": 0.3
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-13": {
+   "cards": [
+    "B4-may-see",
+    "D1-needs-first",
+    "E1-at-most-half",
+    "E2-at-least-half",
+    "W1-no-veto"
+   ],
+   "train": {
+    "pleasure": 0.8726486111111112,
+    "no_fail": 0.8333333333333334,
+    "liberty": 4.042425603989339,
+    "cooperation": 0.874732905982906,
+    "freedom": 1.0,
+    "bits": 4.951845346617575,
+    "up": 0.8333333333333334,
+    "down": 0.16666666666666666,
+    "left": 0.3333333333333333
+   },
+   "val": {
+    "pleasure": 0.83504125,
+    "no_fail": 0.6,
+    "liberty": 4.236919274556057,
+    "cooperation": 0.8286217948717949,
+    "freedom": 0.9999726175213675,
+    "bits": 4.917542685224436,
+    "up": 0.6,
+    "down": 0.4,
+    "left": 0.5666666666666667
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-14": {
+   "cards": [
+    "B4-may-see",
+    "D1-needs-first",
+    "E1-at-most-half",
+    "E2-at-least-half",
+    "W1-no-veto"
+   ],
+   "train": {
+    "pleasure": 0.9133466880341881,
+    "no_fail": 1.0,
+    "liberty": 4.653639645073365,
+    "cooperation": 0.9306623931623932,
+    "freedom": 1.0,
+    "bits": 5.24194778546124,
+    "up": 1.0,
+    "down": 0.0,
+    "left": 0.16666666666666666
+   },
+   "val": {
+    "pleasure": 0.83504125,
+    "no_fail": 0.6,
+    "liberty": 4.384320439379498,
+    "cooperation": 0.8286217948717949,
+    "freedom": 0.9999726175213675,
+    "bits": 5.1618898875738015,
+    "up": 0.6,
+    "down": 0.4,
+    "left": 0.5666666666666667
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": false,
+    "give": false
+   }
+  },
+  "line-15": {
+   "cards": [
+    "R1-may-keep",
+    "R2-may-give",
+    "R3a-pot-use",
+    "R3a2-pot-put",
+    "R5-may-refuse",
+    "R5b-may-commit-requests",
+    "R5c-honor-bound-request",
+    "R6-no-veto",
+    "R7-may-see",
+    "R8a-may-leave",
+    "R8b-exit-terms-negotiated",
+    "R8d-no-commit-stay",
+    "N5a-exit-equal_split",
+    "N5b-exit-equal_split",
+    "N6-stay-52"
+   ],
+   "train": {
+    "pleasure": 0.8571105235042734,
+    "no_fail": 0.8333333333333334,
+    "liberty": 5.104671402787802,
+    "cooperation": 0.8402777777777778,
+    "freedom": 0.9991182158119658,
+    "bits": 5.618851660981798,
+    "up": 0.8333333333333334,
+    "down": 0.16666666666666666,
+    "left": 0.16666666666666666
+   },
+   "val": {
+    "pleasure": 0.8244313247863247,
+    "no_fail": 0.6,
+    "liberty": 4.714309786493201,
+    "cooperation": 0.7702670940170939,
+    "freedom": 0.9994032585470085,
+    "bits": 5.616796877573558,
+    "up": 0.6,
+    "down": 0.4,
+    "left": 0.7
+   },
+   "powers": {
+    "commit_stay": true,
+    "commit_request": true,
+    "give": true
+   }
+  },
+  "line-16": {
+   "cards": [
+    "B4-may-see",
+    "D1-needs-first",
+    "E1-at-most-half",
+    "W1-no-veto"
+   ],
+   "train": {
+    "pleasure": 0.8960371794871795,
+    "no_fail": 1.0,
+    "liberty": 4.771519479107744,
+    "cooperation": 0.9019230769230769,
+    "freedom": 1.0,
+    "bits": 5.277818414793526,
+    "up": 1.0,
+    "down": 0.0,
+    "left": 0.0
+   },
+   "val": {
+    "pleasure": 0.83504125,
+    "no_fail": 0.6,
+    "liberty": 4.373004795230662,
+    "cooperation": 0.8286217948717949,
+    "freedom": 1.0,
+    "bits": 5.169396024375569,
+    "up": 0.6,
+    "down": 0.4,
+    "left": 0.5666666666666667
+   },
+   "powers": {
+    "commit_stay": false,
+    "commit_request": false,
+    "give": false
+   }
+  }
+ },
+ "seeds_val": {
+  "author_seed_v2_bindable": {
+   "pleasure": 0.8237615170940171,
+   "no_fail": 0.6,
+   "liberty": 1.3571639014144998,
+   "cooperation": 0.7702670940170939,
+   "freedom": 0.97159702991453,
+   "bits": 5.911983562193311,
+   "up": 0.6,
+   "down": 0.4,
+   "left": 0.7
+  },
+  "author_seed_v2_free_exit": {
+   "pleasure": 0.8244313247863247,
+   "no_fail": 0.6,
+   "liberty": 0.8699138199303875,
+   "cooperation": 0.7702670940170939,
+   "freedom": 1.0,
+   "bits": 5.817355661249295,
+   "up": 0.6,
+   "down": 0.4,
+   "left": 0.7
+  },
+  "baseline": {
+   "pleasure": 0.8199976068376068,
+   "no_fail": 0.6,
+   "liberty": 1.742378000602207,
+   "cooperation": 0.796826923076923,
+   "freedom": 0.9995471367521367,
+   "bits": 5.40282191742339,
+   "up": 0.6,
+   "down": 0.4,
+   "left": 0.6
+  },
+  "needs_duty": {
+   "pleasure": 0.8199976068376068,
+   "no_fail": 0.6,
+   "liberty": 0.8325353856814275,
+   "cooperation": 0.796826923076923,
+   "freedom": 0.9995705128205129,
+   "bits": 5.812462465148754,
+   "up": 0.6,
+   "down": 0.4,
+   "left": 0.6
+  },
+  "no_pressure_wall": {
+   "pleasure": 0.8808416666666667,
+   "no_fail": 0.8333333333333334,
+   "liberty": 0.7719609822550371,
+   "cooperation": 0.8666880341880342,
+   "freedom": 1.0,
+   "bits": 5.185167712888765,
+   "up": 0.7666666666666667,
+   "down": 0.16666666666666666,
+   "left": 0.3
+  }
+ },
+ "cfg": {
+  "pop": 8,
+  "offspring": 6,
+  "generations": 6,
+  "runs": 6,
+  "k": 3,
+  "max_rules": 16,
+  "attempts_factor": 12,
+  "weeks": 156
+ }
+}

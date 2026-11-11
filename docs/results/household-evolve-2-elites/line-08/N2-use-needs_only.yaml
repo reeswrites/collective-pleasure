@@ -1,0 +1,9 @@
+id: N2-use-needs_only
+attribute: partner
+deontic: must_not
+aim: take_shared
+conditions:
+- {expr: need_gap, op: eq, value: 0}
+or_else: null
+gloss: A member may draw from the pot only when there is a shared need open.
+source: negotiated, week 0, members imposed

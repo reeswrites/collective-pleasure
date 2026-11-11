@@ -1,0 +1,11 @@
+id: E1-at-most-half
+attribute: partner
+deontic: must_not
+aim: leave
+conditions:
+- {expr: pooled, op: gt, value: 0}
+- {expr: take, op: gt, value: 60}
+or_else: null
+gloss: When the pooled share is more than 0 and the share taken is more than 60, a
+  partner must not leave.
+source: evolved (bound) from E1-at-most-half

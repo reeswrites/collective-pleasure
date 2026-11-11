@@ -1,0 +1,10 @@
+id: W2-no-request
+attribute: partner
+deontic: must_not
+aim: request
+conditions: []
+or_else: null
+gloss: No partner may press the other with a request.
+source: 'docs/results/household-v3a-prereg.md (v3a variant, committed before any v3a
+  run). Motivation: restraining a partner who presses on the other (the author''s
+  note on control and brittle households).'

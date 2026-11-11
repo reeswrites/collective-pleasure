@@ -1,0 +1,14 @@
+id: R2-may-give
+attribute: partner
+deontic: may
+aim: give
+conditions: []
+or_else: null
+gloss: A partner may give or trade anything they own to anyone, on any terms both
+  accept.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back"
+  (2026-11-10), the author''s words: "people can own things to themselkves but choose
+  to give htme to someone on any conditions". Seed v2 rule R2. Encoded as a permission
+  on `give`; trade is a give with a commitment as the terms (ASSUMED). Seed v2.2 (2026-11-10,
+  pending author read-back): R3b stays removed; pot terms are negotiated by everyone
+  who shares the pot (docs/decisions/0013-negotiated-pots.md).'

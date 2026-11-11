@@ -1,0 +1,9 @@
+id: R6-no-veto
+attribute: partner
+deontic: must_not
+aim: veto
+conditions:
+- {expr: need_gap, op: ge, value: 2}
+or_else: null
+gloss: When the unfunded need is at least 2, a partner must not veto.
+source: evolved (add_condition) from R6-no-veto

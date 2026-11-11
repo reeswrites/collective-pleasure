@@ -1,0 +1,11 @@
+id: R5c-honor-bound-request
+attribute: partner
+deontic: must_not
+aim: refuse_request
+conditions:
+- {expr: bound_request, op: eq, value: 1}
+- {expr: months_in, op: lt, value: 25}
+or_else: null
+gloss: When the bound-request flag is exactly 1 and the months in the household is
+  less than 25, a partner must not refuse request.
+source: evolved (add_condition) from R5c-honor-bound-request

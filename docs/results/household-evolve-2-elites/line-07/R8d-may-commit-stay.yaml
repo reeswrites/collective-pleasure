@@ -1,0 +1,14 @@
+id: R8d-may-commit-stay
+attribute: partner
+deontic: may
+aim: commit_stay
+conditions: []
+or_else: null
+gloss: A partner may choose to bind themselves not to leave for a committed duration;
+  leaving during it is a breach with the agreed consequence, and the exit terms apply
+  after it ends.
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "On binding commitments
+  to stay" (2026-11-10), the author''s words: "i guess you can bind someone not to
+  leave if negotiated but maybe also test models where that isnt alllowed". Variant:
+  bindable. Seed v2.2 (2026-11-10, pending author read-back): R3b stays removed; pot
+  terms are negotiated by everyone who shares the pot (docs/decisions/0013-negotiated-pots.md).'
