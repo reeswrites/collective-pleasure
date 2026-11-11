@@ -131,7 +131,7 @@ Done since the last pass: the council fixes, the lint and gates, the capability 
 
 ## Waiting on the author
 
-The 13 open questions in docs/notes/hedonic-technology-synthesis.md, in short. Update 2026-11-11: the author answered Q1 to Q12 (section 5 of that file); Q2, Q4, Q6, Q7, Q8, Q9 and Q10 are not yet read back. The v2.3 read-back is partly confirmed (four points). Still open for the author: the retest verdict rule (docs/results/v2-retest-prereg-DRAFT.md).
+The 13 open questions in docs/notes/hedonic-technology-synthesis.md, in short. Update 2026-11-11: the author answered Q1 to Q12 (section 5 of that file); Q2 and Q4 were read back on 2026-11-11 (Q2: a check-in or a direct renegotiation can come first, exit last; Q4: equal gains are not required, and uneven gains are mostly a problem when slid into, not chosen); Q6, Q7, Q8, Q9 and Q10 are not yet read back. The v2.3 read-back is partly confirmed (four points). Still open for the author: the retest verdict rule (docs/results/v2-retest-prereg-DRAFT.md).
 
 1. Lifetime horizon and a recall term, or a present-weighted one, for a persona (the author has answered this in part: lifetime pleasure, via vividness of memory).
 2. Whether the aversion is to enforcement only, so reliance without a penalty card is fine.
