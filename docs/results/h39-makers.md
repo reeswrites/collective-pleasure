@@ -2,6 +2,8 @@
 
 Wording rule: agents feel nothing; "pleasure" is a gloss for a modeled hedonic state.
 
+**Note (2026-11-11): rerun as H39b, [h39b-makers-rerun.md](h39b-makers-rerun.md).** The 0.02 time cost below charged making twice and was fitted so makers-on matched makers-off. Without it, with making chosen against the agent's own week: the tally rules' harm to clipped pleasure does not survive (BP − Z −0.0027 [−0.0055, +0.0002]; unclipped still below 0); "makers lower pleasure" survives and is larger (−0.022); P3 and P4 no longer hold as stated here; protection starts more projects. Read this file with that note.
+
 Status: run once on 2026-11-11, after the preregistration ([h39-makers-prereg.md](h39-makers-prereg.md), commit a6314a7; Amendment 1, commit fefb085) and the code (823e43a). Design: [h39-makers-design.md](h39-makers-design.md). 13 arms × 120 pairings × 4 seeds = 6,240 runs, 2,779 s on 3 workers. Scripted agents, no model calls, every number ASSUMED. By the power check the H39 and H20a verdicts are DESCRIPTIVE: the verdict rules are applied below, but the runs were too few to carry verdict wording for the headline comparisons.
 
 ## In one paragraph
