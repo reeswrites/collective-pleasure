@@ -467,3 +467,133 @@ def reference_scores(world, spec) -> dict:
     used as the "training score" in exam gaps, the same for every run and arm."""
     scores, yld, seams, _, per_mix = evaluate(world, spec, "ref", None, world.reference_context())
     return {"scores": scores, "yield": yld, "seams": sorted(map(list, seams)), "per_mix": per_mix}
+
+
+# =====================================================================================================================
+# Household evolution (first household run; docs/results/household-evolve-prereg.md). Same machinery as the fishery loop
+# (non-dominated sorting, crowding, bloat tie-break, one seeded RNG, JSONL log), different world: a population of household
+# rule sets scored on persona pairings under conditions drawn afresh each generation (varied training), through the
+# pre-run filter (lint + the household proof checks + redundancy). The loop never touches the exam: evolve_household has no
+# exam argument (tested) and nothing here names an exam condition.
+# =====================================================================================================================
+
+@dataclass
+class HConfig:
+    pop: int = 8
+    offspring: int = 6
+    generations: int = 6
+    runs: int = 6              # persona-pairing runs per candidate per generation (the generation's context)
+    k: int = 3                 # proof-check bound (months)
+    max_rules: int = 16
+    attempts_factor: int = 12
+
+
+def _hrank(world, pop):
+    pts = [tuple(i.scores[o] for o in world.objectives) for i in pop]
+    for r, front in enumerate(nondominated_sort(pts)):
+        cd = crowding_distance(pts, front)
+        for i in front:
+            pop[i].rank, pop[i].crowd = r, cd[i]
+    return pop
+
+
+def _hsurvive(world, pool, mu):
+    _hrank(world, pool)
+    pool.sort(key=lambda i: (i.rank, i.n_rules, -i.crowd))   # bloat tie-break: fewer cards before crowding
+    keep = pool[:mu]
+    _hrank(world, keep)
+    return keep
+
+
+def _hscore(world, spec, ctx, cache, op="seed"):
+    key = (tuple(c.to_yaml() for c in spec), ctx.key)
+    if key not in cache:
+        scores, ev = world.score_runs(spec, ctx)
+        cache[key] = (scores, ev)
+    scores, ev = cache[key]
+    return Individual(tuple(spec), scores, None, frozenset(), ev, op)
+
+
+def pick_elite_h(world, pop) -> Individual:
+    """The documented selection rule: among the rank-0 members, the highest mean of the four objectives (liberty in bits divided by
+    world_api.HH_NORM['liberty'], capped at 1); ties by fewer cards."""
+    front = [i for i in pop if i.rank == 0] or list(pop)
+    return max(front, key=lambda i: (round(world.norm_mean(i.scores), 9), -i.n_rules))
+
+
+def _hh_record(world, gen, stats, pop, seed_scores):
+    front = [i for i in pop if i.rank == 0]
+    objs = [(i.scores["pleasure"], i.scores["no_fail"], min(1.0, i.scores["liberty"] / 6.0), i.scores["cooperation"]) for i in front]
+    el = pick_elite_h(world, pop)
+    return {"gen": gen, **stats, "front_size": len(front), "hv": hypervolume_nd(objs),
+            "front_distinct": len({tuple(round(x, 2) for x in o) for o in objs}),
+            "pop_rules_mean": _mean([i.n_rules for i in pop]), "pop_rules_max": max(i.n_rules for i in pop),
+            "front": [{"n_rules": i.n_rules, "ids": [c.id for c in i.spec], "scores": i.scores, "op": i.op} for i in front],
+            "elite": {"ids": [c.id for c in el.spec], "n_rules": el.n_rules, "scores": el.scores},
+            "seed_scores": seed_scores}
+
+
+def evolve_household(world, seeds, seed, config=None, log_path=None, cache=None):
+    """seeds: {name: spec}. -> dict(pop, elite, log, seed_individuals). One seeded RNG; generation g scores EVERY population member on
+    that generation's context (a fresh draw of persona pairings and conditions from the training distribution), then proposes
+    offspring, filters them (world.check: lint + proof + redundancy, BEFORE any run), scores the survivors, and selects mu of mu + lambda."""
+    cfg, rng = config or HConfig(), random.Random(seed)
+    cache = {} if cache is None else cache
+    log, out = [], (Path(log_path) if log_path else None)
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text("")
+    from .world_api import make_context, run_key
+    names = list(seeds)
+    have = {run_key(s) for s in seeds.values()}
+    ctx = make_context(seed, 0, cfg.runs)
+    seed_inds = {n: _hscore(world, s, ctx, cache) for n, s in seeds.items()}
+    for n, s in seeds.items():           # the seeds are fixed inputs: they must pass the filter on their own, else the run is invalid
+        ok, why = world.check(s, None)
+        if not ok:
+            raise ValueError(f"seed {n} fails the filter: {why}")
+    pop = list(seed_inds.values())
+    for gen in range(cfg.generations + 1):
+        ctx = make_context(seed, gen, cfg.runs)
+        if gen:
+            pop = _hrank(world, [_hscore(world, i.spec, ctx, cache, i.op) for i in pop])
+        else:
+            _hrank(world, pop)
+        target = max(1, cfg.pop - len(pop)) if gen == 0 else cfg.offspring
+        stats = {"proposed": 0, "duplicates": 0, "oversize": 0, "inapplicable": 0, "filter_rejected": 0, "accepted": 0,
+                 "rejected_by_reason": {}, "proposed_by_op": {}, "rejected_by_op": {}, "accepted_by_op": {}}
+        kids, attempts = [], 0
+        while len(kids) < target and attempts < target * cfg.attempts_factor:
+            attempts += 1
+            parent = _tournament(pop, rng) if len(pop) > 1 else pop[0]
+            spec, op = world.mutate(parent.spec, rng, parent.fail_trace)
+            if spec is None:
+                stats["inapplicable"] += 1
+                continue
+            stats["proposed"] += 1
+            stats["proposed_by_op"][op] = stats["proposed_by_op"].get(op, 0) + 1
+            key = run_key(spec)
+            if key in have:
+                stats["duplicates"] += 1
+                continue
+            have.add(key)
+            if len(spec) > cfg.max_rules:
+                stats["oversize"] += 1
+                continue
+            ok, reasons = world.check(spec, parent.spec)         # lint + proof + redundancy, before any run
+            if not ok:
+                stats["filter_rejected"] += 1
+                stats["rejected_by_op"][op] = stats["rejected_by_op"].get(op, 0) + 1
+                for r in reasons:
+                    stats["rejected_by_reason"][r] = stats["rejected_by_reason"].get(r, 0) + 1
+                continue
+            kids.append(_hscore(world, spec, ctx, cache, op))
+            stats["accepted"] += 1
+            stats["accepted_by_op"][op] = stats["accepted_by_op"].get(op, 0) + 1
+        pop = _hsurvive(world, pop + kids, cfg.pop)
+        rec = _hh_record(world, gen, stats, pop, {n: v.scores for n, v in seed_inds.items()} if gen == 0 else None)
+        log.append(rec)
+        if out:
+            with out.open("a") as f:
+                f.write(json.dumps(rec) + "\n")
+    return {"pop": pop, "elite": pick_elite_h(world, pop), "log": log, "seed_individuals": seed_inds}
