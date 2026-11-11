@@ -33,7 +33,7 @@ Claim ids in docs/claims.md: to be added after the run.
 | V22-0 | author_seed_v2_bindable | all fixes off (control) | n/a |
 | BASE-0i | baseline | all fixes off | no (imposed, as before; replication only) |
 
-"All four fixes on" means `contact`, `valued_money`, `real_outside`, `nash_terms`, `fines` on, and `contact_motive` and `fine_crowdout` off. The two sub-flags are behavioral assumptions or fidelity probes and stay out of the headline. Under `fines` with `roles` on, a fine on a lapsed role is on the menu but exists only if both partners accept it (v2.3 rule 17).
+"All four fixes on" means `contact`, `valued_money`, `real_outside`, `nash_terms`, `bar_leave`, `take_menu_terms`, `fines` on, and `contact_motive` and `fine_crowdout` off. `bar_leave` (a partner may leave when the outside option beats staying) and `take_menu_terms` (the leave menu includes the smallest take the exit term allows) come from the test 2 run (docs/results/stay-test.md; design doc, additions B and C). `bar_leave` applies in the baseline arms too. In the fixes-off arms both are off, so those arms keep the old behavior. The two sub-flags are behavioral assumptions or fidelity probes and stay out of the headline. Under `fines` with `roles` on, a fine on a lapsed role is on the menu but exists only if both partners accept it (v2.3 rule 17).
 
 **Descriptive arms (smaller cohort: the 15 hand pairings plus the 25 pilot-style pairings drawn with `random.Random(901)`, at the confirmatory seeds).**
 
@@ -72,6 +72,8 @@ Claim ids in docs/claims.md: to be added after the run.
 | M6 | Baseline may decline: in BASE-F and BASE-0, a pair forms iff both partners' baseline value exceeds their outside option | unit test on constructed cases; count of declines reported |
 | M7 | Unhappiness ladder: under V23-F no partner leaves without a prior check-in and early review, except at non-offsettable load `skip_n` or above | exact count of exceptions, each at or above `skip_n` |
 | M8 | Trust variants: with `trust_words="actions"` a word event never moves trust; with `"words"` its gain is removed after a lapse within the window | unit tests pass |
+| M9 | Leave on the outside option (`bar_leave`): a constructed partner with no distress whose outside option beats the status-quo value by more than `leave_margin` (0.02) puts `leave` on its menu within `bar_runs` (2) readings, and does not when the margin is not met; under V23-F the ladder (check-in, early review) runs first | unit tests pass; per arm, the count of leaves triggered by the bar is reported |
+| M10 | Take menu meets the exit term (`take_menu_terms`): in every fixes-on arm, no partner-week has a leave menu where every take is forbidden by the current exit term (for example "proportional", minimum 100 percent of what was put in) | count is exactly 0 |
 
 If a check fails because of a bug, the bug is fixed and noted in an amendment. No parameter is retuned after seeing outcomes. If M1 or M3 fails for a non-bug reason, the fix is reported as not working and the retest still runs, with that stated.
 
@@ -128,6 +130,7 @@ Descriptive (no verdict wording):
 - C6: P1 and P2 on the 15 hand pairings alone, for continuity with earlier reports.
 - C7: the gap between partners' gains over their outside options, per arm.
 - C8: formed pairs only. P1 to P3 in mean pleasure and in net wellbeing, restricted to pairings that formed a household in both arms compared, with the share of pairings kept. Selected, so descriptive only. It shows whether the result depends on counting people who live apart.
+- C9: all-forbidden take menus in the fixes-off arms (BASE-0, V22-0, BASE-0i): the number of partner-weeks where every take on the leave menu is forbidden by the exit term, and the number of pairings with any. These partners cannot leave whatever their state. The stay test found this in one pairing under the confirmed seed (Steward with Controller) and in three under free exit.
 
 ## Verdict rule
 
@@ -145,7 +148,7 @@ From docs/results/household-fixes-design.md. Letting the baseline decline remove
 
 ## Not testable by design
 
-The manipulation checks M1 to M8 (pass or fail). The fine counts (M4). The slid-into flag's definition (it is a measure, not a test).
+The manipulation checks M1 to M10 (pass or fail). The fine counts (M4). The slid-into flag's definition (it is a measure, not a test).
 
 ## Limits stated now
 
@@ -162,6 +165,7 @@ None yet. Amendment 1 (pilot table, power check, n and S, runtime) is committed 
 
 ### Draft change log
 
-- 2026-11-11 (latest): the author's "everyone counts" settled who is scored: every person at their actual outcome, living apart included, decides the verdict. The "Claude's choice" label was replaced by the author's decision; C8 stays descriptive. Nothing had been run.
+- 2026-11-11 (after the stay test): `bar_leave` and `take_menu_terms` added to "all four fixes on" (they are part of the approved fix-then-retest plan); checks M9 and M10 and descriptive line C9 (all-forbidden take menus in the fixes-off arms) added. Nothing had been run.
+- 2026-11-11 (earlier): the author's "everyone counts" settled who is scored: every person at their actual outcome, living apart included, decides the verdict. The "Claude's choice" label was replaced by the author's decision; C8 stays descriptive. Nothing had been run.
 - 2026-11-11 (later): the author's "show both, judge on pleasure" made mean pleasure primary again (P1, P2 pleasure only); net wellbeing and non-offsettable suffering became secondary lines that do not decide; the clause calling the condition met when the gain only spares suffering was removed; scoring people who decline was labeled Claude's choice (faithfulness review F1) and a formed-pairs-only line (C8) was added. Nothing had been run.
 - 2026-11-11: after the author's v2.3 answers and retest decisions, the primary measure became net wellbeing (pleasure-only became secondary), non-offsettable suffering got its own line, every baseline arm lets pairs decline to form (BASE-0i keeps the old imposed baseline for replication only), the trust-variant arm and the general-unhappiness ladder were added. Nothing had been run.
