@@ -1,0 +1,8 @@
+id: R10a-check-in-first
+attribute: partner
+deontic: may
+aim: checkin
+conditions: []
+or_else: null
+gloss: 'When a partner is unhappy, the first response is a soft check-in: a question, not a complaint, a fine or a penalty. This holds for any unhappiness, a lapsed role or a general sense that things are not working. The world runs it (WeeklyWorld ladders); the card documents it.'
+source: 'docs/results/seed-v2.3-readback.md, confirmed by the author 2026-11-11 (experiments/questions.jsonl, topics seed-v2.3-readback-1 to -4). Rule 15. The author: "renegotiate or a soft check in i think not leaving right away but utlimtaly what the person does is the sterongest signal"; "check in first for general unhappiness too".'

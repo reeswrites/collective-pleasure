@@ -1,0 +1,8 @@
+id: R9-may-agree-roles
+attribute: partner
+deontic: may
+aim: role
+conditions: []
+or_else: null
+gloss: 'Partners may agree roles: who usually does a recurring job for the household (earning and keeping the bills funded, or planning time together). A role exists only if both agreed to it; it is a negotiated term and can be changed at any review. A role holder gets better at the job over time.'
+source: 'docs/results/seed-v2.3-readback.md, confirmed by the author 2026-11-11 (experiments/questions.jsonl, topics seed-v2.3-readback-1 to -4). Rule 14. The author: "reliance is fine its the guilt and scorekeeping i dont like like this seems to be abou specializaion and having to allocate roles etc". The three jobs and the specialization saving are Claude''s defaults (open question 1).'

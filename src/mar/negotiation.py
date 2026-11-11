@@ -137,7 +137,13 @@ GLOSS = {
     ("stay", STAY_WEEKS): "Every member commits to stay for 52 weeks; leaving earlier forfeits the breach share of what the exit term would let them carry (the breach cost term sets that share; the whole of it by default).",
     ("requests", "mutual"): "Every member commits to honor the others' stay-home requests for 52 weeks (a bound stay-home request bars seeing the friend and spending on oneself).",
     ("fine", "some"): "A member who breaks a request commitment they chose pays the wronged member a fine of 3 money (the code's REQUEST_FINE); without this term breaking it carries no fine, only the loss of the other member's trust.",
+    ("fine", "big"): "A member who breaks a commitment they chose (a request commitment, a stay, or an agreed role) pays the wronged member a fine of 6 money. Both members chose this term; while it stands both pay a small scorekeeping cost each week.",
+    ("roles", "earner_planner"): "Partner A holds the earning role (works and keeps the bills funded); Partner B holds the planning role (plans time together). A role holder gets better at the job over time. A lapse leads to a soft check-in, then an early renegotiation; no penalty unless both chose a fine.",
+    ("roles", "swapped"): "Partner B holds the earning role (works and keeps the bills funded); Partner A holds the planning role (plans time together). A role holder gets better at the job over time. A lapse leads to a soft check-in, then an early renegotiation; no penalty unless both chose a fine.",
+    ("roles", "shared"): "Both partners share every recurring job; nobody holds a role.",
 }
+FIX_FINES = ("none", "some", "big")       # fix 4: opt-in fines; "some" = 3 money (REQUEST_FINE), "big" = 6
+ROLES = ("none", "earner_planner", "swapped", "shared")    # seed v2.3 rule 14 (roles as a negotiated term)
 
 
 
@@ -192,6 +198,13 @@ def compile_bundle(b, members):
             # a `may commit_request` like N7 and R8d: the consequence of breaking the commitment is stated on the card and enforced by the
             # world (WeeklyWorld.fine reads this card's id); the shared sanction check knows only warn / cap_halve / suspend
             cards.append(_card("N8-fine-some", "may", "commit_request", [], g("fine"), src))
+    if b.get("roles", "none") != "none":
+        cards.append(_card(f"N9-roles-{b['roles']}", "may", "role", [], g("roles"), src))
+    f = b.get("fine", "none")
+    if f != "none" and not (b["requests"] == "mutual" and f == "some"):
+        # fix 4: an opt-in fine on any chosen commitment (stay, requests or roles); the world reads the card id (WeeklyWorld.fine_amount)
+        aim = "commit_request" if b["requests"] == "mutual" else ("commit_stay" if b["stay"] else "role")
+        cards.append(_card(f"N8-fine-{f}", "may", aim, [], GLOSS[("fine", "big")] if f == "big" else g("fine"), src))
     return cards
 
 
@@ -219,7 +232,11 @@ def menu_of(base):
     """Which optional commitments the base rules let a partner choose to make."""
     gate = H.PyGate(base)
     st = {n: 0 for n in H.STATE_VARS}
-    return {"stay": gate.check("partner", "commit_stay", st)[0], "requests": gate.check("partner", "commit_request", st)[0]}
+    out = {"stay": gate.check("partner", "commit_stay", st)[0], "requests": gate.check("partner", "commit_request", st)[0]}
+    fx = HD.active_fixes()
+    if fx and fx.roles:     # seed v2.3: roles are on the menu only where a base card permits agreeing roles
+        out["roles"] = any(c.aim == "role" and c.deontic == "may" for c in base)
+    return out
 
 
 # ---- proof checks BEFORE living ------------------------------------------------------------------------------------
@@ -420,8 +437,21 @@ def default_key():
     return key(FAIR_DEFAULT)
 
 
-def bundles_v2(allow_stay=True, allow_requests=True):
-    """v1's menu with the breach-cost term (1.0 / 0.5 / 0.0) added where a stay is agreed; otherwise breach is inert (1.0)."""
+def bundles_v2(allow_stay=True, allow_requests=True, allow_roles=False, fines=False):
+    """v1's menu with the breach-cost term (1.0 / 0.5 / 0.0) added where a stay is agreed; otherwise breach is inert (1.0).
+    allow_roles / fines (household fixes, default off): the roles term and opt-in fines on any chosen commitment."""
+    if allow_roles or fines:
+        out = []
+        for b in bundles(allow_stay, allow_requests):
+            for ro in (ROLES if allow_roles else ("none",)):
+                committed = b["stay"] or b["requests"] == "mutual" or ro in ("earner_planner", "swapped")
+                for f in (BREACH if b["stay"] else (1.0,)):
+                    for fine in ((FIX_FINES if fines else FINES) if (committed if fines else b["requests"] == "mutual") else ("none",)):
+                        x = dict(b, breach=f, fine=fine)
+                        if allow_roles:
+                            x["roles"] = ro
+                        out.append(x)
+        return out
     out = []
     for b in bundles(allow_stay, allow_requests):
         for f in (BREACH if b["stay"] else (1.0,)):
@@ -441,13 +471,32 @@ def fine_values(p):
     security and togetherness like it, members who value autonomy do not)."""
     w = p.weights
     x = 0.30 * w["security"] + 0.20 * w["togetherness"] - 0.40 * w["autonomy"] - 0.10 * w["other_connections"]
-    return {"none": 0.0, "some": 0.5 * x}
+    return {"none": 0.0, "some": 0.5 * x, "big": 1.0 * x}
+
+
+def role_values(p, low=False):
+    """Value of the roles term (seed v2.3; ASSUMED proxy): members who value togetherness and security like specializing, members who
+    value autonomy less so. Partner A is the higher earner, so the earner_planner split fits the incomes slightly better."""
+    w = p.weights
+    x = 0.15 * w["togetherness"] + 0.10 * w["security"] - 0.15 * w["autonomy"] + 0.05
+    return {"none": 0.0, "earner_planner": x + 0.02, "swapped": x - 0.02, "shared": 0.5 * x}
+
+
+_TV = {}
 
 
 def term_sum(p, low, b):
-    tv = term_values(p, low)
-    return (sum(tv[t][b[t]] for t in TERM_NAMES) + (breach_values(p)[b["breach"]] if b["stay"] else 0.0)
+    tk = (p.id, low, tuple(sorted(p.weights.items())), p.risk_tolerance, tuple(p.tags))     # term_values reads only these
+    tv = _TV.get(tk)
+    if tv is None:
+        tv = _TV[tk] = term_values(p, low)
+    base = (sum(tv[t][b[t]] for t in TERM_NAMES) + (breach_values(p)[b["breach"]] if b["stay"] else 0.0)
             + (fine_values(p)[b.get("fine", "none")] if b["requests"] == "mutual" else 0.0))
+    if "roles" in b or (b.get("fine", "none") != "none" and b["requests"] != "mutual"):     # household fixes only
+        base += role_values(p, low)[b.get("roles", "none")]
+        if b["requests"] != "mutual":
+            base += fine_values(p)[b.get("fine", "none")]
+    return base
 
 
 _DCACHE = {}
@@ -455,7 +504,7 @@ _DCACHE = {}
 
 def deltas(p, low, blist, ref, ukey):
     """TERM_SCALE x (term_sum(b) - term_sum(ref)) for every bundle (array)."""
-    ck = (p.id, low, ukey, key(ref), ref.get("breach"), ref.get("fine", "none"))
+    ck = (p.id, low, ukey, key(ref), ref.get("breach"), ref.get("fine", "none"), ref.get("roles"))
     if ck not in _DCACHE:
         r = term_sum(p, low, ref)
         _DCACHE[ck] = TERM_SCALE * np.array([term_sum(p, low, b) - r for b in blist])
@@ -539,11 +588,14 @@ def _solo_cards():
     return _SOLO_CARDS
 
 
-def alone_value(p, role, holdings, seed, mode, hed=None, weeks=OUT_WEEKS):
+def alone_value(p, role, holdings, seed, mode, hed=None, weeks=OUT_WEEKS, cx=None):
     """Persona evaluation of a short rollout of living alone (mode "alone") or with Friend C (mode "friend") with the given holdings.
     Cached by (persona, role, holdings, seed, mode, hedonic-state signature); deterministic given the key."""
     sig = None if hed is None else (round(hed.B, 1), round(hed.N, 1))
-    ck = (p.id, role, int(holdings), seed, mode, weeks, sig)
+    fk = HD.fix_key()
+    if fk is not None and cx is not None:
+        sig = (sig, round(cx["cf"], 1))
+    ck = (p.id, role, int(holdings), seed, mode, weeks, sig) + ((fk,) if fk is not None else ())
     if ck in _RC:
         STATS["hits"] += 1
         return _RC[ck]
@@ -554,6 +606,8 @@ def alone_value(p, role, holdings, seed, mode, hed=None, weeks=OUT_WEEKS):
     w.solo = mode
     if hed is not None:
         w.hed[role] = copy.deepcopy(hed)
+    if cx is not None and w.fx is not None and w.fx.real_outside:    # fix 3: the outside rollout starts from current closeness to friends
+        w.cx[role]["cf"] = cx["cf"]
     run = w.play()
     STATS["rollouts"] += 1
     STATS["rollout_weeks"] += weeks
@@ -561,10 +615,10 @@ def alone_value(p, role, holdings, seed, mode, hed=None, weeks=OUT_WEEKS):
     return _RC[ck]
 
 
-def outside_value(p, role, holdings, seed, hed=None):
+def outside_value(p, role, holdings, seed, hed=None, cx=None):
     """The member's real outside option: the better of living alone and living with Friend C, by its own evaluation.
-    -> (value, {"alone": x, "friend": y})."""
-    d = {m: alone_value(p, role, holdings, seed, m, hed) for m in ("alone", "friend")}
+    cx (fix 3, real_outside): the member's current closeness state, carried into the rollout. -> (value, {"alone": x, "friend": y})."""
+    d = {m: alone_value(p, role, holdings, seed, m, hed, cx=cx) for m in ("alone", "friend")}
     return max(d.values()), d
 
 
@@ -574,6 +628,8 @@ _PC = {}
 def pot_baseline(pa, pb, seed, base, weeks=OUT_WEEKS):
     """Persona evaluation of living together under the fair default for 26 weeks: {"A": x, "B": y}. Cached by (pair, seed)."""
     ck = (pa.id, pb.id, seed, weeks, tuple(sorted(c.id for c in base)))
+    if HD.fix_key() is not None:
+        ck = ck + (HD.fix_key(),)
     if ck not in _PC:
         cards = list(base) + compile_bundle(FAIR_DEFAULT, [pa.id, pb.id])
         run = H.run_weekly(cards, (pa, pb), seed, weeks, deal=deal_from_bundle(FAIR_DEFAULT), breach_forfeit=FAIR_DEFAULT["breach"])
@@ -645,7 +701,7 @@ def trust_penalty(t):
 
 
 def _ids_key(b):
-    return key(b) + (b["breach"], b.get("fine", "none"))
+    return key(b) + (b["breach"], b.get("fine", "none")) + ((b["roles"],) if "roles" in b else ())
 
 
 def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, holdings=None, floor=True, review=False, week=0,
@@ -660,9 +716,17 @@ def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, 
     n = len(personas)
     deadline = deadline or (DEADLINE_REVIEW if review else DEADLINE)
     menu = menu_of(base)
-    blist = bundles_v2(menu["stay"], menu["requests"])
-    ukey = (menu["stay"], menu["requests"])
+    fx = HD.active_fixes()
+    if fx and (fx.fines or menu.get("roles")):
+        blist = bundles_v2(menu["stay"], menu["requests"], bool(menu.get("roles")), bool(fx.fines))
+        ukey = (menu["stay"], menu["requests"], bool(menu.get("roles")), bool(fx.fines))
+    else:
+        blist = bundles_v2(menu["stay"], menu["requests"])
+        ukey = (menu["stay"], menu["requests"])
     ref = ref or FAIR_DEFAULT
+    if "roles" in blist[0]:          # seed v2.3 menu: bundles carry a roles term; a status quo without one has none
+        ref = dict(ref, roles=ref.get("roles", "none"))
+        status_quo = dict(status_quo, roles=status_quo.get("roles", "none")) if status_quo is not None else None
     holdings = holdings or {r: START_HOLDINGS for r in roles}
     keys = [_ids_key(b) for b in blist]
     kindex = {k: i for i, k in enumerate(keys)}
@@ -719,6 +783,17 @@ def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, 
             continue
         passes = 0
         idx = int(np.argmax(np.where(ok, np.round(score, 9), -np.inf)))
+        if fx and fx.nash_terms:
+            # fix 3: among bundles every member values above their bar, propose the Nash bargaining point with disagreement point O
+            both = ok.copy()
+            for q in personas:
+                both &= U[q.id] > bar[q.id]
+            if both.any():
+                nash = np.zeros(len(blist))
+                for j, q in enumerate(personas):
+                    a_q = fx.nash_alpha if j == i else (1.0 - fx.nash_alpha) / max(1, n - 1)
+                    nash = nash + a_q * np.log(np.maximum(U[q.id] - O[q.id], 1e-9))
+                idx = int(np.argmax(np.where(both, np.round(nash, 9), -np.inf)))
         b = blist[idx]
         acc, rej = [me.id], []
         for j, q in enumerate(personas):
@@ -762,6 +837,134 @@ def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, 
         else:
             res.status = "no_pot"           # the default stood but it is worse than someone's outside option
     return res
+
+
+# ---- household fixes: shared helpers (docs/results/household-fixes-design.md) ------------------------------------------------------
+
+def _cx(world, r):
+    """The member's closeness state for the outside rollout (fix 3, real_outside), or None."""
+    return world.cx[r] if (world.fx is not None and world.fx.real_outside and world.fx.contact) else None
+
+
+def bar_reading(world, sq, out, modes=None):
+    """Fix 3, bar_leave: one reading of the ADR 0018 bar. sq: {role: status-quo value (minus the trust penalty)}; out: {role: outside
+    option}. A member whose outside option beats staying by more than leave_margin in bar_runs readings in a row gets `leave` on its menu."""
+    fx = world.fx
+    runs = getattr(world, "bar_runs", None)
+    if runs is None:
+        runs = world.bar_runs = {"A": 0, "B": 0}
+    world.bar_log = getattr(world, "bar_log", [])
+    for r in "AB":
+        better = out[r] > sq[r] + fx.leave_margin
+        runs[r] = runs[r] + 1 if better else 0
+        world.bar_out[r] = runs[r] >= fx.bar_runs
+        if modes:
+            world.bar_mode[r] = modes[r]          # a member who leaves on the bar goes to the alternative it compared (alone or with Friend C)
+    world.bar_log.append({"sq": dict(sq), "out": dict(out), "bar_out": dict(world.bar_out)})
+
+
+class BaselineLived:
+    """The imposed baseline lived the same way as a negotiated household (docs/results/v2-retest-prereg-DRAFT.md). The baseline's cards
+    are imposed; with decline=True (`baseline_may_decline`, the author: "yes pairs should be allowed to not form a househodl") a pair forms
+    only if both members value living under the baseline (a 26-week rollout) above their outside option, else both live apart as a v2.2
+    pair with no pot does and may form at a later 13-week reading. With bar_leave, a 13-week reading of the bar can put `leave` on a
+    member's menu. decline=False and no fixes is the old imposed baseline, bit for bit."""
+
+    def __init__(self, pa, pb, seed, cards, weeks=H.WEEKS, decline=True):
+        self.pa, self.pb, self.seed, self.cards, self.decline = pa, pb, seed, list(cards), decline
+        self.world = H.WeeklyWorld(self.cards, (pa, pb), seed, weeks)
+        self.apart, self.log, self.retries = False, [], []
+        if decline:
+            W = baseline_value(pa, pb, seed, self.cards)
+            O, det = {}, {}
+            for r, p in zip("AB", (pa, pb)):
+                O[r], det[r] = outside_value(p, r, START_HOLDINGS[0] + START_HOLDINGS[1], seed)
+            self.week0 = {"W": W, "O": O}
+            if any(O[r] > W[r] for r in "AB"):
+                self.apart = True
+                self.world = H.WeeklyWorld(self.cards, (pa, pb), seed, weeks, deal={"pot": False, "commits": []})
+                self.world.solo = {r: apart_mode(det[r]) for r in "AB"}
+                for r in "AB":
+                    self.world.p[r]["in"] = False
+
+    def retry(self, w, last):
+        world = self.world
+        O, modes = {}, {}
+        for r, p in zip("AB", (self.pa, self.pb)):
+            O[r], d = outside_value(p, r, world.p[r]["money"], self.seed, world.hed[r], cx=_cx(world, r))
+            modes[r] = apart_mode(d)
+        hyp = copy.deepcopy(world)
+        hyp.hook = None
+        _form_baseline(hyp, w)
+        fwd = forward_values(hyp, w, last)
+        formed = all(fwd[r] > O[r] for r in "AB")
+        self.retries.append({"week": w, "formed": formed, "outside": dict(O), "baseline": dict(fwd)})
+        if formed:
+            _form_baseline(world, w)
+            self.apart = False
+            if world.fx:
+                for r in "AB":
+                    world.events.append((w, r, "formed"))
+        else:
+            world.solo = modes
+
+    def reading(self, w, last):
+        world = self.world
+        fwd = forward_values(world, w, last)
+        O, modes = {}, {}
+        for r, p in zip("AB", (self.pa, self.pb)):
+            carry = world.p[r]["money"] + world.carry_out(r, 50)
+            O[r], d = outside_value(p, r, carry, self.seed, world.hed[r], cx=_cx(world, r))
+            modes[r] = apart_mode(d)
+        self.log.append({"week": w, "outside": dict(O), "baseline": dict(fwd)})
+        bar_reading(world, {r: fwd[r] - trust_penalty(world.trust[r]) for r in "AB"}, O, modes)
+
+    def play(self):
+        world = self.world
+        last = {"busy": {"A": False, "B": False}}
+        bar = world.fx is not None and world.fx.bar_leave
+        for w in range(world.weeks):
+            if w and w % REVIEW_EVERY == 0:
+                if self.apart and self.decline:
+                    self.retry(w, last)
+                elif bar and all(world.p[r]["in"] for r in "AB"):
+                    self.reading(w, last)
+            if world.early_review:
+                world.ladder_reviewed(w)
+            last = {"busy": world.step_week(w, last)}
+        world.run.final = {r: {**world.p[r], "pooled": world.pool, "put": world.put[r]} for r in "AB"}
+        if world.mech:
+            world.run.meta = world.commit_report()
+        if world.fx:
+            world.run.fix = world.fix_report()
+        world.run.exits = list(world.exit_log)
+        return world.run
+
+
+_BC = {}
+
+
+def baseline_value(pa, pb, seed, cards, weeks=OUT_WEEKS):
+    """Persona evaluation of living together under imposed cards for 26 weeks: {"A": x, "B": y}. Cached."""
+    ck = (pa.id, pb.id, seed, weeks, tuple(sorted(c.id for c in cards)), HD.fix_key())
+    if ck not in _BC:
+        run = H.run_weekly(list(cards), (pa, pb), seed, weeks)
+        STATS["rollouts"] += 1
+        _BC[ck] = {r: wellbeing(run.outcomes, r) for r in "AB"}
+    return _BC[ck]
+
+
+def _form_baseline(world, w):
+    """Two partners living apart move in together under the imposed baseline cards: each puts min(POOL_SHARE, own money) in the pot."""
+    for r in "AB":
+        p = world.p[r]
+        put = min(POOL_SHARE, int(p["money"]))
+        p["money"] -= put
+        world.pool += put
+        world.put[r] += put
+        p["in"], p["months_in"], p["weeks_out"] = True, 0, 0
+    world.solo, world.pot = None, True
+    world.pending = {"A": set(), "B": set()}
 
 
 # ---- a lived v2 household: week-0 negotiation, then reviews every 13 weeks -------------------------------------------------------
@@ -854,10 +1057,20 @@ class Lived:
         O, det = {}, {}
         for r, p in zip("AB", ps):
             money, share, put = hold[r]
-            v, d = outside_value(p, r, retained(cur, money, share, "exit", put), self.seed, world.hed[r])
+            v, d = outside_value(p, r, retained(cur, money, share, "exit", put), self.seed, world.hed[r], cx=_cx(world, r))
             O[p.id], det[p.id] = v, d
+        if world.fx and world.fx.bar_leave:
+            bar_reading(world, {r: fwd[r] - trust_penalty(world.trust[r]) for r in "AB"}, {r: O[p.id] for r, p in zip("AB", ps)},
+                        {r: apart_mode(det[p.id]) for r, p in zip("AB", ps)})
         res = negotiate_v2(list(ps), self.arm, self.seed, base=self.base, W={self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, O=O,
                            ref=cur, status_quo=cur, holdings=hold, floor=self.floor, review=True, week=w, trust=self.trust_by_id())
+        if world.fx:
+            if res.changed:
+                for r in "AB":
+                    world.events.append((w, r, "terms"))        # a choice event: both members accepted new terms
+            if res.status in ("agreed", "stood"):
+                for r in "AB":
+                    world._word(r, w)                          # trust_words: agreeing to terms is a word, not an action
         new = res.bundle if res.changed else cur
         renew = False
         if cur["stay"] or new["stay"]:
@@ -938,7 +1151,7 @@ class Lived:
         ids = [self.pa.id, self.pb.id]
         O, modes = {}, {}
         for r, p in zip("AB", ps):
-            O[p.id], d = outside_value(p, r, world.p[r]["money"], self.seed, world.hed[r])
+            O[p.id], d = outside_value(p, r, world.p[r]["money"], self.seed, world.hed[r], cx=_cx(world, r))
             modes[r] = apart_mode(d)
         hyp = copy.deepcopy(world)
         hyp.hook = None
@@ -953,6 +1166,9 @@ class Lived:
         if res.pot:
             form_pot(world, self.base, res.bundle, w, ids)
             self.bundle, self.apart = dict(res.bundle), False
+            if world.fx:
+                for r in "AB":
+                    world.events.append((w, r, "formed"))
         else:
             world.solo = modes
 
@@ -964,9 +1180,17 @@ class Lived:
                 self.retry(w, last)
             elif self.reviews and self.bundle is not None and w and w % REVIEW_EVERY == 0 and all(world.p[r]["in"] for r in "AB"):
                 self.review(w, last)
+                if world.early_review:
+                    world.ladder_reviewed(w)
+            elif world.early_review:          # seed v2.3 ladders: an early renegotiation (household fixes only)
+                if self.reviews and self.bundle is not None and all(world.p[r]["in"] for r in "AB"):
+                    self.review(w, last)
+                world.ladder_reviewed(w)
             last = {"busy": world.step_week(w, last)}
         world.run.final = {r: {**world.p[r], "pooled": world.pool, "put": world.put[r]} for r in "AB"}
         if world.mech:
             world.run.meta = world.commit_report()
+        if world.fx:
+            world.run.fix = world.fix_report()
         world.run.exits = list(world.exit_log)
         return world.run

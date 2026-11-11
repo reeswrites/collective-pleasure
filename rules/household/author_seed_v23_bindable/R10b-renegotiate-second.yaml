@@ -1,0 +1,8 @@
+id: R10b-renegotiate-second
+attribute: partner
+deontic: may
+aim: amend
+conditions: []
+or_else: null
+gloss: 'If the unhappiness continues within 8 weeks after a check-in, either partner may reopen the terms early, without waiting for the 13-week review.'
+source: 'docs/results/seed-v2.3-readback.md, confirmed by the author 2026-11-11 (experiments/questions.jsonl, topics seed-v2.3-readback-1 to -4). Rule 16. The 8-week window is ASSUMED.'

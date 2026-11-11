@@ -164,6 +164,115 @@ def levers_on(cfg):
     return cfg is not None and (cfg.adapt or cfg.ritual or cfg.commit or cfg.network or cfg.ad_hoc_dose > 0)
 
 
+# ---- household fixes (docs/results/household-fixes-design.md; docs/results/v2-retest-prereg-DRAFT.md) ----
+# Every flag defaults OFF. With every flag off nothing below is read and runs are bit-identical to earlier results
+# (tests/test_levers_regression.py, tests/test_household_fixes.py). Every number is ASSUMED and lives in this one block.
+@dataclass(frozen=True)
+class FixConfig:
+    # fix 1: contact matters (amplification and release; docs/results/horizon.md sections 4 and 5, scaled to weeks)
+    contact: bool = False
+    contact_motive: bool = False     # behavioral sub-flag: a persona asks for no contact when the partner's friend time crowds out its together time
+    # fix 2: money and security count only as each persona values them (author Q9)
+    valued_money: bool = False
+    # fix 3: real outside options; Nash terms; leaving on the outside option (stay test addition B)
+    real_outside: bool = False
+    nash_terms: bool = False
+    bar_leave: bool = False
+    # stay test addition C: the leave menu includes the smallest take the exit term allows
+    take_menu_terms: bool = False
+    # fix 4: money fines as an opt-in negotiable term
+    fines: bool = False
+    fine_crowdout: bool = False
+    # seed v2.3 support (docs/results/seed-v2.3-readback.md, confirmed 2026-11-11)
+    roles: bool = False
+    lapse_ladder: bool = False
+    unhappy_ladder: bool = False
+    trust_words: str | None = None   # None (v2.2 trust) | "actions" | "mostly" | "words"
+    decency: bool = False
+    # fix 1 parameters
+    a_max: float = 0.5
+    sociability: float = 0.8
+    session_base: float = 0.10       # pleasure scale of one shared session (the hedonic model's together_event)
+    c_visit: float = 0.15
+    c_decay: float = 0.03
+    c_start: float = 0.5
+    overlap_C: float = 0.6
+    want_half: float = 6.0
+    t_cap: float = 1.0
+    k_rel: float = 0.05
+    t_pain: float = 0.6
+    pain_rate: float = 0.05
+    motive_p: float = 0.3
+    # fix 2 parameters
+    k_buy: float = 0.06
+    s_half: float = 2.0
+    w_ref: float = 1.0
+    # fix 3 parameters
+    nash_alpha: float = 0.5
+    bar_every: int = 13
+    leave_margin: float = 0.02
+    bar_runs: int = 2
+    # fix 4 parameters
+    fine_amounts: tuple = (3, 6)
+    keep_friction: float = 0.005
+    crowd: float = 0.5
+    breach_n_paid: float = 0.12
+    # v2.3 parameters
+    spec_gain: float = 0.25
+    spec_ramp: int = 8
+    checkin_cost: float = 0.01
+    ladder_window: int = 8
+    role_kept: float = 0.002
+    role_lapse: float = 0.05
+    decency_weeks: int = 4
+    slid_window: int = 26
+    word_gain: float = 0.01
+    word_gain_tested: float = 0.05
+    word_window: int = 8
+    unhappy_window: int = 8
+    skip_n: float = 0.4
+
+
+ACTIVE_FIXES = None      # module default, set by `use_fixes`; WeeklyWorld(fixes=None) reads it
+
+
+@contextmanager
+def use_fixes(cfg):
+    """Make `cfg` the fix config of every WeeklyWorld built inside the block (also the ones negotiation builds)."""
+    global ACTIVE_FIXES
+    saved, ACTIVE_FIXES = ACTIVE_FIXES, cfg
+    try:
+        yield cfg
+    finally:
+        ACTIVE_FIXES = saved
+
+
+_FIX_FLAGS = ("contact", "contact_motive", "valued_money", "real_outside", "nash_terms", "bar_leave", "take_menu_terms", "fines",
+              "fine_crowdout", "roles", "lapse_ladder", "unhappy_ladder", "decency")
+
+
+def fixes_on(cfg):
+    return cfg is not None and (any(getattr(cfg, f) for f in _FIX_FLAGS) or cfg.trust_words is not None)
+
+
+def active_fixes():
+    """The open fix config if any flag is on, else None."""
+    return ACTIVE_FIXES if fixes_on(ACTIVE_FIXES) else None
+
+
+def fix_key(cfg=None):
+    """A hashable signature of the active levers and fixes, for caches keyed across configs (None when both are off)."""
+    f = cfg if cfg is not None else active_fixes()
+    lv = ACTIVE_LEVERS if levers_on(ACTIVE_LEVERS) else None
+    return None if (f is None and lv is None) else (repr(f), repr(lv))
+
+
+def bought_pleasure(fx, spend):
+    """Fix 2: pleasure bought by spending this week, with diminishing returns."""
+    import math
+    return fx.k_buy * (1.0 - math.exp(-max(0.0, spend) / fx.s_half))
+
+
 class Satiety:
     """Satiety h per variant (fast) and tolerance t (slow) for one repeatable pleasure source (synthesis M1).
     The scale on a session is (1 - h[variant]) x (1 - tol_cap x t), times (1 - switch_cost) if the variant differs from the last used."""
@@ -291,7 +400,22 @@ class Hedonic:
         commitment payoff, strand cover), 0 when no lever is on. -> row dict."""
         c = self.cfg
         L = self.level
-        p_need = sum(self.sal[n] * _clip((L[n] - 0.5) / 0.5) for n in NEEDS)
+        vm = getattr(self, "valued", None)      # fix 2 (valued_money): (fix config, money held, money weight, security weight)
+        if vm is None:
+            p_need = sum(self.sal[n] * _clip((L[n] - 0.5) / 0.5) for n in NEEDS)
+        else:
+            fx, money, w_m, w_s = vm
+            # Money: the need level saturates at 4 weeks of living costs, so it is a subsistence (means) term and counts for everyone;
+            # money valued for its own sake beyond that already enters through the savings aspiration, weighted by the money weight.
+            # Security: counts only as far as the persona values it (security weight); the share it does not value moves to rest and
+            # connection, so the hedonic scale stays comparable (implementation choice, docs/results/v2-retest-prereg.md Amendment 1).
+            v_s = min(1.0, w_s / fx.w_ref)
+            lost = self.sal["security"] * (1.0 - v_s)
+            rc = self.sal["rest"] + self.sal["connection"]
+            up = 1.0 + (lost / rc if rc > 0 else 0.0)
+            p_need = (sum(self.sal[n] * up * _clip((L[n] - 0.5) / 0.5) for n in ("rest", "connection"))
+                      + self.sal["money"] * _clip((L["money"] - 0.5) / 0.5)
+                      + self.sal["security"] * v_s * _clip((L["security"] - 0.5) / 0.5))
         s_need = sum(self.sal[n] * _clip((0.5 - L[n]) / 0.5) for n in NEEDS)
         sat = {k: self.satisfaction(k, aspiration_values.get(k, 0.0)) for k in self.targets}
         p_asp = sum(self.asp_w[k] * sat[k] for k in sat)

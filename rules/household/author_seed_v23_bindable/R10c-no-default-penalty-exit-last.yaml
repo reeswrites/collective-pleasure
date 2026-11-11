@@ -1,0 +1,8 @@
+id: R10c-no-default-penalty-exit-last
+attribute: partner
+deontic: may
+aim: leave
+conditions: []
+or_else: null
+gloss: 'A lapsed role carries no fine, sanction or forfeit by default; a fine exists only if both partners explicitly chose it, and then both pay a small scorekeeping cost each week it stands. Leaving because of unhappiness is the last step, after a check-in and a renegotiation. This is how a partner responds, not a limit on leaving: R8a still holds in full.'
+source: 'docs/results/seed-v2.3-readback.md, confirmed by the author 2026-11-11 (experiments/questions.jsonl, topics seed-v2.3-readback-1 to -4). Rule 17 (changed at the read-back). The author: "allowed only by mutual choice i think"; exit last confirmed as agent behavior, not a ban.'

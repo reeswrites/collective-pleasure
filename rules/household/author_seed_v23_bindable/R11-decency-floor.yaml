@@ -1,0 +1,9 @@
+id: R11-decency-floor
+attribute: partner
+deontic: must_not
+aim: request
+conditions:
+- {expr: refused_recently, op: eq, value: 1}
+or_else: null
+gloss: 'Everyone treats everyone they interact with with politeness and common decency: no one acts only to lower another person''s pleasure; no one repeats a request the other has just refused, for 4 weeks; a refusal or check-in is given openly, never by silence. Only the second part needs this card (the first is R6, the third is how the world already works). The refused-recently flag is set only when the decency fix is on.'
+source: 'docs/results/seed-v2.3-readback.md, confirmed by the author 2026-11-11 (experiments/questions.jsonl, topics seed-v2.3-readback-1 to -4). Rule 18. The author: "At the very least we owe politeness and common decency if we are both on common ground"; "all three feel right, common ground is anyone you interact with". The 4 weeks are ASSUMED.'

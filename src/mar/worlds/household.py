@@ -18,7 +18,8 @@ aim "any" applies to every action. Condition variables (all integers):
   consented (1 if the actor agreed to the standing request), bound_request (1 if the standing request is one the actor
   earlier chose to bind themselves to honor; seed v2 commitments), need_gap (unfunded part of this month's shared
   need), months_in (months in the household), other_in (1 if the other partner is in the household),
-  take (percent of the actor's pooled share carried out on `leave`; 0 for every other action).
+  refused_recently (1 for a few weeks after the other refused this kind of request; seed v2.3 decency floor, only set when the
+  `decency` fix is on, else 0), take (percent of the actor's pooled share carried out on `leave`; 0 for every other action).
 """
 import random
 from contextlib import contextmanager
@@ -38,20 +39,20 @@ RULES = ROOT / "rules" / "household"
 # ---- vocabulary and bounds -------------------------------------------------------------------
 
 STATE_VARS = ("pooled", "money", "other_earns_more", "no_contact_request", "stay_home_request", "consented",
-              "need_gap", "months_in", "other_in", "bound_request")
-OPTIONAL_VARS = {"bound_request": 0}     # state producers that predate a variable may omit it; it then reads as this default
+              "need_gap", "months_in", "other_in", "bound_request", "refused_recently")
+OPTIONAL_VARS = {"bound_request": 0, "refused_recently": 0}     # state producers that predate a variable may omit it; it then reads as this default
 VAR_NAMES = STATE_VARS + ("take",)
 Z = dict(zip(VAR_NAMES, z3.Ints(" ".join(VAR_NAMES))))
 BOUNDS = {"pooled": (0, 100), "money": (0, 100), "other_earns_more": (0, 1), "no_contact_request": (0, 1),
           "stay_home_request": (0, 1), "consented": (0, 1), "need_gap": (0, 10), "months_in": (0, 36),
-          "other_in": (0, 1), "bound_request": (0, 1), "take": (0, 100)}
+          "other_in": (0, 1), "bound_request": (0, 1), "refused_recently": (0, 1), "take": (0, 100)}
 PHRASES = {"pooled": "the pooled share", "money": "the private money", "other_earns_more": "the earns-more flag",
            "no_contact_request": "the no-contact request flag", "stay_home_request": "the stay-home request flag",
            "consented": "the consent flag", "need_gap": "the unfunded need", "months_in": "the months in the household",
            "other_in": "the other-partner-in flag", "bound_request": "the bound-request flag",
-           "take": "the share taken"}
+           "refused_recently": "the refused-recently flag", "take": "the share taken"}
 PARTNER_ACTIONS = ("work", "spend_shared", "spend_self", "see_friend", "refuse_request", "request", "leave", "return")
-EXTRA_ACTIONS = ("gift_pooled", "give", "commit_stay", "commit_request", "amend", "ritual")   # harness-only move (side channel); the formal model in seam_depth does not have it
+EXTRA_ACTIONS = ("gift_pooled", "give", "commit_stay", "commit_request", "amend", "ritual", "role", "checkin")   # harness-only move (side channel); the formal model in seam_depth does not have it
 GIFT = 8
 FRIEND_ACTIONS = ("work", "spend_self", "see_friend", "refuse_request")
 K_DEFAULT = 3
@@ -935,7 +936,12 @@ class PersonaAgent:
             u = self.utilities({**o, "gap": 0})
             out += [(v, _a(a)) for a, v in u.items() if v > 0.003 and a != "together"]
             return sorted(out, key=lambda t: -t[0])
-        if o["low_weeks"] >= 4 or h.N >= 0.2 or o.get("trust", 1.0) < TRUST["leave_below"]:
+        distress = o["low_weeks"] >= 4 or h.N >= 0.2 or o.get("trust", 1.0) < TRUST["leave_below"]
+        if o.get("fix"):                     # household fixes: leave also on the outside option (bar_leave); v2.3 ladder gates it
+            if (distress or o.get("bar_leave")) and o["leave_open"]:
+                why = "distress" if distress else "bar"
+                out += [(0.9 - 0.01 * i, _a("leave", take=t, why=why)) for i, t in enumerate(o.get("leave_takes", LEAVE_TAKES))]
+        elif distress:
             out += [(0.9 - 0.01 * i, _a("leave", take=t)) for i, t in enumerate(LEAVE_TAKES)]
         pend = o["pending_on_me"]
         if pend and not self.consents(sorted(pend)[0]):
@@ -945,6 +951,11 @@ class PersonaAgent:
                 and w["autonomy"] < 0.6 and h.level["connection"] < 0.5 and o["partner_busy"]):
             kind = "stay_home" if w["togetherness"] >= w["other_connections"] + 0.3 else "no_contact"
             out.append((0.06, _a("request", kind=kind)))
+        fx = o.get("fx")
+        if (fx is not None and o.get("contact_motive") and o["other_in"] and o.get("partner_saw_friend") and "no_contact" not in o["pending_by_me"]
+                and w["togetherness"] >= w["other_connections"] and o["asp"]["together"] < h.targets.get("together_per_week", 0)
+                and self.rng.random() < fx.motive_p):   # fix 1 sub-flag (ASSUMED jealousy): the partner's friend time crowds out together time
+            out.append((0.08, _a("request", kind="no_contact", motive=True)))
         for a, v in self.utilities(o).items():
             if v > 0.003:
                 out.append((v, _a(a)))
@@ -1004,8 +1015,11 @@ def make_agent(persona):
 
 
 class WeeklyWorld:
-    def __init__(self, cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT, levers=None):
-        """levers: a hedonic.LeverConfig (pleasure levers, ADR 0016) or None; None reads hedonic.ACTIVE_LEVERS, which is None unless
+    def __init__(self, cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT, levers=None,
+                 fixes=None):
+        """fixes: a hedonic.FixConfig (household fixes, docs/results/household-fixes-design.md) or None; None reads hedonic.ACTIVE_FIXES,
+        which is None unless a `use_fixes` block is open, so the default is the old behaviour bit for bit.
+        levers: a hedonic.LeverConfig (pleasure levers, ADR 0016) or None; None reads hedonic.ACTIVE_LEVERS, which is None unless
         a `use_levers` block is open, so the default is the old behaviour bit for bit.
         deal (negotiated pots, docs/decisions/0013): {"pot": bool, "commits": [...]} replaces the week-0 commitment stub; with
         pot False the partners start with their own holdings and no share of the pot. deal=None is the old behaviour, bit for bit."""
@@ -1041,6 +1055,10 @@ class WeeklyWorld:
         self.solo = None        # negotiation v2 outside-option rollouts: None | "alone" | "friend" (living with Friend C) for both
         #                         partners, or (v2.1) a dict {"A": mode, "B": mode} when the partners live separately by their own choice
         self.personas = {"A": pa, "B": pb}
+        self.fx = fixes if fixes is not None else HD.ACTIVE_FIXES      # household fixes (all off by default); set before any state() call
+        if not HD.fixes_on(self.fx):
+            self.fx = None
+        self.refused_until = {"A": -1, "B": -1}     # decency (fix flag `decency`): the actor's requests were refused until this week
         self.mech = any(c.aim in MECH_AIMS for c in self.gate.cards)
         self.commits, self.gifts = [], {"partner": 0, "friend": 0}
         self.bound_req = {"A": {}, "B": {}}     # bound requests standing ON each partner: kind -> first week it no longer binds
@@ -1064,6 +1082,13 @@ class WeeklyWorld:
             self.lv = None
         if self.lv:
             self._lever_init()
+        self.count_menus = False   # harness switch: count partner-weeks whose leave menu is all forbidden (diagnostic only, not in any output)
+        self.diag = {"menu_forbidden_weeks": 0, "menu_forbidden_distressed": 0}
+        self.bar_out = {"A": False, "B": False}     # set by a harness reading (fix 3, bar_leave): the outside option beats staying
+        self.bar_mode = {"A": None, "B": None}      # the outside arrangement that reading compared ("alone" | "friend")
+        self.early_review = False                    # set by the v2.3 ladders: the harness runs a review at the next week
+        if self.fx:
+            self._fix_init()
 
     # -- pleasure levers (ADR 0016; docs/results/pleasure-levers-prereg.md). Every method below is called only when self.lv is set.
     def _lever_init(self):
@@ -1212,6 +1237,273 @@ class WeeklyWorld:
             fr += d["care_suffer"]
         return pl, fr, d
 
+    # -- household fixes (docs/results/household-fixes-design.md). Every method below is called only when self.fx is set.
+    def _fix_init(self):
+        fx, pa, pb = self.fx, self.personas["A"], self.personas["B"]
+        ax = list(pa.axes)
+        self.overlap_ab = 1.0 - sum(abs(pa.axes[k] - pb.axes[k]) for k in ax) / max(1, len(ax))
+        self.cx = {r: {"cf": fx.c_start, "Tf": 0.0, "af": 0, "cp": fx.c_start, "Tp": 0.0, "ap": 0, "was_with": True} for r in "AB"}
+        self.fstats = {"checkins": 0, "early_reviews": 0, "role_lapses": 0, "role_kept": 0, "ladder_leaves": 0, "bar_leaves": 0,
+                       "fines_paid": 0, "words": 0, "words_revoked": 0, "contact_motive_requests": 0, "skip_leaves": 0}
+        self.words = []                                   # (week, who spoke, receiver, gain) for trust_words
+        self.ladder = {r: {"stage": 0, "t": -99, "calm": 0} for r in "AB"}
+        self.role_ladder = {r: {"stage": 0, "t": -99} for r in "AB"}
+        self.role_weeks = 0
+        self.role_month = {"tog": 0, "able": 0, "could_meet": 0}
+        self.events = []                                  # choice events and ladder events: (week, role, kind)
+
+    @property
+    def fine_amount(self):
+        """Money a breach costs under a negotiated fine term: 0 (none), 3 (N8-fine-some, v2.2) or 6 (N8-fine-big, fix 4)."""
+        ids = {c.id for c in self.gate.cards}
+        return 6 if "N8-fine-big" in ids else (REQUEST_FINE if any(i.startswith("N8-fine-some") for i in ids) else 0)
+
+    def _fine_scope(self):
+        """Fix 4: which breaches a negotiated fine covers ({"requests"} in v2.2; stay and roles too under the fines fix)."""
+        if not (self.fx and self.fx.fines):
+            return {"requests"}
+        return {"requests", "stay", "roles"}
+
+    def roles_term(self):
+        """v2.3: the negotiated roles term from the cards (N9-roles-<value>), or "none"."""
+        for c in self.gate.cards:
+            if c.id.startswith("N9-roles-"):
+                return c.id[len("N9-roles-"):]
+        return "none"
+
+    def role_holders(self):
+        """-> {"earn": role, "plan": role} for a specialized roles term, else {}."""
+        t = self.roles_term() if (self.fx and self.fx.roles) else "none"
+        return {"earner_planner": {"earn": "A", "plan": "B"}, "swapped": {"earn": "B", "plan": "A"}}.get(t, {})
+
+    def v23_ladders(self):
+        return bool(self.fx) and any(c.id == "R10a-check-in-first" for c in self.gate.cards)
+
+    def _word(self, who, w):
+        """trust_words: `who` says something (agrees to terms, answers a check-in): the other's trust moves by the word gain."""
+        fx = self.fx
+        if not fx or fx.trust_words is None:
+            return
+        gain = {"actions": 0.0, "mostly": fx.word_gain, "words": fx.word_gain_tested}[fx.trust_words]
+        if gain:
+            o = self.other(who)
+            self._trust_move(o, gain, "word", w)
+            self.words.append((w, who, o, gain))
+            self.fstats["words"] += 1
+
+    def _revoke_words(self, who, w):
+        """A lapse or breach by `who` takes back the gain of their words within the word window."""
+        fx = self.fx
+        if not fx or fx.trust_words is None:
+            return
+        keep = []
+        for ww, sp, rc, g in self.words:
+            if sp == who and w - ww <= fx.word_window:
+                self._trust_move(rc, -g, "word_revoked", w)
+                self.fstats["words_revoked"] += 1
+            else:
+                keep.append((ww, sp, rc, g))
+        self.words = keep
+
+    def distressed(self, r):
+        me, h = self.p[r], self.hed[r]
+        return me["low"] >= 4 or h.N >= 0.2 or self.trust[r] < TRUST["leave_below"]
+
+    def _fix_week_start(self, w):
+        fx = self.fx
+        hold = self.role_holders()
+        if hold and all(self.p[x]["in"] for x in "AB"):          # specialization: a role holder does the job more cheaply (unit credit)
+            self.role_weeks += 1
+            ramp = min(1.0, self.role_weeks / max(1, fx.spec_ramp))
+            self.units[hold["earn"]] += fx.spec_gain * ramp * V2_COST["work"]
+            self.units[hold["plan"]] += fx.spec_gain * ramp * V2_COST["together"]
+        if fx.unhappy_ladder and self.v23_ladders():
+            for r in "AB":
+                L = self.ladder[r]
+                if not self.p[r]["in"] or not self.p[self.other(r)]["in"]:
+                    L.update(stage=0, calm=0)
+                    continue
+                unhappy = self.distressed(r) or self.bar_out[r]
+                if not unhappy:
+                    L["calm"] += 1
+                    if L["calm"] >= fx.unhappy_window:
+                        L.update(stage=0, calm=0)
+                    continue
+                L["calm"] = 0
+                if L["stage"] == 0:                              # first: a soft check-in (costs both a little time)
+                    L.update(stage=1, t=w)
+                    self._checkin(r, w)
+                elif L["stage"] == 1 and w - L["t"] >= 1:        # still unhappy after the check-in: reopen the terms early
+                    L.update(stage=2, t=w)
+                    self.early_review = True
+                    self.events.append((w, r, "ask_review"))
+                elif L["stage"] == 2 and w - L["t"] >= 1:        # the review has run (or there was nothing to renegotiate): leaving is open
+                    L.update(stage=3, t=w)
+
+    def _checkin(self, r, w):
+        """r checks in with the other partner; the other's answer is a word (trust_words)."""
+        self.fstats["checkins"] += 1
+        for x in "AB":
+            self.wk[x]["checkin"] = self.wk[x].get("checkin", 0) + 1
+        self.events.append((w, r, "checkin"))
+        self._word(self.other(r), w)
+
+    def ladder_reviewed(self, w):
+        """The harness ran the early review the ladder asked for."""
+        self.early_review = False
+        self.fstats["early_reviews"] += 1
+        for r in "AB":
+            if self.ladder[r]["stage"] == 2:
+                self.ladder[r]["t"] = w - 1
+            if self.role_ladder[r]["stage"] == 2:
+                self.role_ladder[r]["stage"] = 0
+
+    def leave_open(self, r):
+        """v2.3 unhappiness ladder: may leave join r's menu now? Always True without the ladder (free exit is unchanged; this is policy)."""
+        fx = self.fx
+        if not (fx and fx.unhappy_ladder and self.v23_ladders()):
+            return True
+        if self.hed[r].N >= fx.skip_n:
+            return True
+        return self.ladder[r]["stage"] >= 3
+
+    def leave_takes(self, r, w):
+        """The takes the agent would ask for: LEAVE_TAKES, plus (take_menu_terms) the smallest take the exit term allows, minus forbidden ones."""
+        st = self.state(r, w)
+        allowed = [t for t in PROBE_TAKES if self.gate.check("partner", "leave", st, t)[0]]
+        menu = [t for t in LEAVE_TAKES if t in allowed]
+        # the smallest allowed take joins only if it is a meaningful exit by the world's own trapped threshold (retains >= 25 percent)
+        extra = [t for t in allowed if t not in menu and self.retained_fraction(r, t) >= 0.25]
+        if extra:
+            menu.append(min(extra))
+        return menu or list(LEAVE_TAKES)
+
+    def _count_menu(self, r, w):
+        if self.p[r]["in"] and not any(self.gate.check("partner", "leave", self.state(r, w), t)[0] for t in LEAVE_TAKES):
+            self.diag["menu_forbidden_weeks"] += 1
+            if self.distressed(r):
+                self.diag["menu_forbidden_distressed"] += 1
+
+    def _fix_obs(self, r, w, ob):
+        fx, oth = self.fx, self.other(r)
+        ob["fix"], ob["fx"] = True, fx
+        ob["leave_open"] = self.leave_open(r)
+        ob["bar_leave"] = bool(fx.bar_leave and self.bar_out[r])
+        if fx.take_menu_terms and self.p[r]["in"]:
+            ob["leave_takes"] = self.leave_takes(r, w)
+        if fx.contact_motive:
+            ob["contact_motive"] = True
+            ob["partner_saw_friend"] = self.wk[oth]["friends"] > 0
+
+    def _role_end_week(self, w, settle):
+        """v2.3 roles, judged once a month (at the bill settlement): the earning role lapses if the month's bills went unfunded while the
+        earner could work; the planning role lapses if the month had no time together while it was possible. A lapse lowers the other's
+        trust a little and starts the lapse ladder; a kept month raises it a little (4 x role_kept)."""
+        fx, hold = self.fx, self.role_holders()
+        both = all(self.p[x]["in"] for x in "AB")
+        if hold and both:
+            self.role_month["tog"] += self.wk["A"]["together"]
+            self.role_month["able"] += int(not self.p[hold["earn"]]["jobless"] and not self.p[hold["earn"]]["ill"])
+            self.role_month["could_meet"] += int(not self.p["A"]["ill"] and not self.p["B"]["ill"] and not self.moved)
+        if not settle:
+            return
+        m, self.role_month = self.role_month, {"tog": 0, "able": 0, "could_meet": 0}
+        if not hold or not both:
+            return
+        for job, r in hold.items():
+            o = self.other(r)
+            if job == "earn":
+                due, done = m["able"] >= 2, self.funded >= self.need_month()
+            else:
+                due, done = m["could_meet"] >= 2, m["tog"] > 0
+            if not due:
+                continue
+            if done:
+                self.fstats["role_kept"] += 1
+                self._trust_move(o, 4 * fx.role_kept, "kept", w)
+                continue
+            self.fstats["role_lapses"] += 1
+            self.events.append((w, r, f"lapse_{job}"))
+            self._trust_move(o, -fx.role_lapse, "role_lapse", w)
+            self._revoke_words(r, w)
+            if "roles" in self._fine_scope() and self.fine_amount:
+                f = min(self.fine_amount, int(self.p[r]["money"]))
+                self.p[r]["money"] -= f; self.p[o]["money"] += f
+                self.fstats["fines_paid"] += 1
+            if fx.lapse_ladder and self.v23_ladders():
+                L = self.role_ladder[o]                       # the other partner responds to the lapse
+                if L["stage"] == 0 or w - L["t"] > fx.ladder_window:
+                    L.update(stage=1, t=w)
+                    self._checkin(o, w)
+                elif L["stage"] == 1:
+                    L.update(stage=2, t=w)
+                    self.early_review = True
+                    self.events.append((w, o, "ask_review"))
+
+    def _contact_terms(self, r, w):
+        """Fix 1 for partner r this week -> (extra pleasure, extra offsettable suffering, breakdown). Amplification of shared sessions by
+        closeness, taste overlap and sociability; tension while apart, released at the next contact; pain above a threshold."""
+        fx, cx, wk, me = self.fx, self.cx[r], self.wk[r], self.p[r]
+        o = self.p[self.other(r)]
+        n_f = wk["friends"] + wk["friend_initiated"] + (1 if self.with_friend(r) else 0)
+        cohab = me["in"] and o["in"]
+        n_p = wk["together"] if cohab else 0
+        unit = fx.session_base * fx.a_max * fx.sociability
+        amp = unit * (n_f * cx["cf"] * fx.overlap_C + n_p * cx["cp"] * self.overlap_ab)
+        rel, pain = 0.0, 0.0
+        # friend bond
+        if n_f > 0:
+            rel += fx.k_rel * cx["Tf"]
+            cx["Tf"], cx["af"] = 0.0, 0
+            for _ in range(n_f):
+                cx["cf"] += fx.c_visit * (1.0 - cx["cf"])
+        else:
+            cx["af"] += 1
+            want = 0.5 ** (cx["af"] / fx.want_half)
+            cx["Tf"] += cx["cf"] * want * (1.0 - cx["Tf"] / fx.t_cap)
+            cx["cf"] *= 1.0 - fx.c_decay
+        # partner bond: tension builds only while not living together; released when they live together again
+        if cohab:
+            if not cx["was_with"]:
+                rel += fx.k_rel * cx["Tp"]
+            cx["Tp"], cx["ap"] = 0.0, 0
+            for _ in range(n_p):
+                cx["cp"] += fx.c_visit * (1.0 - cx["cp"])
+        else:
+            cx["ap"] += 1
+            want = 0.5 ** (cx["ap"] / fx.want_half)
+            cx["Tp"] += cx["cp"] * want * (1.0 - cx["Tp"] / fx.t_cap)
+            cx["cp"] *= 1.0 - fx.c_decay
+        cx["was_with"] = cohab
+        for T in (cx["Tf"], cx["Tp"]):
+            if T > fx.t_pain:
+                pain += fx.pain_rate * (T - fx.t_pain)
+        return amp + rel, pain, {"amp": round(amp, 5), "release": round(rel, 5), "miss_pain": round(pain, 5),
+                                 "c_friend": round(cx["cf"], 4), "c_partner": round(cx["cp"], 4)}
+
+    def _fix_terms(self, r, w):
+        """-> (extra pleasure, extra offsettable friction, breakdown) from the fixes for partner r this week."""
+        fx, pl, fr, d = self.fx, 0.0, 0.0, {}
+        if fx.contact:
+            a, b, dd = self._contact_terms(r, w)
+            pl += a; fr += b; d.update(dd)
+        if fx.valued_money:
+            d["bought"] = HD.bought_pleasure(fx, self.wk[r]["spent_self"])
+            pl += d["bought"]
+        if fx.fines and self.fine_amount and self.p[r]["in"] and self.p[self.other(r)]["in"]:
+            d["scorekeeping"] = fx.keep_friction * (1.0 - float(self.personas[r].weights["security"]))
+            fr += d["scorekeeping"]
+        ck = self.wk[r].get("checkin", 0)
+        if ck:
+            d["checkin"] = fx.checkin_cost * ck
+            fr += d["checkin"]
+        return pl, fr, d
+
+    def fix_report(self):
+        return {**self.fstats, "events": list(self.events), "roles": self.roles_term() if self.fx.roles else None,
+                "fine_amount": self.fine_amount, "trust": dict(self.trust), "diag": dict(self.diag),
+                "closeness": {r: {k: round(v, 4) for k, v in self.cx[r].items() if k in ("cf", "cp")} for r in "AB"}}
+
     def other(self, r):
         return "B" if r == "A" else "A"
 
@@ -1260,7 +1552,38 @@ class WeeklyWorld:
             self.trust_log.append((w, who, why, self.trust[who]))
 
     def breaks(self, r):
+        if self.fx and self.fx.fine_crowdout and self.fine_amount:      # fix 4, crowd-out probe: a price replaces a norm
+            return self.hed[r].N >= self.fx.breach_n_paid
         return self.hed[r].N >= BREACH_N
+
+    def _fix_breach(self, r, a, w, cand):
+        """breach() with the fixes on: fines may cover stay breaches (fix 4); a paid fine may crowd out part of the trust drop; words are revoked."""
+        fx, o = self.fx, self.other(r)
+        scope = "stay" if a == "leave" else "requests"
+        fine = min(self.fine_amount, int(self.p[r]["money"])) if scope in self._fine_scope() else 0
+        drop = TRUST["breach_drop"] * ((1.0 - fx.crowd) if (fx.fine_crowdout and fine) else 1.0)
+        self._trust_move(o, -drop, "breach", w)
+        self._revoke_words(r, w)
+        if self.lv and self.lv.commit:
+            self.K *= 1.0 - self.lv.breach_loss
+        if fine:
+            self.p[r]["money"] -= fine
+            self.p[o]["money"] += fine
+            self.fstats["fines_paid"] += 1
+        if a == "leave":
+            for c in self.commits:
+                if c["kind"] == "stay" and c["by"] == r and self._active(c, w):
+                    c["breached"] += 1
+            if self.breach_forfeit >= 1.0:
+                return dict(cand, take=0)
+            return dict(cand, take=min(cand.get("take", 0), int(round(100 * (1 - self.breach_forfeit)))))
+        for c in self.commits:
+            if c["kind"] == "requests" and c["by"] == r and self._active(c, w):
+                c["breached"] += 1
+        for k, until in self.bound_req[r].items():
+            if until > w:
+                self.bound_broken[r][k] = True
+        return cand
 
     def commit_decide(self, r, a, w):
         """-> None (no commitment bears on this action) | ("hard", reasons) honored | ("breach", reasons) bound partner breaks it."""
@@ -1281,6 +1604,8 @@ class WeeklyWorld:
     def breach(self, r, a, w, cand):
         """Apply the agreed consequence of breaking a commitment; -> the (possibly changed) candidate."""
         o = self.other(r)
+        if self.fx:
+            return self._fix_breach(r, a, w, cand)
         self._trust_move(o, -TRUST["breach_drop"], "breach", w)     # the wronged partner trusts r less (implicit consequence)
         if self.lv and self.lv.commit:
             self.K *= 1.0 - self.lv.breach_loss                     # L-B: a breach resets part of the compounded payoff
@@ -1324,7 +1649,8 @@ class WeeklyWorld:
                 "no_contact_request": int("no_contact" in pend), "stay_home_request": int("stay_home" in pend),
                 "consented": int(bool(pend) and bool(self.consent[r])), "need_gap": min(gap, 10),
                 "months_in": min(36, me["months_in"]), "other_in": int(o["in"]),
-                "bound_request": int(any(u > w for u in self.bound_req[r].values()))}
+                "bound_request": int(any(u > w for u in self.bound_req[r].values())),
+                **({"refused_recently": int(self.refused_until[r] > w)} if (self.fx and self.fx.decency) else {})}
 
     def decide(self, r, a, w, take=0, st=None, commit=True):
         """-> ("ok" | "soft" | "hard" | "breach", sanction dicts, reasons). Enforcement: a card with a sanction is soft (it may be
@@ -1453,6 +1779,8 @@ class WeeklyWorld:
         if me["in"] and o["in"]:
             oo = {"hed": self.hed[oth]}
             ob["partner_accepts"] = self.agents[oth].together_utility(oo) >= 0.02 and self.units[oth] >= V2_COST["together"]
+        if self.fx:
+            self._fix_obs(r, w, ob)
         return ob
 
     def apply(self, r, cand, w, sanc):
@@ -1484,11 +1812,15 @@ class WeeklyWorld:
                 self._lever_session("adhoc_agent")
         elif a == "refuse_request":
             self.pending[r] = set()
+            if self.fx and self.fx.decency:          # decency floor: the asker may not repeat the request for a few weeks
+                self.refused_until[oth] = w + self.fx.decency_weeks
         elif a == "give":
             me["money"] -= GIVE
             if cand["kind"] == "partner":
                 o["money"] += GIVE
             self.gifts[cand["kind"]] += GIVE
+            if self.fx:
+                self.events.append((w, r, "give"))
         elif a == "request":
             self.pending[oth].add(cand["kind"])
             self.consent[oth] = int(bool(self.agents[oth].consents(cand["kind"])))
@@ -1497,6 +1829,8 @@ class WeeklyWorld:
                 self.bound_req[oth][cand["kind"]] = w + BIND_WEEKS
                 self.bound_broken[oth].pop(cand["kind"], None)
             self.agents[r].last_request = w
+            if self.fx and cand.get("motive"):
+                self.fstats["contact_motive_requests"] += 1
             if cand["kind"] == "time":
                 self.wk[oth]["pressed"] += 1
         elif a == "veto":
@@ -1513,6 +1847,20 @@ class WeeklyWorld:
             me["money"] += carry
             self.pool -= carry                   # what is not carried out stays in the pot
             self.exit_log.append({"week": w, "role": r, "assets": round(me["money"], 2), "take": take, "breach": bool(cand.get("breach"))})
+            if self.fx:
+                why = cand.get("why", "distress")
+                if why == "bar":
+                    self.fstats["bar_leaves"] += 1
+                    if self.bar_mode[r]:            # fix 3: leaving on the bar goes to the alternative that beat staying
+                        solo = dict(self.solo) if isinstance(self.solo, dict) else {x: self.solo for x in "AB"}
+                        solo[r] = self.bar_mode[r]
+                        self.solo = solo
+                self.bar_out[r] = False
+                if hasattr(self, "bar_runs"):
+                    self.bar_runs[r] = 0
+                elif self.v23_ladders():
+                    self.fstats["ladder_leaves" if self.ladder[r]["stage"] >= 3 else "skip_leaves"] += 1
+                self.events.append((w, r, f"leave_{why}"))
             me["in"], me["weeks_out"], self.pending[r] = False, 0, set()
         elif a == "return":
             me["in"], me["months_in"] = True, 0
@@ -1602,6 +1950,11 @@ class WeeklyWorld:
             self.hook(self, w)
         if self.lv:
             self._lever_start(w)
+        if self.fx:
+            self._fix_week_start(w)
+        if self.count_menus or (self.fx and self.fx.take_menu_terms):
+            for r in "AB":
+                self._count_menu(r, w)
         probes = {r: self.probe(r, w) for r in "AB"}
         rec = {"blocked": {r: set() for r in "AB"}, "c_attempts": 0, "c_blocked": 0}
         for ps in range(PASSES):
@@ -1632,6 +1985,8 @@ class WeeklyWorld:
                 for r in inn:
                     self.wk[r]["sec_hit"] += 0.15
         busy = {r: self.wk[r]["friends"] + self.wk[r]["works"] >= 2 for r in "AB"}
+        if self.fx:
+            self._role_end_week(w, settle)
         lvl = self.lv
         if lvl:
             self._lever_end_week(w)
@@ -1670,7 +2025,20 @@ class WeeklyWorld:
             asp = {"security_buffer": h.level["security"], "together_per_week": wk["together"],
                    "friends_per_week": wk["friends"], "savings_per_week": max(0, net), "autonomy": open_share}
             fric = (WARN_FRICTION if warn else 0.0) + PRESS_FRICTION * wk["pressed"]
-            if lvl:
+            if self.fx:
+                fx = self.fx
+                if fx.valued_money:
+                    pw = self.personas[r].weights
+                    h.valued = (fx, float(me["money"]), float(pw["money"]), float(pw["security"]))
+                xp, xf, terms = self._lever_terms(r, w) if lvl else (0.0, 0.0, None)
+                fp, ff, fterms = self._fix_terms(r, w)
+                hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=tog_in,
+                                       friction=fric + xf + ff, extra_pleasure=xp + fp)
+                if lvl:
+                    hrow[r]["lever"] = {**{k: round(v, 5) for k, v in terms.items()}, "eff_together": round(tog_in, 4),
+                                        "K": round(self.K, 4), "q0": round(getattr(self, "q0", 0.0), 4)}
+                hrow[r]["fix"] = {k: (round(v, 5) if isinstance(v, float) else v) for k, v in fterms.items()}
+            elif lvl:
                 xp, xf, terms = self._lever_terms(r, w)
                 hrow[r] = h.close_week(asp, trapped=trapped, restricted=restricted, together_sessions=tog_in,
                                        friction=fric + xf, extra_pleasure=xp)
@@ -1715,12 +2083,14 @@ class WeeklyWorld:
         self.run.final = {r: {**self.p[r], "pooled": self.pool, "put": self.put[r]} for r in "AB"}   # "pooled": the one shared balance
         if self.mech:
             self.run.meta = self.commit_report()
+        if self.fx:
+            self.run.fix = self.fix_report()
         if self.lv:
             self.run.lever = {**self.lstats, "K": self.K, "ritual": bool(self.ritual), "policy": dict(self.policy),
                               "kept": list(self.ritual["kept"]) if self.ritual else []}
         return self.run
 
 
-def run_weekly(cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT, levers=None):
+def run_weekly(cards, personas, seed=0, weeks=WEEKS, cfg=HD.DEFAULT, deal=None, breach_forfeit=BREACH_FORFEIT, levers=None, fixes=None):
     """personas: (Partner A persona, Partner B persona). -> Run (trace, outcomes with weekly hedonic rows, final)."""
-    return WeeklyWorld(cards, personas, seed, weeks, cfg, deal, breach_forfeit, levers).play()
+    return WeeklyWorld(cards, personas, seed, weeks, cfg, deal, breach_forfeit, levers, fixes).play()
