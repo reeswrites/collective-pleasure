@@ -34,6 +34,7 @@ from ..cards import load_cards
 from .. import exit_fallback as _EXIT
 from .. import exit_items as _ITEMS
 from .. import observe as _OBS
+from .. import makers as _MAKERS
 from .. import pairing as _PAIR
 from ..patch_check import check_sanctions
 
@@ -1112,6 +1113,7 @@ class WeeklyWorld:
         self.items = None
         if _ITEMS.ACTIVE is not None:
             _ITEMS.init_world(self)      # exit fallbacks slice 2: indivisible items held jointly (off by default)
+        self.makers = _MAKERS.init_world(self) if _MAKERS.ACTIVE is not None else None    # H39 makers (off by default)
         if not HD.levers_on(self.lv):
             self.lv = None
         if self.lv:
@@ -2057,6 +2059,8 @@ class WeeklyWorld:
                 ob.flow_diff(w, "contest", None, before)
         if self.items:
             _ITEMS.week_start(self, w)
+        if self.makers:
+            _MAKERS.week_start(self, w)      # H39: the making choice; its time comes out of this week's units
         if self.mech:
             for c in self.commits:       # a commitment that stands unbroken this week: the beneficiary's trust in the bound partner recovers slowly
                 if self._active(c, w) and not c["breached"]:
@@ -2160,6 +2164,9 @@ class WeeklyWorld:
             if h.parts_on:                                  # observer layer: the sources inside extra_pleasure and friction
                 h.xparts = {"items": ip, "warn": WARN_FRICTION if warn else 0.0, "press": PRESS_FRICTION * wk["pressed"],
                             "contest": _EXIT.CONTEST_FRICTION if self.contest else 0.0}
+            if self.makers:                                                 # H39: what was made for r, and craving (0 when off)
+                mp, mf = _MAKERS.week_terms(self, r, w)
+                ip, fric = ip + mp, fric + mf
             if self.fx:
                 fx = self.fx
                 if fx.valued_money:

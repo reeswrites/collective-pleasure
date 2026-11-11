@@ -117,7 +117,7 @@ def _forward(world, w, last, fx, weeks=None):
     n0, lt = len(c.run.outcomes), last
     for x in range(w, w + weeks):
         lt = {"busy": c.step_week(x, lt)}
-    return {r: NG.wellbeing(c.run.outcomes[n0:], r) for r in "AB"}
+    return {r: NG.wellbeing(c.run.outcomes[n0:], r, world.personas[r]) for r in "AB"}
 
 
 def stay_reading(world, w, last):

@@ -575,13 +575,19 @@ def v1_flag(b, base):
 
 # ---- simulated outside options and in-pot baselines -----------------------------------------------------------------------
 
-def wellbeing(outcomes, role):
+def wellbeing(outcomes, role, persona=None):
     """Persona evaluation of a stretch of weeks: mean of pleasure - offsettable suffering - non-offsettable suffering. Under the
-    formation-check flag (FixConfig.decide_on == "pleasure") it is the member's own mean clipped pleasure instead."""
+    formation-check flag (FixConfig.decide_on == "pleasure") it is the member's own mean clipped pleasure instead. Under
+    decide_on == "weighted" (H39) it is pleasure - w x (both kinds of suffering), w the persona's own suffering weight
+    (makers.suffering_weight; docs/notes/decision-weights-research.md)."""
     xs = [o["hedonic"][role] for o in outcomes]
     fx = HD.active_fixes()
     if fx is not None and fx.decide_on == "pleasure":
         return sum(h["pleasure"] for h in xs) / len(xs)
+    if fx is not None and fx.decide_on == "weighted":
+        from . import makers as _MAKERS
+        wt = 1.0 if persona is None else _MAKERS.suffering_weight(persona)   # no persona (an observer record): the plain net score
+        return sum(h["pleasure"] - wt * (h["s_off"] + h["s_non"]) for h in xs) / len(xs)
     return sum(h["pleasure"] - h["s_off"] - h["s_non"] for h in xs) / len(xs)
 
 
@@ -625,7 +631,7 @@ def alone_value(p, role, holdings, seed, mode, hed=None, weeks=OUT_WEEKS, cx=Non
     run = w.play()
     STATS["rollouts"] += 1
     STATS["rollout_weeks"] += weeks
-    _RC[ck] = wellbeing(run.outcomes, role)
+    _RC[ck] = wellbeing(run.outcomes, role, p)
     if w.hed[role].parts_on:                    # observer layer: the rollout's parts, kept beside the value
         _RC_P[ck] = _OBS.rollout_parts(w.hed[role], 0)
     return _RC[ck]
@@ -676,7 +682,7 @@ def pot_baseline(pa, pb, seed, base, weeks=OUT_WEEKS):
         run = wd.play()
         STATS["rollouts"] += 1
         STATS["rollout_weeks"] += weeks
-        _PC[ck] = {r: wellbeing(run.outcomes, r) for r in "AB"}
+        _PC[ck] = {r: wellbeing(run.outcomes, r, q) for r, q in zip("AB", (pa, pb))}
         if wd.hed["A"].parts_on:
             _PC_P[ck] = {r: _OBS.rollout_parts(wd.hed[r], 0) for r in "AB"}
     _LAST_KEY["pot"] = ck
@@ -712,7 +718,7 @@ def forward_values(world, w, last, weeks=FORWARD_WEEKS, parts=None):
     if parts is not None:
         for r in "AB":
             parts[r] = _OBS.rollout_parts(c.hed[r], 0)
-    return {r: wellbeing(c.run.outcomes[n0:], r) for r in "AB"}
+    return {r: wellbeing(c.run.outcomes[n0:], r, world.personas[r]) for r in "AB"}
 
 
 # ---- the v2 protocol -------------------------------------------------------------------------------------------------------
@@ -1077,7 +1083,7 @@ def baseline_value(pa, pb, seed, cards, weeks=OUT_WEEKS):
         wd = H.WeeklyWorld(list(cards), (pa, pb), seed, weeks)
         run = wd.play()
         STATS["rollouts"] += 1
-        _BC[ck] = {r: wellbeing(run.outcomes, r) for r in "AB"}
+        _BC[ck] = {r: wellbeing(run.outcomes, r, q) for r, q in zip("AB", (pa, pb))}
         if wd.hed["A"].parts_on:
             _BC_P[ck] = {r: _OBS.rollout_parts(wd.hed[r], 0) for r in "AB"}
     _LAST_KEY["base"] = ck

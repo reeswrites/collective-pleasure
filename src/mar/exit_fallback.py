@@ -121,6 +121,9 @@ def world_arm(world):
 def contribution_share(world, r, basis):
     """r's share of what both put in. basis "pot": world.put (into the pot); "all": world.money_in (pot and bills). 0.5 if nothing."""
     src = world.put if basis == "pot" else world.money_in
+    if basis == "all" and getattr(world, "makers", None):     # H39 makers: making credit counts as contribution (off by default)
+        from . import makers as _MAKERS
+        src = _MAKERS.contribution_basis(world, r)
     tot = src["A"] + src["B"]
     return src[r] / tot if tot > 0 else 0.5
 
