@@ -190,3 +190,17 @@ def test_every_prereg_verdict_can_happen_on_synthetic_fronts():
     assert R.p4_line([{"train": a}, {"train": b}]) is True
     assert R.p4_line([{"train": a}, {"train": dict(a, liberty=3.1)}]) is False                # near-ties are not a trade-off
     assert R.p4_line([{"train": a}]) is False
+
+
+def test_loss_report_lists_powers_mechanics_and_backwards_cards():
+    from mar import loss_report as LR
+    seed = WORLD.load_spec("author_seed_v2_bindable")
+    rep = LR.loss_report(seed, WORLD.load_spec("baseline"))
+    lost = {p for p, _ in rep["powers_lost"]}
+    assert {"commit_stay", "commit_request", "give", "leave", "refuse_request"} <= lost
+    assert {p for p, _ in rep["mechanics_off"]} == {"commit_stay", "commit_request", "give"}
+    assert any(i == "E1-at-most-half" for i, _ in rep["added"]) and LR.loss_report(seed, seed)["removed"] == []
+    d1 = WORLD.load_spec("needs_duty")[0]
+    flipped = W._hrebuild(d1, "flip", deontic="must")
+    rep2 = LR.loss_report(seed, (flipped,))
+    assert [b[0] for b in rep2["backwards"]] == ["D1-needs-first"]

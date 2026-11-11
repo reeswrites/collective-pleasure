@@ -23,6 +23,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from mar import evolve as EV  # noqa: E402
+from mar import loss_report as LR  # noqa: E402
 from mar import stats as S  # noqa: E402
 from mar import world_api as W  # noqa: E402
 from mar.cards import make_card  # noqa: E402
@@ -183,7 +184,7 @@ def report():
         print("  val   " + ", ".join(f"{o} {e['val'][o]:.3f}" for o in OBJ) + "  | vs seed " + ", ".join(f"{o} {d[o]:+.3f}" for o in OBJ))
         for c in spec:
             print("   - " + c.id + ": " + W.card_plain_english(c))
-        for x in W.spec_diff_plain(seed_spec, spec):
+        for x in LR.render(LR.loss_report(seed_spec, spec)):
             print("   * " + x)
     print("\nPER GENERATION (mean over lines)")
     G = max(len(l["log"]) for l in R["lines"])
