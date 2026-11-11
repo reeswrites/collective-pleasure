@@ -115,3 +115,31 @@ One parameter point per sweep. Assumed numbers, a deterministic one-agent model,
 ## Reproduce
 
 `uv run python scripts/horizon_run.py` (about 80 seconds) and `uv run pytest tests/test_horizon.py` (about 25 seconds).
+
+## 5. Amendment 2026-11-10: shared-experience amplification (preregistered in the amendment to docs/results/horizon-prereg.md, commit 0161425)
+
+The author's correction (latest row of `experiments/changes.jsonl`, verbatim): "well we ight have to think harder baout how we do things like if you like eating with others then it makes sense that it could amplioify or channel pelasure iwth eating with a nother person or if you like watfching movies and it would be cooler to share and wathc with someone else". The friendship-gap case in section 4 treated a friend as rationed reunions and undercounted companionship. Section 4 stays as it was ("Before amplification"; the old figures are in `experiments/kept/horizon-2026-11-10/report-before-amplification.html`, `results-before-amplification.json`). The new run adds the `amp` key to `results.json`; every old key is unchanged (checked), and with amplification off the score equals the old one exactly (max difference 0.0 over g 1..200, four friendships). Code: `Activity`, `AmpParams`, `share_multiplier`, `amp_score`, `amp_curve`, `amp_best` in `src/mar/horizon.py`; 6 new tests (27 total). Everything is for the ASSUMED parameters in the amendment, not real friendships. The model was smoke-run before the amendment was written and two settings changed after that look; this is disclosed in the amendment.
+
+Best days between contacts (default overlap 0.7), one-self scoring:
+
+| friendship half-life (days) | before (rationed reunions) | smaller reunion layer alone (control) | with shared activities |
+|---|---|---|---|
+| 10 | 19 | 6 | 4 |
+| 20 | 42 | 7 | 5 |
+| 45 | 86 | 10 | 6 |
+| 90 | 139 | 12 | 7 |
+
+Best gap by taste overlap (0.1, 0.3, 0.5, 0.7, 0.9): half-life 10: 6, 6, 6, 4, 3; half-life 20: 7, 7, 6, 5, 4; half-life 45: 10, 10, 7, 6, 5; half-life 90: 12, 12, 8, 7, 6. At overlap 0.1 and 0.3 no activity beats its logistics (at 0.3 only meals and walks marginally; the person shares none at 0.1), so the rhythm is the reunion layer's. Reading or a solo hobby is never shared.
+
+| ID | Prediction | Result |
+|---|---|---|
+| A1 | much more frequent: (a) H = 90, overlap 0.7 at most 7 days; (b) at most 14 days for every H at overlap 0.5, 0.7, 0.9; (c) at overlap 0.7 and 0.9 at least 1 day shorter than the reunion-only control | **held** (a) 7 days exactly, (b) max 10, (c) shorter by 2 to 5 days |
+| A2 | (a) nonincreasing gap as overlap rises; (b) nonincreasing gap as closeness level rises; (c) descriptive: slower fading gives a longer gap | **missed on (b)**. (a) held for all four H. (b) gap goes 5, 6, 7 for closeness level 0.3, 0.6, 0.9 (control 8, 10, 11): closer friends here want a LONGER gap, the opposite. (c) as stated: longer gap with larger H |
+| A3 | (a) sharing gain negative for the solo hobby at every overlap and for meals, movies, walks at overlap 0.1; (b) forcing all sharing lowers value | **held**. Per-occasion gain at overlap 0.1: meals -0.44, movies -1.56, walks -0.39, hobby -3.78; break-even overlap about 0.22, 0.32, 0.21 and none for the hobby. Forced sharing lowers lifetime at overlap 0.7 for every H (for example 6.81 to 5.90 at H = 45) |
+| A4 | release share of friendship pleasure above 0 and below 0.5 at overlap 0.7, no larger at 0.9 | **held**: 43.6, 43.7, 43.6, 43.3% at overlap 0.7 for the four H; 33.8 to 35.1% at 0.9. At overlap 0.1 and 0.3 it is 100% (nothing shared) |
+| A5 | shared bad occasions amplified | **held** (movies at overlap 0.7: bad part -0.62 against 0 with amplification off) |
+| A6 | regression | **held** |
+
+What it teaches. Amplification makes the best rhythm weekly or better for people who share tastes (4 to 7 days against 19 to 139), but most of the drop from the old answer is the smaller reunion layer, not sharing: shrinking release alone already gives 6 to 12 days. The sharing-specific shortening is 2 to 5 days at overlap 0.7 and it grows with overlap. So the old long gaps were produced by a model in which the only value of a friend was a large release after absence; once that is demoted, the data-free answer is "weekly". A2(b) missed because in this model deeper or closer friendships keep the amplifier up through a gap and the release layer still favors some absence; frequent contact is wanted most where sharing is most valuable per contact (high overlap), not where closeness is highest. If the author thinks closer friends should be seen more often, something is missing: sharing should itself raise closeness (not modeled), and companionship should have value that the gap does not dilute. That is an open design question, not a finding.
+
+Report: `experiments/kept/horizon-2026-11-10/report.html` (new "After amplification" section with six charts and plain-English captions; the two old gap figures sit under "Before amplification").

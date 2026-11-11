@@ -168,6 +168,9 @@ def main():
         ("default", sp), ("memory weight 0 (old experienced)", Hz.PURE_PRESENT), ("memory weight x3", replace(sp, nu=0.03)),
         ("no ending boost", replace(sp, w_end=0.0)), ("no rumination", replace(sp, rum=1.0)), ("fast forgetting (tau 10)", replace(sp, tau_m=10.0)))}
 
+    # ---- amended 2026-11-10: shared-experience amplification (prereg amendment; mechanism off in everything above)
+    R["amp"] = amp_results(people)
+
     def conv(o):
         if isinstance(o, dict):
             return {k: conv(v) for k, v in o.items()}
@@ -182,6 +185,53 @@ def main():
     print(json.dumps({k: R[k] for k in ("n_states", "p1_max_abs_loss_off", "p1b_adapt_commit_off_only", "gamma_large10", "horizon_large10_g1", "critical_gamma", "gamma_commitment_accepted",
                                          "delta_large10", "beta_large10", "plans")}, indent=1))
     print("wrote", OUT / "results.json", OUT / "report.html")
+
+
+HS = (10, 20, 45, 90)
+OVS = (0.1, 0.3, 0.5, 0.7, 0.9)
+
+
+def per_occasion(ap, a, ov, x=0.8, g=7):
+    m = Hz.share_multiplier(ap, a, x, g, ov)
+    mb = 1 + ap.amp_bad * (m - 1)
+    good, bad = (1 - a.p_bad) * a.base * (m - 1), -a.p_bad * a.u_bad * (mb - 1)
+    return {"mult": m, "gain": good + bad, "good": good, "bad": bad}
+
+
+def amp_results(people):
+    ap = Hz.AmpParams()
+    A = {"params": {k: str(v) for k, v in ap.__dict__.items() if k != "activities"},
+         "activities": [dict(a.__dict__) for a in ap.activities], "hs": list(HS), "overlaps": list(OVS)}
+    A["old_best"] = {str(h): Hz.best_gaps(Hz.GapParams(H=h))["best_lifetime"] for h in HS}
+    ctrl = Hz.AmpParams(activities=())
+    A["c1_release_only"] = {str(h): Hz.amp_best(Hz.GapParams(H=h), ap=ctrl)["best_gap"] for h in HS}
+    A["grid"] = {}
+    for h in HS:
+        for o in OVS:
+            b = Hz.amp_best(Hz.GapParams(H=h), ap=ap, overlap=o)
+            ab = b["at_best"]
+            A["grid"][f"{h}|{o}"] = {"best_gap": b["best_gap"], "release_share": ab["release_share"], "lifetime": ab["lifetime"],
+                                    "base_lifetime": ab["base_lifetime"], "shared": [n for n, v in ab["activities"].items() if v["shared"]],
+                                    "closeness_at_meeting": ab["closeness_at_meeting"]}
+            f = Hz.amp_best(Hz.GapParams(H=h), ap=Hz.AmpParams(choose=False), overlap=o)
+            A["grid"][f"{h}|{o}"]["forced_best_gap"] = f["best_gap"]
+            A["grid"][f"{h}|{o}"]["forced_lifetime"] = f["at_best"]["lifetime"]
+    A["reset"] = {str(r): Hz.amp_best(Hz.GapParams(H=45, reset=r), ap=ap, overlap=0.7)["best_gap"] for r in (0.3, 0.6, 0.9)}
+    A["reset_c1"] = {str(r): Hz.amp_best(Hz.GapParams(H=45, reset=r), ap=ctrl)["best_gap"] for r in (0.3, 0.6, 0.9)}
+    A["per_occasion"] = {a.name: {str(o): per_occasion(ap, a, o) for o in (0.1, 0.3, 0.5, 0.7, 0.9)} for a in ap.activities}
+    A["break_even_overlap"] = {}
+    for a in ap.activities:
+        pts = [o / 100 for o in range(0, 101) if per_occasion(ap, a, o / 100)["gain"] > 0]
+        A["break_even_overlap"][a.name] = min(pts) if pts else None
+    A["a5_movies"] = {"bad_part_amplified": per_occasion(ap, ap.activities[1], 0.7)["bad"],
+                      "bad_part_not_amplified": per_occasion(replace(ap, amp_bad=0.0), ap.activities[1], 0.7)["bad"]}
+    A["a6_max_diff_off"] = max(abs(Hz.amp_score(Hz.GapParams(H=h), g, ap=Hz.AmpParams(on=False))["lifetime"] - Hz.gap_score(Hz.GapParams(H=h), g)["lifetime"])
+                               for h in HS for g in range(1, 201))
+    A["curves"] = {}
+    for o in (0.1, 0.5, 0.9):
+        c = Hz.amp_best(Hz.GapParams(H=45), ap=ap, overlap=o)["curve"]
+        A["curves"][str(o)] = [[r["gap"], r["lifetime"]] for r in c]
+    return A
 
 
 # --------------------------------------------------------------------------- report
@@ -262,7 +312,11 @@ table{border-collapse:collapse}td,th{padding:3px 10px;border-bottom:1px solid va
 {asked(R)}
 <p>A small household decision problem solved exactly ({R['n_states']} reachable states, 7 actions). Every parameter is assumed; see docs/results/horizon.md. Agents feel nothing; pleasure is a gloss for a modeled hedonic state.</p>
 <p>With all carried-over state switched off, greedy loses exactly {R['p1_max_abs_loss_off']:.0f} over {R['p1_cells']} grid cells. With it on, greedy loses up to {max(A['pct_finite']):.1f}% of lifetime pleasure at gamma 1 over 26 weeks.</p>
-<div class="grid">{''.join(f'<div class="card">{c}<div class="cap"><b>What this shows</b>{t}</div></div>' for c, t in zip(charts, caps))}</div>
+<div class="grid">{''.join(f'<div class="card">{c}<div class="cap"><b>What this shows</b>{t}</div></div>' for c, t in zip(charts[:5], caps[:5]))}</div>
+{amp_section(R)}
+<h2>Before amplification: the friendship gap with rationed reunions only</h2>
+<p>These two figures are the earlier worked case, kept as it was. A friend is modeled as missing, then release. It gave best gaps of {R['gap']['10']['best_lifetime']} to {R['gap']['90']['best_lifetime']} days, and the author said that undercounts wanting to hang out with a friend.</p>
+<div class="grid">{''.join(f'<div class="card">{c}<div class="cap"><b>What this shows</b>{t}</div></div>' for c, t in zip(charts[5:], caps[5:]))}</div>
 <h2>Heuristics against the optimum (gamma 0.9, 26 weeks)</h2><div class="tw"><table><tr><th>policy</th><th>total</th><th>% of optimal</th></tr>{rows}</table></div>
 {proof(R)}
 {answers(R)}
@@ -270,6 +324,59 @@ table{border-collapse:collapse}td,th{padding:3px 10px;border-bottom:1px solid va
 {trust(R)}
 {alignment(R)}
 </body></html>"""
+
+
+def amp_charts(R):
+    A = R["amp"]
+    g = A["grid"]
+    hs, ovs = A["hs"], A["overlaps"]
+    charts = [
+        svg_lines("Best contact rhythm: before and after amplification", "friendship half-life, days (log)", "best days between contacts (log)",
+                  [("before: rationed reunions", [(h, A["old_best"][str(h)]) for h in hs]),
+                   ("release layer alone, smaller", [(h, A["c1_release_only"][str(h)]) for h in hs]),
+                   ("with sharing (overlap 0.7)", [(h, g[f"{h}|0.7"]["best_gap"]) for h in hs])], xs_log=True),
+        svg_lines("Best rhythm against taste overlap", "taste overlap with the friend", "best days between contacts",
+                  [(f"half-life {h}", [(o, g[f"{h}|{o}"]["best_gap"]) for o in ovs]) for h in (10, 45, 90)]),
+        svg_lines("Best rhythm against closeness level", "how much each meeting closes the gap", "best days between contacts",
+                  [("with sharing", [(float(r), v) for r, v in A["reset"].items()]), ("release layer alone", [(float(r), v) for r, v in A["reset_c1"].items()])]),
+        svg_lines("What sharing does to one occasion", "taste overlap for that activity", "pleasure gained or lost per occasion",
+                  [(n, [(float(o), v["gain"]) for o, v in d.items()]) for n, d in list(A["per_occasion"].items())[:3]] + [("reading or solo hobby", [(float(o), v["gain"]) for o, v in A["per_occasion"]["reading or solo hobby"].items()])]),
+        svg_lines("Share of friendship pleasure from the reunion release", "taste overlap", "release share at the best rhythm",
+                  [(f"half-life {h}", [(o, g[f"{h}|{o}"]["release_share"]) for o in ovs]) for h in (10, 45, 90)]),
+    ]
+    c = A["curves"]
+    def nrm(v):
+        lo, hi = min(y for _, y in v), max(y for _, y in v)
+        return [(x, (y - lo) / ((hi - lo) or 1)) for x, y in v if x <= 60]
+    charts.append(svg_lines("Contact rhythm curve, half-life 45 days", "days between contacts (first 60)", "score, scaled 0 to 1 per line",
+                            [(f"overlap {o}", nrm(c[o])) for o in ("0.1", "0.5", "0.9")]))
+    h90 = g["90|0.7"]["best_gap"]
+    caps = [
+        f"Orange is the old answer: wait {A['old_best']['10']} to {A['old_best']['90']} days. Green is what is left if you only shrink the reunion release without adding sharing, {A['c1_release_only']['10']} to {A['c1_release_only']['90']} days, so part of the shift is just a smaller release. "
+        f"Blue adds sharing meals, movies and walks: {g['10|0.7']['best_gap']} to {h90} days, about weekly or more for everyone. The deepest friendship goes from {A['old_best']['90']} days to {h90}.",
+        f"More in common with the friend means seeing them more often. At half-life 45 the best gap goes from {g['45|0.1']['best_gap']} days at overlap 0.1 to {g['45|0.9']['best_gap']} days at 0.9. "
+        f"At very low overlap nothing is worth sharing, so the rhythm falls back to the reunion layer alone.",
+        f"Closeness level is how much each meeting closes the distance. At half-life 45 and overlap 0.7 the best gap goes from {A['reset']['0.3']} days at 0.3 to {A['reset']['0.9']} at 0.9, so closer friends are seen more often. Without sharing (the lower line) the change is {A['reset_c1']['0.3']} to {A['reset_c1']['0.9']}.",
+        "Each line is what one shared occasion is worth compared with doing it alone. Meals, movies and walks gain when you have taste in common and lose when you do not. "
+        f"A solo hobby is worse shared at every overlap, the thing you do better alone. Break-even overlap: meals {A['break_even_overlap']['meals']}, movies {A['break_even_overlap']['movies']}, walks {A['break_even_overlap']['walks']}.",
+        f"The reunion release is still there but it is not most of the friendship. At overlap 0.7 it is {100*g['45|0.7']['release_share']:.0f}% of the pleasure at the best rhythm (half-life 45), {100*g['45|0.9']['release_share']:.0f}% at overlap 0.9. "
+        "At overlap 0.1 nothing is shared, so the release is all there is (100%).",
+        "Each line scores every contact rhythm up to 60 days, scaled 0 to 1. High overlap peaks early and the curve slopes down quickly after, because sharing needs frequent contact to keep the amplifier up. Low overlap is flat and low.",
+    ]
+    return charts, caps
+
+
+def amp_section(R):
+    if "amp" not in R:
+        return ""
+    A = R["amp"]
+    ch, cp = amp_charts(R)
+    cards = "".join(f'<div class="card">{c}<div class="cap"><b>What this shows</b>{t}</div></div>' for c, t in zip(ch, cp))
+    return (f'<h2>After amplification: doing ordinary things together</h2>'
+            "<p>The author's correction: a friend is not only someone you miss. If you like eating with others, or watching movies, sharing can amplify the pleasure. "
+            "Here the person has ordinary liked activities on their own schedule (meals, movies, walks, a solo hobby). Doing one with the friend multiplies its pleasure by a factor that depends on closeness, on taste overlap for that activity, and on how social the activity is. "
+            "Bad occasions are amplified too. The reunion release stays, as a smaller layer. Every number is assumed; see docs/results/horizon-prereg.md (amendment).</p>"
+            f'<div class="grid">{cards}</div>')
 
 
 def _box(title, *paras):

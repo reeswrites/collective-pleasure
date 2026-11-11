@@ -171,3 +171,50 @@ def test_gap_mismatch_costs_the_short_person():
     m = Hz.gap_mismatch(Hz.GapParams(H=20), Hz.GapParams(H=90))
     assert m["mismatch_days"] > 0 and m["short_loss_pct"] > 0
     assert m["closeness_at_meeting_long_gap"] < m["closeness_at_meeting_best"]
+
+
+# ---- shared-experience amplification (prereg amendment 2026-11-10)
+
+def test_amp_off_reproduces_old_gap_score():
+    off = Hz.AmpParams(on=False)
+    for h in (10, 20, 45, 90):
+        p = Hz.GapParams(H=h)
+        for g in (1, 3, 7, 30, 120, 200):
+            assert abs(Hz.amp_score(p, g, ap=off)["lifetime"] - Hz.gap_score(p, g)["lifetime"]) < 1e-12
+
+
+def test_amp_multiplier_properties():
+    ap = Hz.AmpParams()
+    meals, reading = ap.activities[0], ap.activities[3]
+    assert Hz.share_multiplier(ap, reading, 0.8, 7, 0.9) < 1.0            # better alone, even at high overlap
+    assert Hz.share_multiplier(ap, meals, 0.8, 7, 0.1) < 1.0              # low overlap lowers it
+    assert Hz.share_multiplier(ap, meals, 0.8, 7, 0.7) > 1.0
+    ms = [Hz.share_multiplier(ap, meals, 0.8, 7, o) for o in (0.1, 0.3, 0.5, 0.7, 0.9)]
+    assert ms == sorted(ms)                                                 # rises with overlap
+    assert Hz.share_multiplier(ap, meals, 0.3, 7, 0.7) < Hz.share_multiplier(ap, meals, 0.8, 7, 0.7)   # rises with closeness
+
+
+def test_amp_bad_occasions_amplified():
+    p = Hz.GapParams(H=45)
+    on = Hz.amp_score(p, 7, ap=Hz.AmpParams(), overlap=0.7)["activities"]["movies"]
+    off = Hz.amp_score(p, 7, ap=Hz.AmpParams(amp_bad=0.0), overlap=0.7)["activities"]["movies"]
+    assert on["bad_part"] < off["bad_part"] <= 0 and abs(on["bad_part"]) > abs(off["bad_part"])
+
+
+def test_amp_forced_sharing_lowers_value():
+    p = Hz.GapParams(H=45)
+    chosen = Hz.amp_best(p, overlap=0.7)["at_best"]["lifetime"]
+    forced = Hz.amp_best(p, ap=Hz.AmpParams(choose=False), overlap=0.7)["at_best"]["lifetime"]
+    assert forced < chosen
+
+
+def test_amp_makes_close_friends_more_frequent_than_old_model():
+    for h in (10, 90):
+        assert Hz.amp_best(Hz.GapParams(H=h), overlap=0.7)["best_gap"] < Hz.best_gaps(Hz.GapParams(H=h))["best_lifetime"]
+
+
+def test_amp_best_gap_nonincreasing_in_overlap_and_release_is_minority():
+    p = Hz.GapParams(H=45)
+    gaps = [Hz.amp_best(p, overlap=o)["best_gap"] for o in (0.1, 0.3, 0.5, 0.7, 0.9)]
+    assert gaps == sorted(gaps, reverse=True)
+    assert 0 < Hz.amp_best(p, overlap=0.7)["at_best"]["release_share"] < 0.5

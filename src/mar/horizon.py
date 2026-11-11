@@ -626,3 +626,102 @@ def stretch_value(L: int, level: float, sp: SelfParams = SelfParams()) -> dict:
     V = _vividness(replace(sp, w_end=0.0, w_nov=0.0, w_emo=0.0, w_sh=0.0), level, 10 ** 9, 0.0, False, False)
     mem = sp.nu * _recall_mass(sp.tau_m) * V * level
     return {"present": level * L, "memory": mem, "memory_share": mem / (level * L + mem)}
+
+
+# ------------------------------------------------------------------ worked case, amended 2026-11-10: shared-experience amplification
+# Added after the author's correction (experiments/changes.jsonl, latest row). Nothing above this line was changed; with AmpParams(on=False)
+# every function below returns the old gap_score exactly.
+
+@dataclass(frozen=True)
+class Activity:
+    """An ordinary liked activity on the person's own schedule. ALL ASSUMED."""
+    name: str
+    r: float            # occasions per day when done on one's own schedule
+    cap: float          # most occasions that fit in one contact day
+    base: float         # pleasure of a good occasion alone (same units as the daily feeling in GapParams)
+    soc: float          # sociability: below 1 = better alone
+    off: float = 0.0    # offset of this activity's taste overlap from the friendship's overall overlap
+    p_bad: float = 0.1  # share of occasions that go badly
+    u_bad: float = 3.0  # how bad (a negative valence of this size)
+
+
+DEFAULT_ACTIVITIES = (
+    Activity("meals", 1.0, 2.0, 3.0, 1.2, 0.0, 0.05, 3.0),
+    Activity("movies", 1 / 7, 1.0, 8.0, 1.2, -0.1, 0.20, 6.0),
+    Activity("walks", 1 / 3, 1.0, 3.0, 1.1, 0.1, 0.05, 2.0),
+    Activity("reading or solo hobby", 0.5, 1.0, 4.0, 0.4, 0.0, 0.05, 2.0),
+)
+
+
+@dataclass(frozen=True)
+class AmpParams:
+    """Shared-experience amplification (author, 2026-11-10: "if you like eating with others then it makes sense that it could amplify or channel
+    pleasure with eating with another person or if you like watching movies and it would be cooler to share and watch with someone else").
+    A contact every g days shares k = min(r * g, cap) occasions of each activity. A shared occasion's valence is multiplied by
+    mult = soc * (1 + A * h(g) * x * overlap) - kappa * (1 - overlap), x = closeness at the meeting (decays with long gaps), overlap in [0, 1],
+    h(g) = 1 - exp(-g / tau_s) (habituation: near-daily contact dulls each shared occasion). Bad occasions are amplified too (Boothby, Clark and
+    Bargh 2014, "Shared experiences are amplified", Psychological Science; from memory, verify) by 1 + amp_bad * (mult - 1)."""
+    on: bool = True
+    A: float = 1.0
+    kappa: float = 0.5
+    tau_s: float = 3.0
+    amp_bad: float = 1.0
+    cost_occ: float = 0.8     # logistics per shared occasion (a special meeting cost 24 in GapParams)
+    cost_sess: float = 7.2    # logistics per contact session = old special-meeting cost (24) x m_scale, so the release layer keeps its old cost-to-release ratio
+    m_scale: float = 0.3      # the reunion release layer is scaled down: tension scale M x m_scale
+    choose: bool = True       # the person shares an activity only when its gain per occasion beats the occasion's logistics; False = forced sharing of all
+    activities: tuple = DEFAULT_ACTIVITIES
+
+
+def share_multiplier(ap: AmpParams, act: Activity, x: float, g: int, overlap: float) -> float:
+    ov = min(max(overlap + act.off, 0.0), 1.0)
+    h = 1.0 - np.exp(-g / ap.tau_s)
+    return act.soc * (1.0 + ap.A * h * x * ov) - ap.kappa * (1.0 - ov)
+
+
+def amp_score(p: GapParams, g: int, sp: SelfParams = SelfParams(), ap: AmpParams = AmpParams(), overlap: float = 0.7, base: dict | None = None) -> dict:
+    """Contact every g days. Layer 1 (reunion release, smaller): gap_score with tension scale M x m_scale and no meeting cost.
+    Layer 2 (amplification): per contact, sum over activities of k * [(1-p_bad) * base * (mult-1) - p_bad * u_bad * (mult_bad-1)] minus
+    occasion and session logistics. One-self scoring as before: present + vivid memory of each shared trace + anticipation of the contact."""
+    if not ap.on:
+        return gap_score(p, g, sp)
+    b = base if base is not None else gap_score(replace(p, M=p.M * ap.m_scale, cost=0.0), g, sp)
+    x = b["closeness_at_meeting"]
+    S = _recall_mass(sp.tau_m)
+    gross = occ_cost = mem = 0.0
+    parts = {}
+    for a in ap.activities:
+        mult = share_multiplier(ap, a, x, g, overlap)
+        mult_bad = 1.0 + ap.amp_bad * (mult - 1.0)
+        k = min(a.r * g, a.cap)
+        good = (1 - a.p_bad) * a.base * (mult - 1.0)
+        bad = -a.p_bad * a.u_bad * (mult_bad - 1.0)
+        delta = good + bad                                        # per occasion, above doing it alone
+        shared = (not ap.choose) or delta > ap.cost_occ
+        if not shared:
+            parts[a.name] = {"mult": float(mult), "k": 0.0, "per_occasion_gain": float(delta), "good_part": float(good), "bad_part": float(bad), "shared": False}
+            continue
+        V = _vividness(sp, delta, g, 0.3, False, True)
+        mem += sp.nu * S * k * V * delta * (sp.rum if delta < 0 else 1.0)
+        gross += k * delta
+        occ_cost += k * ap.cost_occ
+        parts[a.name] = {"mult": float(mult), "k": float(k), "per_occasion_gain": float(delta), "good_part": float(good), "bad_part": float(bad), "shared": True}
+    amp_present = gross - occ_cost - ap.cost_sess
+    ant = sp.a_sched * max(gross, 0.0) * sum(np.exp(-(g - d) / sp.tau_ant) for d in range(1, g + 1))
+    life = b["lifetime"] + (sp.pi * amp_present + mem + ant) / g
+    rel = b["release"]
+    pos = max(gross, 0.0)
+    return {"gap": g, "lifetime": float(life), "base_lifetime": float(b["lifetime"]), "amp_present_per_day": float(sp.pi * amp_present / g),
+            "amp_memory_per_day": float(mem / g), "amp_anticipation_per_day": float(ant / g), "release": float(rel), "gross_amp": float(gross),
+            "release_share": float(rel / (rel + pos)) if rel + pos > 0 else 0.0, "closeness_at_meeting": float(x), "activities": parts}
+
+
+def amp_curve(p: GapParams, sp: SelfParams = SelfParams(), ap: AmpParams = AmpParams(), overlap: float = 0.7, gmax: int = 200) -> list[dict]:
+    pb = replace(p, M=p.M * ap.m_scale, cost=0.0)
+    return [amp_score(p, g, sp, ap, overlap, base=gap_score(pb, g, sp)) for g in range(1, gmax + 1)]
+
+
+def amp_best(p: GapParams, sp: SelfParams = SelfParams(), ap: AmpParams = AmpParams(), overlap: float = 0.7, gmax: int = 200) -> dict:
+    c = amp_curve(p, sp, ap, overlap, gmax)
+    bl = max(c, key=lambda r: r["lifetime"])
+    return {"best_gap": bl["gap"], "at_best": bl, "curve": c}
