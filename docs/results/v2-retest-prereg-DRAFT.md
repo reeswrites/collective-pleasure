@@ -14,7 +14,7 @@ Retest decisions by the author (experiments/changes.jsonl, 2026-11-11):
 
 - The verdict. "show both, judge on pleasure" (02:51:22Z). The condition is met only if pleasure itself rises. Pleasure minus suffering and non-offsettable suffering are reported alongside and do not decide the verdict. This replaces the earlier reading of "pleasure minus suffering yeah i guess if that is what is commonly held" (02:22:46Z) as the deciding score; that hedged answer now sets only what is shown beside the verdict.
 - The baseline. "yes pairs should be allowed to not form a househodl" (02:23:24Z). The baseline must also let pairs decline to form a household.
-- **Claude's choice, not the author's:** each person is scored at their actual outcome, living apart included, so pairs that decline still count. The author said pairs should be allowed not to form; the author did not say whether their outcomes count toward "pleasure in relationships" (docs/reviews/2026-11-11-faithfulness.md, finding F1). A formed-pairs-only line is reported beside it (C8), and the question goes to the author before the run.
+- Who counts. "everyone counts" (02:53:11Z). Each person is scored at their actual outcome, living apart included, so people in pairs that decline still count, and this scoring decides the verdict. This is the author's decision; it resolves faithfulness review finding F1 (docs/reviews/2026-11-11-faithfulness.md). A formed-pairs-only line (C8) stays descriptive.
 
 This run asks: with the household fixed (contact that matters, money valued per persona, real outside options, opt-in fines), the levers on, and the same formation choice in every arm, does seed v2.2 produce more modeled pleasure than the baseline? Does seed v2.3? A decision this changes: whether the author's condition on v2.2 counts as met, and whether v2.3 replaces v2.2 as the working seed.
 
@@ -49,7 +49,7 @@ Claim ids in docs/claims.md: to be added after the run.
 
 **Fixed parameters.** Everything in `HedonicConfig`, `LeverConfig` and `FixConfig` at the values committed with the fixes, named in the design doc. All ASSUMED. Frozen at the commit of Amendment 1.
 
-**Measures per run, per person, at their actual outcome (living together or apart; Claude's choice, see above).**
+**Measures per run, per person, at their actual outcome (living together or apart; the author's "everyone counts").**
 
 - **Primary: mean pleasure** over 156 weeks (the measure of every earlier report). This alone decides the verdict.
 - **Secondary, shown beside it: net wellbeing.** Mean over 156 weeks of pleasure minus offsettable suffering minus non-offsettable suffering (the `negotiation.wellbeing` quantity, which the negotiation itself already uses).
@@ -136,7 +136,7 @@ The author's rule, verbatim: "show both, judge on pleasure". The statistical bar
 - **The author's condition is met for v2.2** iff P1 (mean pleasure) holds robustly: Holm-adjusted p below 0.05 and the whole 95 percent interval above 0. If P1 is significant but the interval touches 0, it is "weak support" and the condition is not counted as met. If the point estimate is above 0 but P1 is not significant, the condition is "not shown".
 - **The same rule for v2.3** with P2 (mean pleasure).
 - **Shown, not deciding.** Net wellbeing (S1, S2) and non-offsettable suffering (S3, S4) are reported on their own lines next to the verdict. A gain in net wellbeing without a gain in pleasure does not meet the condition. If P1 holds while S3 shows a significant rise in non-offsettable suffering, the report states both side by side, so the author can read them.
-- **Who counts.** The verdict uses every person at their actual outcome, living apart included. That is Claude's choice; C8 (formed pairs only) is shown beside it.
+- **Who counts.** The verdict uses every person at their actual outcome, living apart included (the author: "everyone counts"). C8 (formed pairs only) is shown beside it and does not decide.
 - Results are under the model and ASSUMED parameters. A "met" verdict means the rules produce modeled pleasure the baseline lacks, not that they would in people.
 
 ## Expectations stated now (not predictions, recorded so the report can be checked against them)
@@ -162,5 +162,6 @@ None yet. Amendment 1 (pilot table, power check, n and S, runtime) is committed 
 
 ### Draft change log
 
+- 2026-11-11 (latest): the author's "everyone counts" settled who is scored: every person at their actual outcome, living apart included, decides the verdict. The "Claude's choice" label was replaced by the author's decision; C8 stays descriptive. Nothing had been run.
 - 2026-11-11 (later): the author's "show both, judge on pleasure" made mean pleasure primary again (P1, P2 pleasure only); net wellbeing and non-offsettable suffering became secondary lines that do not decide; the clause calling the condition met when the gain only spares suffering was removed; scoring people who decline was labeled Claude's choice (faithfulness review F1) and a formed-pairs-only line (C8) was added. Nothing had been run.
 - 2026-11-11: after the author's v2.3 answers and retest decisions, the primary measure became net wellbeing (pleasure-only became secondary), non-offsettable suffering got its own line, every baseline arm lets pairs decline to form (BASE-0i keeps the old imposed baseline for replication only), the trust-variant arm and the general-unhappiness ladder were added. Nothing had been run.
