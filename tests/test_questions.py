@@ -65,3 +65,21 @@ def test_timeline_merges_runs_and_changes(capsys, tmp_path):
     html = (tmp_path / "runs" / "timeline.html").read_text()
     assert "not like that" in html and "not what I meant" in html and "fishery-exploiterx4-m6-s0" in html
     assert "report.html" in html
+
+
+def test_track_is_optional_and_checked(capsys, tmp_path):
+    mar(capsys, tmp_path, "question", "record", "--quote", "no track")
+    mar(capsys, tmp_path, "question", "record", "--quote", "tagged", "--track", "social")
+    a, b = explog.read_rows(tmp_path / "exp" / "questions.jsonl")
+    assert "track" not in a and b["track"] == "social"
+    try:
+        explog.record_question(tmp_path / "exp", "bad", track="other")
+        raise AssertionError("bad track accepted")
+    except ValueError:
+        pass
+
+
+def test_real_log_rows_carry_a_valid_track_when_present():
+    for name in ("questions.jsonl", "changes.jsonl", "log.jsonl", "hypotheses.jsonl"):
+        for r in explog.read_rows(EXP / name):
+            assert r.get("track", "social") in explog.TRACKS, (name, r.get("track"))

@@ -272,7 +272,8 @@ def cmd_change(a) -> int:
     if a.change_cmd == "list":
         print(explog.changes_text(explog.read_rows(path)))
         return 0
-    row = explog.record_change(a.experiments_dir, a.kind, a.quote, a.reason, a.before, a.after, a.nwim)
+    row = explog.record_change(a.experiments_dir, a.kind, a.quote, a.reason, a.before, a.after, a.nwim,
+                               track=a.track)
     print(f"recorded {row['kind']} change in {path}" + (" (not what I meant)" if row["not_what_i_meant"] else ""))
     return 0
 
@@ -282,7 +283,7 @@ def cmd_question(a) -> int:
     if a.question_cmd == "list":
         print(explog.questions_text(explog.read_rows(path)))
         return 0
-    explog.record_question(a.experiments_dir, a.quote, a.topic, a.led_to)
+    explog.record_question(a.experiments_dir, a.quote, a.topic, a.led_to, track=a.track)
     print(f"recorded question in {path}")
     return 0
 
@@ -910,6 +911,7 @@ def parser():
     rc.add_argument("--before", required=True, help="file with the old text, or - for none")
     rc.add_argument("--after", required=True, help="file with the new text")
     rc.add_argument("--nwim", action="store_true", help="the author is rejecting what a run or rule did")
+    rc.add_argument("--track", choices=list(explog.TRACKS), help="optional: social, alignment or engine")
     ch.add_parser("list", help="print recorded changes")
     q = sub.add_parser("question", help="record or list the author's questions").add_subparsers(
         dest="question_cmd", required=True)
@@ -917,6 +919,7 @@ def parser():
     qr.add_argument("--quote", required=True, help="the author's exact words, verbatim")
     qr.add_argument("--topic", help="short topic label")
     qr.add_argument("--led-to", action="append", default=[], help="ADR id, change row or run id (repeatable)")
+    qr.add_argument("--track", choices=list(explog.TRACKS), help="optional: social, alignment or engine")
     q.add_parser("list", help="print recorded questions")
     tl = sub.add_parser("timeline", help="build runs/timeline.html from questions, decisions, changes, runs, commits")
     tl.add_argument("--keep", action="store_true", help="also write a dated, committed snapshot: "

@@ -5,7 +5,9 @@ experiments/changes.jsonl  one line per rule or oracle change.
 experiments/questions.jsonl one line per author question that redirected the project or opened a line of curiosity.
 experiments/kept/<run_id>/ trace.json and report.html copied by `mar keep`.
 
-Nothing here ever rewrites an earlier line: files are opened in append mode only.
+Nothing here ever rewrites an earlier line: files are opened in append mode only. (One exception, outside this module:
+scripts/tag_tracks.py added the optional `track` key to existing rows on 2026-11-11, and changed nothing else.)
+Rows may carry an optional `track`: one of TRACKS. Rows without one are valid.
 Full traces stay in runs/ (ignored). No LLM, no network.
 """
 import difflib
@@ -22,6 +24,7 @@ REPO = Path(__file__).resolve().parents[2]
 LOG_NAME = "log.jsonl"
 CHANGES_NAME = "changes.jsonl"
 QUESTIONS_NAME = "questions.jsonl"
+TRACKS = ("social", "alignment", "engine")  # optional `track` field on log rows
 
 
 def now_utc() -> str:
@@ -113,7 +116,12 @@ def _text(arg) -> str:
     return "" if arg in (None, "-") else Path(arg).read_text(encoding="utf-8")
 
 
-def record_change(exp_dir, kind, quote, reason, before, after, nwim=False) -> dict:
+def _check_track(track):
+    if track is not None and track not in TRACKS:
+        raise ValueError(f"track must be one of {', '.join(TRACKS)}")
+
+
+def record_change(exp_dir, kind, quote, reason, before, after, nwim=False, track=None) -> dict:
     """before/after: file path, or '-' for none (a new file). Stores both texts and a unified diff."""
     if kind not in ("rule", "oracle"):
         raise ValueError("kind must be rule or oracle")
@@ -121,12 +129,15 @@ def record_change(exp_dir, kind, quote, reason, before, after, nwim=False) -> di
         raise ValueError("--quote is required: the author's exact words, verbatim")
     if after in (None, "-"):
         raise ValueError("--after must be a file")
+    _check_track(track)
     b, a = _text(before), _text(after)
     diff = "".join(difflib.unified_diff(b.splitlines(True), a.splitlines(True), "before", "after"))
     row = {"timestamp": now_utc(), "kind": kind, "quote": quote, "reason": reason,
            "files": {"before": None if before in (None, "-") else str(before), "after": str(after)},
            "before_text": b, "after_text": a, "diff": diff, "git_commit": git_commit(),
            "not_what_i_meant": bool(nwim)}
+    if track is not None:
+        row["track"] = track
     _append(Path(exp_dir) / CHANGES_NAME, row)
     return row
 
@@ -146,15 +157,18 @@ def changes_text(rows) -> str:
 # ---- questions -----------------------------------------------------------------------------
 
 def record_question(exp_dir, quote, topic=None, led_to=None, timestamp=None, backfilled=False,
-                    paraphrase=None, source=None) -> dict:
+                    paraphrase=None, source=None, track=None) -> dict:
     """quote: the author's exact words, or None for a backfilled paraphrase row (then `paraphrase` is the
     one-line summary and is flagged "paraphrase": true). led_to: list of ADR ids, change rows or run ids."""
     if quote is None and not paraphrase:
         raise ValueError("--quote is required: the author's exact words, verbatim")
     if quote is not None and not quote.strip():
         raise ValueError("--quote is required: the author's exact words, verbatim")
+    _check_track(track)
     row = {"timestamp": timestamp or now_utc(), "quote": quote, "topic": topic, "led_to": list(led_to or []),
            "backfilled": bool(backfilled), "paraphrase": quote is None, "text": paraphrase, "source": source}
+    if track is not None:
+        row["track"] = track
     _append(Path(exp_dir) / QUESTIONS_NAME, row)
     return row
 

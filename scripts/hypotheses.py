@@ -6,7 +6,7 @@ Usage:
 
 rank prints rows ordered by testability x novelty x decision value.
 --open hides rows whose status starts with "running" (already being tested).
-check validates fields and that stored products match the scores.
+check validates fields and that stored products match the scores. `track` is optional (social, alignment, engine).
 No model calls.
 """
 import argparse
@@ -18,6 +18,7 @@ PATH = pathlib.Path(__file__).resolve().parent.parent / "experiments" / "hypothe
 KEYS = ("id", "group", "status", "claim", "motivation", "premortem", "experiment", "scores", "product")
 EXP = ("world", "arms", "measure", "test", "seeds", "cost")
 SC = ("testability", "novelty", "decision_value")
+TRACKS = ("social", "alignment", "engine")  # optional `track` field
 
 
 def load():
@@ -54,6 +55,8 @@ def check(_):
         miss = [k for k in KEYS if k not in r]
         miss += [f"experiment.{k}" for k in EXP if k not in r.get("experiment", {})]
         miss += [f"scores.{k}" for k in SC if k not in r.get("scores", {})]
+        if "track" in r and r["track"] not in TRACKS:
+            miss.append(f"bad track {r['track']!r}")
         if r.get("id") in ids:
             miss.append("duplicate id")
         ids.add(r.get("id"))
