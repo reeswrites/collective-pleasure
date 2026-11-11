@@ -5,4 +5,4 @@ aim: leave
 conditions: []
 or_else: null
 gloss: A partner may leave whenever they like.
-source: 'docs/seeds/author-household-norms-2026-11-10.md, the author''s words: "leaving should be whenever". Seed v2 rule R8. Seed v2.1 (2026-11-10): R3b removed; pot terms are negotiated by everyone who shares the pot (docs/decisions/0013-negotiated-pots.md).'
+source: 'docs/seeds/author-household-norms-2026-11-10.md, the author''s words: "leaving should be whenever". Seed v2 rule R8. Seed v2.2 (2026-11-10, pending author read-back): R3b stays removed; pot terms are negotiated by everyone who shares the pot (docs/decisions/0013-negotiated-pots.md).'

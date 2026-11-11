@@ -110,3 +110,17 @@ What changed:
   others accept (unanimous: every other member, via the card gate's `consented`; propose_accept: a majority, proposer counts; frozen: never),
   and the new terms are recompiled, floor-checked, checked against what the base rules let members commit to, and proof-checked before they take
   effect. Tests: tests/test_negotiation_v2.py. The earlier "Reading of the findings" bullets on `author_seed_v2_*` and on N4 are superseded by this pass.
+
+## Seed v2.2 (2026-11-10, pending author read-back)
+
+Regenerated with `uv run python scripts/lint_rules.py` after the change (no model calls): `household/author_seed_v2_bindable`,
+`household/author_seed_v2_free_exit` and `household/author_seed_v2_nocommit` pass (0 unwaived fail/open, 0 waived); the sample of 40
+negotiated agreements passes (0 of 40 fail); the only non-clean set is the deliberate `fishery-en+patch` fixture, as before.
+
+What changed in the cards: R8b and R8c (the even-split stand-in) are replaced by one `may leave` card, `R8b-exit-terms-negotiated`; R5c
+is still `must_not refuse_request when bound_request = 1` but its gloss now says it is a norm with no formal penalty and its `or_else`
+stays null (the formal penalty lives only in a negotiated card). New negotiated card `N8-fine-some` is a `may commit_request` (like N7
+and R8d, the consequence is on the card and the world enforces it), not a sanction, because the shared sanction check knows only warn,
+cap_halve and suspend. The gloss check (e) does not fire on the new glosses (they use no "unless", "except" or similar). The
+negotiated sample is drawn from the v1 menu, so it has no fine; two bundles with a stay, mutual requests and the fine `none` / `some`
+were linted separately in `tests/test_trust_v22.py` and both pass.

@@ -751,7 +751,20 @@ SEED_V2_VARIANTS = ("author_seed_v2_bindable", "author_seed_v2_free_exit", "auth
 GIVE = 3                    # money moved by one `give`
 BIND_WEEKS = 4              # a bound request stands this long (like a veto)
 BREACH_N = 0.2              # a bound partner breaks a commitment only at this non-offsettable load
-REQUEST_FINE = 3            # agreed consequence of breaking a request commitment (money to the proposer)
+REQUEST_FINE = 3            # money a bound partner pays the proposer on a request breach, ONLY when a negotiated card N8-fine-some says so (v2.2)
+# Trust (seed v2.2, rule 8 is a norm: docs/results/seed-v2.2-readback.md). One value per direction in [0, 1]: trust[r] is how much partner r
+# trusts the other. It is an implicit consequence modeled in the world, not a rule: it changes what partners are willing to do. Every
+# number here is ASSUMED (no data); change them only in this block.
+TRUST = {
+    "start": 0.7,               # both partners' trust in each other at week 0 (ASSUMED)
+    "breach_drop": 0.3,         # trust lost by the partner who is wronged when the other breaks a commitment they chose (ASSUMED)
+    "kept_week": 0.004,         # trust gained per week in which an active commitment of the other stands unbroken (ASSUMED; slow: a 52-week stay adds ~0.2)
+    "honored_request": 0.04,    # trust gained when a bound request runs its 4 weeks without being broken (ASSUMED)
+    "full": 0.5,                # at or above this, trust does not change willingness; below it, willingness to accept requests falls linearly to 0 (ASSUMED)
+    "commit_min": 0.4,          # below this a partner will not accept a new commitment (stay or requests) from the other (ASSUMED)
+    "review_penalty": 0.3,      # at a renegotiation review, the value a partner puts on the CURRENT terms falls by up to this much as trust falls from `full` to 0 (ASSUMED)
+    "leave_below": 0.15,        # below this a partner considers leaving, like a partner with a severe unmet need (ASSUMED)
+}
 BOUND_BLOCKS = {"stay_home": ("see_friend", "spend_self"), "no_contact": ("see_friend",)}   # what honoring a bound request means
 BREACH_FORFEIT = 1.0        # share of the leaver's carry a stay breach forfeits (seed v2: all of it). Exploratory sweeps vary it per world
 NO_POT_MONEY = 55           # no pot (negotiation failed): each partner keeps their own holdings, 10 private + the 45 that would have been pooled
@@ -822,7 +835,22 @@ class PersonaAgent:
         self.prosocial = max(0.0, min(1.0, 0.5 * (1 - ax["giving_keeping"]) + 0.5 * w["togetherness"]))
         self.last_request = -99
 
+    @property
+    def trust(self):
+        """This partner's trust in the other (the world's trust dict), 1.0 when the agent is not in a world."""
+        src = getattr(self, "trust_src", None)
+        return 1.0 if src is None else src[0][src[1]]
+
     def consents(self, kind):
+        """The persona's willingness to accept a request, scaled down by trust (seed v2.2): below TRUST["full"] a would-be yes
+        becomes a yes with probability trust / full. No random draw is made at or above it, so runs without breaches are unchanged."""
+        ok = self._consents(kind)
+        t = self.trust
+        if ok and t < TRUST["full"]:
+            return self.rng.random() < t / TRUST["full"]
+        return ok
+
+    def _consents(self, kind):
         s, a = self.persona.negotiation_style, self.persona.weights["autonomy"]
         if s == "accommodating":
             return True
@@ -886,7 +914,7 @@ class PersonaAgent:
             u = self.utilities({**o, "gap": 0})
             out += [(v, _a(a)) for a, v in u.items() if v > 0.003 and a != "together"]
             return sorted(out, key=lambda t: -t[0])
-        if o["low_weeks"] >= 4 or h.N >= 0.2:
+        if o["low_weeks"] >= 4 or h.N >= 0.2 or o.get("trust", 1.0) < TRUST["leave_below"]:
             out += [(0.9 - 0.01 * i, _a("leave", take=t)) for i, t in enumerate(LEAVE_TAKES)]
         pend = o["pending_on_me"]
         if pend and not self.consents(sorted(pend)[0]):
@@ -994,6 +1022,11 @@ class WeeklyWorld:
         self.commits, self.gifts = [], {"partner": 0, "friend": 0}
         self.bound_req = {"A": {}, "B": {}}     # bound requests standing ON each partner: kind -> first week it no longer binds
         self._rr = {"A": 1.0, "B": 1.0}
+        self.trust = {"A": TRUST["start"], "B": TRUST["start"]}     # trust[r] = r's trust in the other partner (seed v2.2)
+        self.trust_log = []                                          # (week, role whose trust changed, why, new value)
+        self.bound_broken = {"A": {}, "B": {}}
+        for r in "AB":
+            self.agents[r].trust_src = (self.trust, r)
         if not self.pot:
             self.pool, self.put = 0, {"A": 0, "B": 0}
             for r in "AB":
@@ -1040,6 +1073,17 @@ class WeeklyWorld:
         return any(c["kind"] == "requests" and c["by"] == by and c["to"] == to and c["type"] == kind and self._active(c, w)
                    for c in self.commits)
 
+    @property
+    def fine(self):
+        """Money a request breach costs: REQUEST_FINE only if a negotiated card says so (N8-fine-some), else 0 (seed v2.2)."""
+        return REQUEST_FINE if any(c.id == "N8-fine-some" for c in self.gate.cards) else 0
+
+    def _trust_move(self, who, delta, why, w):
+        """who's trust in the other partner changes by delta, clamped to [0, 1]."""
+        self.trust[who] = round(min(1.0, max(0.0, self.trust[who] + delta)), 6)
+        if why != "kept":
+            self.trust_log.append((w, who, why, self.trust[who]))
+
     def breaks(self, r):
         return self.hed[r].N >= BREACH_N
 
@@ -1061,6 +1105,8 @@ class WeeklyWorld:
 
     def breach(self, r, a, w, cand):
         """Apply the agreed consequence of breaking a commitment; -> the (possibly changed) candidate."""
+        o = self.other(r)
+        self._trust_move(o, -TRUST["breach_drop"], "breach", w)     # the wronged partner trusts r less (implicit consequence)
         if a == "leave":
             for c in self.commits:
                 if c["kind"] == "stay" and c["by"] == r and self._active(c, w):
@@ -1068,11 +1114,13 @@ class WeeklyWorld:
             if self.breach_forfeit >= 1.0:
                 return dict(cand, take=0)          # stay breach: nothing of the pot is carried out
             return dict(cand, take=min(cand.get("take", 0), int(round(100 * (1 - self.breach_forfeit)))))
-        o = self.other(r)
         for c in self.commits:
             if c["kind"] == "requests" and c["by"] == r and self._active(c, w):
                 c["breached"] += 1
-        fine = min(REQUEST_FINE, int(self.p[r]["money"]))
+        for k, until in self.bound_req[r].items():
+            if until > w:
+                self.bound_broken[r][k] = True
+        fine = min(self.fine, int(self.p[r]["money"]))
         self.p[r]["money"] -= fine
         self.p[o]["money"] += fine
         return cand
@@ -1085,7 +1133,7 @@ class WeeklyWorld:
         for k in ("stay", "requests"):
             cs = [c for c in self.commits if c["kind"] == k]
             by[k] = {"made": len(cs), "breached": sum(1 for c in cs if c["breached"])}
-        return {"made": made, "honored": made - br, "breached": br, "by_kind": by, "gifts": dict(self.gifts),
+        return {"made": made, "honored": made - br, "breached": br, "by_kind": by, "gifts": dict(self.gifts), "trust": dict(self.trust),
                 "log": [dict(c) for c in self.commits]}
 
     def need_month(self):
@@ -1217,7 +1265,7 @@ class WeeklyWorld:
               "can_see_friend": me["ill"] == 0 and self.moved == 0, "gap": st["need_gap"], "need_month": self.need_month(),
               "last_week_of_month": w % MONTH_WEEKS == MONTH_WEEKS - 1, "pending_on_me": set(self.pending[r]),
               "pending_by_me": set(self.pending[oth]),
-              "pooled": self.pool, "asp": {"friends": wk["friends"], "together": wk["together"], "net": net},
+              "trust": self.trust[r], "pooled": self.pool, "asp": {"friends": wk["friends"], "together": wk["together"], "net": net},
               "partner_conn_deficit": max(0.0, 0.5 - self.hed[oth].level["connection"]) * 2,
               "partner_busy": self.wk[oth]["friends"] + self.wk[oth]["works"] >= 2 or last_week["busy"][oth]}
         ob.update({"veto_on_partner": set(self.vetoes[oth]), "pool": self.pool, "took_this_week": self.wk[r]["took"]})
@@ -1264,6 +1312,7 @@ class WeeklyWorld:
             if self.mech and self.req_commit(oth, r, cand["kind"], w):      # a request the other chose to be bound by
                 self.consent[oth] = 1
                 self.bound_req[oth][cand["kind"]] = w + BIND_WEEKS
+                self.bound_broken[oth].pop(cand["kind"], None)
             self.agents[r].last_request = w
             if cand["kind"] == "time":
                 self.wk[oth]["pressed"] += 1
@@ -1354,6 +1403,16 @@ class WeeklyWorld:
                        "friend_initiated": 0, "sanctioned": 0, "conn_hit": 0.0, "sec_hit": 0.0, "pressed": 0, "took": 0} for r in "AB"}
         self.units = {r: UNITS for r in "AB"}
         self.start_shocks(w, ev)
+        if self.mech:
+            for c in self.commits:       # a commitment that stands unbroken this week: the beneficiary's trust in the bound partner recovers slowly
+                if self._active(c, w) and not c["breached"]:
+                    self._trust_move(c["to"], TRUST["kept_week"], "kept", w)
+            for r in "AB":               # a bound request that ran its weeks without being broken counts as honored
+                for k, until in list(self.bound_req[r].items()):
+                    if until <= w:
+                        del self.bound_req[r][k]
+                        if not self.bound_broken[r].pop(k, False):
+                            self._trust_move(self.other(r), TRUST["honored_request"], "honored", w)
         if self.hook:
             self.hook(self, w)
         probes = {r: self.probe(r, w) for r in "AB"}

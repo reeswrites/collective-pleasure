@@ -30,14 +30,14 @@ TERMS = {
     "requests": ("none", "mutual"),        # accept the others' stay_home requests for 52 weeks
 }
 TERM_NAMES = tuple(TERMS)
-TERM_ID = {"N1": "contribution", "N2": "use", "N3": "taking", "N4": "change", "N5": "exit", "N6": "stay", "N7": "requests"}
+TERM_ID = {"N1": "contribution", "N2": "use", "N3": "taking", "N4": "change", "N5": "exit", "N6": "stay", "N7": "requests", "N8": "requests"}   # N8 (fine) only exists with requests, so a failing N8 bans the requests term
 STAY_WEEKS = 52
 DEADLINE = 12
 LAMBDA0 = {"competitive": 0.1, "direct": 0.4, "avoidant": 0.6, "collaborative": 1.0, "accommodating": 1.5}
 THETA0 = {"competitive": 0.10, "direct": 0.06, "avoidant": 0.04, "collaborative": 0.02, "accommodating": 0.0}
 LAMBDA_END = 2.0
 K = 3                                       # proof-check bound (months)
-STUB_EXIT_CARDS = ("R8b-exit-terms-not-less", "R8c-exit-terms-not-more")   # replaced by the negotiated exit term
+STUB_EXIT_CARDS = ()      # seed v2.2: the even-split stand-in cards R8b/R8c are gone (git history); R8b-exit-terms-negotiated is a `may` and stays in the base
 IMPOSED = {"contribution": "none", "use": "needs_only", "taking": "forbidden", "change": "propose_accept",
            "exit": "equal_split", "stay": 0, "requests": "none"}      # what the rejected R3b-era seed imposed (reference only)
 
@@ -136,7 +136,9 @@ GLOSS = {
     ("exit", "forfeit"): "A member who leaves carries none of the pot, except what the exit floor tops up (card FLOOR-exit-floor).",
     ("stay", STAY_WEEKS): "Every member commits to stay for 52 weeks; leaving earlier forfeits the breach share of what the exit term would let them carry (the breach cost term sets that share; the whole of it by default).",
     ("requests", "mutual"): "Every member commits to honor the others' stay-home requests for 52 weeks (a bound stay-home request bars seeing the friend and spending on oneself).",
+    ("fine", "some"): "A member who breaks a request commitment they chose pays the wronged member a fine of 3 money (the code's REQUEST_FINE); without this term breaking it carries no fine, only the loss of the other member's trust.",
 }
+
 
 
 def _card(cid, deontic, aim, conds, gloss, source, or_else=None):
@@ -186,6 +188,10 @@ def compile_bundle(b, members):
         cards.append(_card("N6-stay-52", "may", "commit_stay", [], g("stay"), src))
     if b["requests"] == "mutual":
         cards.append(_card("N7-requests-mutual", "may", "commit_request", [], g("requests"), src))
+        if b.get("fine", "none") == "some":
+            # a `may commit_request` like N7 and R8d: the consequence of breaking the commitment is stated on the card and enforced by the
+            # world (WeeklyWorld.fine reads this card's id); the shared sanction check knows only warn / cap_halve / suspend
+            cards.append(_card("N8-fine-some", "may", "commit_request", [], g("fine"), src))
     return cards
 
 
@@ -387,13 +393,14 @@ def describe(res):
 # nothing; "value" is a modeled gloss.
 # =====================================================================================================================
 ARMS = ("fair_default", "wants_first", "wants_fallback")
+FINES = ("none", "some")                                    # seed v2.2 menu option: a fine (REQUEST_FINE money to the wronged partner) for breaking a request commitment; only where requests are agreed
 BREACH = (1.0, 0.5, 0.0)                                    # share of the carry-out a stay breach forfeits (only with a stay)
 # The fair default (post-fix 2026-11-10, author's choice "1" on the pot): one shared pot, open use, equal exit split, no commitments,
 # unanimous change. The earlier default (fixed contribution, needs-only use, taking forbidden) imposed the reading the author rejected.
 FAIR_DEFAULT = {"contribution": "none", "use": "any_use", "taking": "allowed", "change": "unanimous",
-                "exit": "equal_split", "stay": 0, "requests": "none", "breach": 1.0}
+                "exit": "equal_split", "stay": 0, "requests": "none", "breach": 1.0, "fine": "none"}
 FAIR_DEFAULT_V1 = {"contribution": "fixed", "use": "needs_only", "taking": "forbidden", "change": "unanimous",
-                   "exit": "equal_split", "stay": 0, "requests": "none", "breach": 1.0}   # SUPERSEDED 2026-11-10; kept for the record
+                   "exit": "equal_split", "stay": 0, "requests": "none", "breach": 1.0, "fine": "none"}   # SUPERSEDED 2026-11-10; kept for the record
 FLOOR_WEEKS = 13
 FLOOR_LIVING = HD.DEFAULT.living_cost                      # the hedonic model's one consumption-as-need: 2.0 per week
 FLOOR = FLOOR_WEEKS * FLOOR_LIVING                         # 26 money units (ASSUMED, constant)
@@ -418,7 +425,8 @@ def bundles_v2(allow_stay=True, allow_requests=True):
     out = []
     for b in bundles(allow_stay, allow_requests):
         for f in (BREACH if b["stay"] else (1.0,)):
-            out.append(dict(b, breach=f))
+            for fine in (FINES if b["requests"] == "mutual" else ("none",)):
+                out.append(dict(b, breach=f, fine=fine))
     return out
 
 
@@ -428,9 +436,18 @@ def breach_values(p):
     return {f: (f - 0.5) * x for f in BREACH}
 
 
+def fine_values(p):
+    """Value of a fine for breaking a request commitment (ASSUMED proxy, same sign structure as the breach cost: members who value
+    security and togetherness like it, members who value autonomy do not)."""
+    w = p.weights
+    x = 0.30 * w["security"] + 0.20 * w["togetherness"] - 0.40 * w["autonomy"] - 0.10 * w["other_connections"]
+    return {"none": 0.0, "some": 0.5 * x}
+
+
 def term_sum(p, low, b):
     tv = term_values(p, low)
-    return sum(tv[t][b[t]] for t in TERM_NAMES) + (breach_values(p)[b["breach"]] if b["stay"] else 0.0)
+    return (sum(tv[t][b[t]] for t in TERM_NAMES) + (breach_values(p)[b["breach"]] if b["stay"] else 0.0)
+            + (fine_values(p)[b.get("fine", "none")] if b["requests"] == "mutual" else 0.0))
 
 
 _DCACHE = {}
@@ -438,7 +455,7 @@ _DCACHE = {}
 
 def deltas(p, low, blist, ref, ukey):
     """TERM_SCALE x (term_sum(b) - term_sum(ref)) for every bundle (array)."""
-    ck = (p.id, low, ukey, key(ref), ref.get("breach"))
+    ck = (p.id, low, ukey, key(ref), ref.get("breach"), ref.get("fine", "none"))
     if ck not in _DCACHE:
         r = term_sum(p, low, ref)
         _DCACHE[ck] = TERM_SCALE * np.array([term_sum(p, low, b) - r for b in blist])
@@ -622,15 +639,23 @@ class Result2:
         return self.pot
 
 
+def trust_penalty(t):
+    """How much less a member values the current terms at a review when their trust in the other is t (0 at or above H.TRUST["full"])."""
+    return H.TRUST["review_penalty"] * max(0.0, H.TRUST["full"] - t) / H.TRUST["full"]
+
+
 def _ids_key(b):
-    return key(b) + (b["breach"],)
+    return key(b) + (b["breach"], b.get("fine", "none"))
 
 
 def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, holdings=None, floor=True, review=False, week=0,
-                 deadline=None, roles=("A", "B")):
+                 deadline=None, roles=("A", "B"), trust=None):
     """One negotiation round of v2. personas: 2 Persona; W: {persona id: in-pot value}; O: {persona id: outside option}.
     ref: the bundle U is measured against (default; at a review the current terms). status_quo: the bundle that stands if
-    nothing is agreed (the fair default at week 0 in FAIR_DEFAULT; the current terms at a review); None means no agreement = no pot."""
+    nothing is agreed (the fair default at week 0 in FAIR_DEFAULT; the current terms at a review); None means no agreement = no pot.
+    trust (seed v2.2): {persona id: that member's trust in the other, in [0, 1]} from the live world, or None (no effect). Lower trust
+    (a) lowers the member's value of the CURRENT terms at a review (so they are readier to change them), and (b) below
+    H.TRUST["commit_min"] the member neither proposes nor accepts a NEW commitment (stay or requests). Constants ASSUMED."""
     ids = [p.id for p in personas]
     n = len(personas)
     deadline = deadline or (DEADLINE_REVIEW if review else DEADLINE)
@@ -643,6 +668,13 @@ def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, 
     kindex = {k: i for i, k in enumerate(keys)}
     U = {p.id: W[p.id] + deltas(p, roles[i] != "A", blist, ref, ukey) for i, p in enumerate(personas)}
     sq = kindex[_ids_key(status_quo)] if status_quo is not None else None
+    cm_new = np.array([bool(b["stay"]) or b["requests"] == "mutual" for b in blist])
+    if sq is not None:
+        cm_new[sq] = False                              # commitments already standing are not "new"
+    no_commit = {pid: bool(trust) and trust.get(pid, 1.0) < H.TRUST["commit_min"] for pid in ids}
+    if trust and sq is not None and review:
+        for pid in ids:
+            U[pid][sq] -= trust_penalty(trust.get(pid, 1.0))
     bar = {pid: max(O[pid], float(U[pid][sq])) if sq is not None else O[pid] for pid in ids}
     res = Result2(ids, arm, seed, week, "deadline", None, outside=dict(O), baseline=dict(W))
     mask = np.ones(len(blist), dtype=bool)
@@ -659,7 +691,7 @@ def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, 
                 for t in res.cared[p.id]:
                     allowed[t].add(res.stated[p.id][t])
         stay_open = any("stay" in res.cared[p.id] for p in personas)
-        mask = np.array([all(b[t] in allowed[t] for t in TERM_NAMES) and (stay_open or not b["stay"]) and (b["breach"] == 1.0 or b["stay"])
+        mask = np.array([all(b[t] in allowed[t] for t in TERM_NAMES) and (stay_open or not b["stay"]) and (b["breach"] == 1.0 or b["stay"]) and b["fine"] == "none"
                          for b in blist])
         # terms nobody cares about are fixed at the default (their allowed set is just the default)
     order = list(range(n))
@@ -675,7 +707,7 @@ def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, 
         for j, q in enumerate(personas):
             if j != i:
                 score = score + lam * np.minimum(0.0, U[q.id] - bar[q.id])
-        ok = alive & mask & (U[me.id] > bar[me.id])
+        ok = alive & mask & (U[me.id] > bar[me.id]) & (~cm_new if no_commit[me.id] else True)
         if not ok.any():
             if sq is None:
                 res.status = "no_bundle"
@@ -692,7 +724,7 @@ def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, 
         for j, q in enumerate(personas):
             if j != i:
                 theta = THETA0[q.negotiation_style] * (1 - c)
-                (acc if U[q.id][idx] > bar[q.id] + theta else rej).append(q.id)
+                (acc if U[q.id][idx] > bar[q.id] + theta and not (no_commit[q.id] and cm_new[idx]) else rej).append(q.id)
         prop = {"k": k, "proposer": me.id, "bundle": dict(b), "accepted_by": acc, "rejected_by": rej, "outcome": "refused" if rej else "all accept"}
         res.proposals.append(prop)
         if rej:
@@ -825,7 +857,7 @@ class Lived:
             v, d = outside_value(p, r, retained(cur, money, share, "exit", put), self.seed, world.hed[r])
             O[p.id], det[p.id] = v, d
         res = negotiate_v2(list(ps), self.arm, self.seed, base=self.base, W={self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, O=O,
-                           ref=cur, status_quo=cur, holdings=hold, floor=self.floor, review=True, week=w)
+                           ref=cur, status_quo=cur, holdings=hold, floor=self.floor, review=True, week=w, trust=self.trust_by_id())
         new = res.bundle if res.changed else cur
         renew = False
         if cur["stay"] or new["stay"]:
@@ -842,9 +874,17 @@ class Lived:
                          "floor_blocks": len(res.floor_blocks), "rejections": len(res.rejections), "status": res.status,
                          "outside": res.outside, "baseline": res.baseline, "flagged": res.flagged})
 
+    def trust_by_id(self):
+        """{persona id: that member's trust in the other} from the live world."""
+        return {self.pa.id: self.world.trust["A"], self.pb.id: self.world.trust["B"]}
+
     def accepts(self, r, new):
-        """Does member r accept a change to `new`? Their own closed-form term values (ASSUMED proxy): strictly better than now."""
+        """Does member r accept a change to `new`? Their own closed-form term values (ASSUMED proxy): strictly better than now,
+        and (seed v2.2) a new commitment is accepted only while their trust in the other is at least H.TRUST["commit_min"]."""
         p = self.pa if r == "A" else self.pb
+        adds = (new["stay"] and not self.bundle["stay"]) or (new["requests"] == "mutual" and self.bundle["requests"] != "mutual")
+        if adds and self.world.trust[r] < H.TRUST["commit_min"]:
+            return False
         return term_sum(p, r == "B", new) > term_sum(p, r == "B", self.bundle)
 
     def amend(self, proposer, new, w, accepts=None):
@@ -906,7 +946,7 @@ class Lived:
         fwd = forward_values(hyp, w, last)
         hold = {r: hyp.hold(r) for r in "AB"}
         res = negotiate_v2(list(ps), self.arm, self.seed, base=self.base, W={self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, O=O,
-                           ref=FAIR_DEFAULT, status_quo=None, holdings=hold, floor=self.floor, review=True, week=w)
+                           ref=FAIR_DEFAULT, status_quo=None, holdings=hold, floor=self.floor, review=True, week=w, trust=self.trust_by_id())
         self.retries.append({"week": w, "formed": res.pot, "status": res.status, "bundle": dict(res.bundle) if res.pot else None,
                              "floor_blocks": len(res.floor_blocks), "rejections": len(res.rejections), "outside": dict(O),
                              "baseline": {self.pa.id: fwd["A"], self.pb.id: fwd["B"]}, "modes": dict(modes)})

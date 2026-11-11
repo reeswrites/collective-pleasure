@@ -198,6 +198,7 @@ def parse_bundle(raw, menu, allowed=None):
         b["breach"] = float(br)
     else:
         b["breach"] = 1.0
+    b["fine"] = "none"      # seed v2.2: the model is not offered the request-breach fine (menu text unchanged); it always proposes "none"
     return b
 
 

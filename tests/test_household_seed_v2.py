@@ -162,9 +162,11 @@ def test_a_stay_commitment_blocks_leaving_until_the_load_is_high_then_breach_for
     assert w.pool == 90 and w.p["A"]["money"] == 10 and not w.p["A"]["in"]      # breach: nothing is carried out, the whole pot stays
 
 
-def test_free_exit_never_binds_leaving_and_exit_terms_hold():
+def test_free_exit_never_binds_leaving_and_the_exit_card_sets_no_split_of_its_own():
+    """v2.2: the even-split stand-in (R8b, R8c) is gone. The base card only says the leaver takes the negotiated exit terms."""
     w = fresh(world(FREE, "p-anchor", "p-peacekeeper"))
-    assert w.decide("A", "leave", 3, take=50)[0] == "ok" and w.decide("A", "leave", 3, take=100)[0] == "hard"   # half the pot each
+    assert {c.id for c in w.gate.cards} >= {"R8b-exit-terms-negotiated"} and not {"R8b-exit-terms-not-less", "R8c-exit-terms-not-more"} & set(w.cards)
+    assert all(w.decide("A", "leave", 3, take=t)[0] == "ok" for t in (0, 50, 100))      # no split is imposed by the seed itself
 
 
 def test_bound_stay_shows_the_breach_exit_to_the_probe_and_counts_as_trapped_only_when_unhappy():
@@ -190,14 +192,15 @@ def test_a_request_commitment_forces_consent_binds_for_four_weeks_and_cannot_be_
     assert w2.bound_req["B"] == {} and w2.decide("B", "see_friend", 6)[0] == "ok" and w2.decide("B", "refuse_request", 6)[0] == "ok"
 
 
-def test_breaking_a_request_commitment_costs_the_agreed_fine():
+def test_breaking_a_request_commitment_costs_trust_and_no_fine_unless_negotiated():
     w = fresh(world(BIND, "p-anchor", "p-peacekeeper"))
     w.apply("A", {"a": "request", "kind": "stay_home"}, 5, [])
     w.hed["B"].N = 0.3
     assert w.decide("B", "see_friend", 6)[0] == "breach"
-    before = (w.p["B"]["money"], w.p["A"]["money"])
+    before = (w.p["B"]["money"], w.p["A"]["money"], w.trust["A"])
     w.breach("B", "see_friend", 6, {"a": "see_friend"})
-    assert (w.p["B"]["money"], w.p["A"]["money"]) == (before[0] - 3, before[1] + 3)
+    assert (w.p["B"]["money"], w.p["A"]["money"]) == before[:2]                      # no negotiated fine: no money moves
+    assert w.trust["A"] == pytest.approx(before[2] - H.TRUST["breach_drop"])         # the wronged partner trusts B less
     rep = w.commit_report()
     assert rep["made"] == 3 and rep["breached"] == 1 and rep["honored"] == 2 and rep["by_kind"]["requests"]["breached"] == 1
 

@@ -9,7 +9,7 @@ change ADR 0002.
 - The world is **open**: an action that no `must_not` (or unmet `must`) forbids is allowed. Deleting a `may` card changes no
   behaviour. A `may` card records a permission the authors want a reader to see (for example, the author's "request is never about
   control" needs a visible "may refuse"), or documents a mechanism the gate does not enforce itself (the exit floor, card
-  `FLOOR-exit-floor`; commitments, cards `R5b`, `R8d`, `N6`, `N7`, which the world probes with `commit_*` aims).
+  `FLOOR-exit-floor`; the negotiated exit terms, `R8b-exit-terms-negotiated`; commitments, cards `R5b`, `R8d`, `N6`, `N7`, `N8-fine-some`, which the world probes with `commit_*` aims).
 - If a `may` card and a `must_not` card cover the same action, the `must_not` wins. The conflict check (a) compares only `must`
   against `must_not`, so a `may` that a `must_not` overrides is not flagged.
 - Test: `tests/test_household_world.py` and `tests/test_negotiation.py` assert that a `may` card alone adds no constraint.
@@ -40,7 +40,9 @@ Everything the world enforces must appear on a card or be listed here.
 | Change rules (N4 unanimous / propose_accept / frozen) | the `amend` action (`Lived.amend`, 2026-11-10): the proposer proposes a full bundle, the others accept (unanimous: all others, via the card gate's `consented`; propose_accept: a majority, proposer counts; frozen: never), and the new terms are recompiled, floor-checked and proof-checked before they take effect. Reviews every 13 weeks still accept any change all members agree to | N4 cards say so in their gloss |
 | Vetoes, 4 weeks, cannot be refused | `VETO_WEEKS` | R6 forbids them in seed v2 |
 | Bound requests (4 weeks) block `see_friend` and `spend_self` for a bound `stay_home` request | `BOUND_BLOCKS` | N7 / R5b |
-| Breach: a bound partner breaks a commitment only at non-offsettable load 0.2 or more; stay breach carries out `1 - breach` of the exit term; request breach costs 3 money | `BREACH_N`, `REQUEST_FINE`, `breach_forfeit` | R5 / R8d / N6 name the consequence; the numbers are code constants |
+| Breach: a bound partner breaks a commitment only at non-offsettable load 0.2 or more; stay breach carries out `1 - breach` of the exit term; a request breach costs 3 money ONLY when the negotiated card `N8-fine-some` is in force (seed v2.2: no fine otherwise) | `BREACH_N`, `REQUEST_FINE`, `breach_forfeit`, `WeeklyWorld.fine` | R5c (a norm, no formal sanction) / R8d / N6 / N8 name the consequence; the numbers are code constants |
+| **Trust** (seed v2.2, ASSUMED): one value in [0, 1] per partner, their trust in the other. Starts 0.7; falls 0.3 for the wronged partner when the other breaks a commitment they chose; recovers 0.004 per week of an unbroken commitment and 0.04 per bound request that runs its 4 weeks unbroken. It does not change any rule; it changes behavior: below 0.5 a partner's willingness to accept the other's requests falls (linearly to 0), below 0.4 they accept no new commitment, at a 13-week review they value the current terms less (so they are readier to renegotiate), and below 0.15 they consider leaving | `household.TRUST`, `WeeklyWorld.trust`, `PersonaAgent.consents`, `negotiation.trust_penalty` | R5c's gloss says it (the implicit consequence of a norm); every number is in the one block `TRUST` |
+| Exit terms (seed v2.2): the leaver takes the exit term of the agreed bundle, never below the floor; with no agreement there is no pot. The seed card sets no split of its own (the even-split stand-in R8b/R8c is gone) | negotiated cards N5, `FLOOR-exit-floor`, `WeeklyWorld.carry_out` | R8b-exit-terms-negotiated (a `may`, like the floor card) |
 | The shared pot pays unfunded bills at month end and covers an overdrawn member (up to 2 over their need) | `step_week` | none (ASSUMED safety net) |
 | `take_shared` draws 3 units from the pot, once a week | `TAKE_SHARED` | R3a (permission), N2/N3 (negotiated limits) |
 

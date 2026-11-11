@@ -5,4 +5,4 @@ aim: commit_request
 conditions: []
 or_else: null
 gloss: A partner may choose to bind themselves to honor the other's requests of a kind, for a committed duration.
-source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back": "unless chosen bound". Permission to make a request commitment. Seed v2.1 (2026-11-10): R3b removed; pot terms are negotiated by everyone who shares the pot (docs/decisions/0013-negotiated-pots.md).'
+source: 'docs/seeds/author-household-norms-2026-11-10.md, "Correction after read-back": "unless chosen bound". Permission to make a request commitment. Seed v2.2 (2026-11-10, pending author read-back): R3b stays removed; pot terms are negotiated by everyone who shares the pot (docs/decisions/0013-negotiated-pots.md).'
