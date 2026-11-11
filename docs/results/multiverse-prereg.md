@@ -188,4 +188,4 @@ Ranges are judgment, mostly half to double. A conclusion robust here is robust t
 
 ## Amendments
 
-None yet.
+**Amendment 1, 2026-11-11 02:10 UTC (written before any C4 or C5 run started and before any household result was seen; committed with the code, because each commit waits on a 23-minute test suite).** The machine is shared with other agents (load average about 68 on 8 cores), so the household design above would take many hours. For compute only, and with no threshold changed: C4 uses one arm, `fair_default` (the arm of the v2.2 protocol), instead of all three, and 8 LHS points instead of 16; C5 uses seed 0 only instead of seeds 0 and 1, and 8 LHS points instead of 16. OAT is unchanged for both. C6 (already running) is unchanged. With 8 LHS points a share is coarse (steps of 0.125), so for C4 and C5 the OAT result carries more of the label.
