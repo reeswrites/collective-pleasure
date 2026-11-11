@@ -192,4 +192,18 @@ Exact words are in experiments/questions.jsonl, one row per answer. These are Cl
 
   Cheap novelty is all spike. Deep novelty keeps producing learning. This is the next piece after test 1 (liking vs wanting) lands. Literature is from memory: Berridge, Zajonc, Berlyne, Oudeyer and Gottlieb, Schmidhuber. Verify before citing.
 - **Q5 (how much we owe):** open.
-- **Q13:** the notes could not be fetched. Open.
+- **Q13:** fetched 2026-11-11 from Notion (Apple Notes import). Provenance: the note titles and a few lines are the author's own ("human flourishing is just the right delivery schedule for a unique...", "what is the shape? lets work out the delivery schedule shape based on our biology", "the value is our end to reproduce i guess: our telos is evolution"). The rest of the note bodies are saved AI replies, not the author's prose. Do not quote them as the author's words.
+  - **Delivery schedule** (the author's thesis; the AI elaboration was saved): flourishing comes from spacing, contrast and effort more than from content. There is a shared substrate (relationships, health, autonomy, meaningful effort, contribution) with personal tuning. The saved reply's parameters are:
+    - recovery time of the taxed system as the master variable;
+    - dose;
+    - interval;
+    - predictability: variable in content, reliable in frame;
+    - effort as an ingredient, not a cost;
+    - direction: a rising schedule beats a flat one;
+    - episode shape: peak and end.
+
+    It also sorts goods into fast-adapting and slow or non-adapting, and claims an asymmetry: chronic negatives do not adapt, so removing one beats adding a positive. Model status:
+    - "variable in content, reliable in frame" matches pleasure-levers LA1 (rotate beats repeat) and LA2 (ritual beats ad hoc);
+    - adaptation in hedonic.py already applies only to positives;
+    - "subtraction beats addition", "effort as ingredient", "rising beats flat" and "peak-end memory" are untested candidates.
+  - **Pleasure as detector of value** (title is the author's; body is a saved AI reply): pleasure is a thermometer, not the temperature. It is indispensable but can misfire, because it was calibrated for an ancestral environment and now meets superstimuli. This maps onto test 1: wanting without liking is a miscalibrated detector. Open, for the author: the "thermometer" reading implies a standard beyond pleasure, while the author's current position is that pleasure is the good.
