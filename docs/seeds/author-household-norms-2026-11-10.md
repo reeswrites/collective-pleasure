@@ -61,3 +61,56 @@ After the v2.2 read-back (docs/results/seed-v2.2-readback.md: negotiated exit te
 > yes as long as it can demonstrate pleasure in relationships hedonic technology
 
 So seed v2.2 is the author's confirmed seed, on one condition: it must demonstrate pleasure in relationships. The author's framing is "hedonic technology", meaning rules as a technology for producing pleasure in relationships, not only for preventing harm.
+
+## On roles, reliance and a lapsed role (2026-11-11)
+
+Asked about enforcement versus reliance (docs/notes/hedonic-technology-synthesis.md, Q2), the author answered, verbatim:
+
+> reliance is fine its the guilt and scorekeeping i dont like like this seems to be abou specializaion and having to allocate roles etc
+
+Asked what should happen when a role lapses, verbatim:
+
+> renegotiate or a soft check in i think not leaving right away but utlimtaly what the person does is the sterongest signal
+
+Claude turned these into draft rules for a seed v2.3 (docs/results/seed-v2.3-readback.md). The role rule (rule 14) and the order "check-in, then renegotiate, then exit" are Claude's drafts and were not read back. The author wrote "or" between renegotiate and check-in.
+
+## On what we owe each other (2026-11-11)
+
+From the author's own essay draft, pasted in chat (excerpt not archived beyond experiments/questions.jsonl), verbatim:
+
+> At the very least we owe politeness and common decency if we are both on common ground. However beyond that I feel like it becomes tricky. Each person's internal calculus will be different but I think it's most helpful to think that you can't complain about doing things for friends
+
+> You can choose to give a part of yourself, but you have to be okay with that and actively choose it, not have it be chosen for you or just slid into.
+
+This qualifies "no one owes anyone anything day to day except for what they have negotirated" (above): there is a floor of decency, and beyond it the author called the question "tricky" and person-specific. It does not change the confirmed v2.2 cards.
+
+## Read-back of seed v2.3 (2026-11-11)
+
+The v2.3 draft was read back (docs/results/seed-v2.3-readback.md). The author answered four points, verbatim:
+
+1. Trust:
+   > maybe we have to test? but my intutions is mostly actions
+2. Fines on a lapsed role:
+   > allowed only by mutual choice i think
+3. Exit last:
+   > check in first for general unhappiness too
+4. The decency floor (no spite, no repeated request soon after a refusal, no silent refusals):
+   > all three feel right, common ground is anyone you interact with
+
+So these four points are the author's, with the author's hedges. Not answered, and still Claude's drafts: rule 14 (roles), the slid-into evaluator flag, renegotiation as a fixed second step, and skipping the ladder in severe distress. Seed v2.2 is not changed; v2.3 is a separate, partly confirmed draft.
+
+## Fix and retest decisions (2026-11-11)
+
+After the pleasure-levers run did not show the v2.2 condition, the author answered, verbatim (experiments/changes.jsonl):
+
+> yes fix then retest if that is best course of aciotn
+
+On the score for the condition:
+
+> pleasure minus suffering yeah i guess if that is what is commonly held
+
+On the imposed baseline:
+
+> yes pairs should be allowed to not form a househodl
+
+These change how the retest judges the v2.2 condition ("demonstrate pleasure in relationships"). Two questions follow from them and have not been put to the author: does a net-wellbeing win with no pleasure win meet the condition, and do pairs who never form a household count toward it? Until answered, the retest's verdict rule is Claude's proposal (docs/results/v2-retest-prereg-DRAFT.md).
