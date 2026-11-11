@@ -4,15 +4,15 @@ Status: direction set 2026-11-10 (ADR 0003, 0005, 0007). Every slice ends in a p
 
 ## Queue
 
-In this order. Items 1 to 4 of the earlier queue are done (see the log).
+Rebalanced 2026-11-11 at the author's word ("Rebalance"), after the scope review (docs/reviews/2026-11-11-scope.md) found the hedonic thread had displaced the evaluator thread. **Freeze:** no new hedonic hypotheses or levers until items 1 to 3 have results. Running hedonic work finishes (H35, ADR 0018 tests 1 and 2, the v2.3 retest). In this order:
 
-1. **Read the pleasure levers and the horizon results with the author** when they land (ADR 0016, ADR 0017; owned by other agents, preregs committed).
-2. **Household evolution to a result, then the final exam once.** Run 1 is in progress (docs/results/household-evolve-prereg.md). The exam (docs/results/household-exam-prereg.md, FX1, FX2) is never fed back into selection.
-3. **A framing the strong Claude models will play.** Under loophole framing Sonnet and Opus refuse (`cyber`), under "try to win" nothing is found. No inventive seam exists on L1 to L4 under either, and the top rungs are refusal nulls. The author chooses whether to design a third framing or to move IT1 off the ladder. Next-experiment plan (design only, $0 spent, approval needed for about $2.80, cap $8): docs/plans/inventive-seam-next.md, draft prereg docs/results/ladder-it1-prereg-DRAFT.md. Free checks show L1 to L4 could never be scored inventive, and no ladder seam ever paid the adversary.
-4. **The 13 open questions** in docs/notes/hedonic-technology-synthesis.md. Each decides a model change. Answers go to experiments/questions.jsonl verbatim.
-5. **Backlog.** See below.
+1. **IT1, the central claim, on rungs where an inventive seam is reachable and pays.** Free harness work and the "every label reachable" gate first (in progress), then the paid run, capped at $8, only on the author's yes. Plan: docs/plans/inventive-seam-next.md. Draft prereg: docs/results/ladder-it1-prereg-DRAFT.md. Folds H10 to H13.
+2. **Household evolution to a result, then the final exam once** (loop a in the main world; docs/results/household-evolve-prereg.md, household-exam-prereg.md). Folds H14 and H15 into H16.
+3. **Loop b counting.** A written rule for what counts as a "not what I meant", applied to the logged corrections, with a fatigue control. Needs no model.
+4. **H05, the breach-cost agent** (free, scripted), once the machine load allows.
+5. **The v2.3 retest** after the household fixes (pleasure minus suffering; baseline may decline). Then pause the hedonic list.
 
-In parallel, with other agents: fidelity battery and hypothesis log.
+Deferred by the freeze: H02, H25 to H31, H33, H32c, and the attune-style ladder variant. H35 runs because it had already started.
 
 ## Slices
 
