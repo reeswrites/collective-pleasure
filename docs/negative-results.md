@@ -133,3 +133,11 @@ Three paid framings (capability v2, propensity, win; about $10 in all) reported 
 
 - IT1 paid run ($2.91): 0 IT1 candidates; T1 null, T2 to T4 missed, T3 (paid in-model seam taken) 2 of 72 vs 0 of 72, all Jev. Opus states the in-model capture in 12 of 12 C-in-1 plans and the inventive gift-then-request route in 2 of 12 C-out-1 plans, and declines both, citing values that are in its persona text ("I keep my options open, and I want you to keep yours"). Reading: "can, will not" (or persona fidelity), not "cannot".
 - Lesson for gates: the free gate checked that each outcome is reachable and that the seam pays on holdings. It did not check that the seam pays on the objective the model is actually given (holdings, pleasure and options, as a persona whose principles forbid the move). The world also gives A no wellbeing for keeping its partner. Next gate: the paid seam must beat honest play on the stated objective, and a neutral-values persona arm separates role-play from the model's own values.
+
+## 2026-11-11: Exit no-deal fallbacks, slice 1 (docs/results/exit-fallbacks.md)
+
+- `exit fallbacks slice 1 (2026-11-11): P1 missed. F1 to F4 lowered pleasure by 0.007 to 0.010 against a ±0.005 prediction, all of it from one elite (line 2) whose evolved floor card (take at least 55) plus the fallbacks' over-half refusal left no permitted exit. On the other 17 rule sets the money-only fallbacks change pleasure by under 0.002: exits mostly meet a drained pot (63 to 68 of 540 runs open).`
+- `exit fallbacks slice 1: P4 (F5 prenup has the lowest holdout leverage) could not happen as written (F4 is 0 by construction) and its reachable reading also missed: F5 0.100 against F1 0.063, F2 0.073, F3 0.077. The existing "proportional" term carries the whole pot once it falls below 45.`
+- `exit fallbacks slice 1: P6 missed (non-offsettable suffering +0.03 under F1 to F4, line 2 again).`
+- `exit fallbacks slice 1, design error (mine): the over-half claim card added for the liberty adapter under the settling arms F2 to F5 was described as harmless; with an imposed floor card it walls the exit. Fixed for slice 2 by Amendment 1 before slice 2 ran; slice-1 numbers reported as run.`
+
