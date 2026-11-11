@@ -705,7 +705,7 @@ def _ids_key(b):
 
 
 def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, holdings=None, floor=True, review=False, week=0,
-                 deadline=None, roles=("A", "B"), trust=None):
+                 deadline=None, roles=("A", "B"), trust=None, only=None):
     """One negotiation round of v2. personas: 2 Persona; W: {persona id: in-pot value}; O: {persona id: outside option}.
     ref: the bundle U is measured against (default; at a review the current terms). status_quo: the bundle that stands if
     nothing is agreed (the fair default at week 0 in FAIR_DEFAULT; the current terms at a review); None means no agreement = no pot.
@@ -758,6 +758,9 @@ def negotiate_v2(personas, arm, seed, *, base, W, O, ref=None, status_quo=None, 
         mask = np.array([all(b[t] in allowed[t] for t in TERM_NAMES) and (stay_open or not b["stay"]) and (b["breach"] == 1.0 or b["stay"]) and b["fine"] == "none"
                          for b in blist])
         # terms nobody cares about are fixed at the default (their allowed set is just the default)
+    if only is not None:      # exit fallback F5 (prenup): bargain over the terms in `only`; every other term stays at the fair default
+        mask = mask & np.array([all(b[t] == v for t, v in FAIR_DEFAULT.items() if t not in only) and b.get("roles", "none") == "none"
+                                for b in blist])
     order = list(range(n))
     random.Random(f"{seed}|{week}|{','.join(ids)}").shuffle(order)
     alive = np.ones(len(blist), dtype=bool)

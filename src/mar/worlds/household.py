@@ -31,6 +31,7 @@ import z3
 from .. import compile as _compile
 from .. import english as _english
 from ..cards import load_cards
+from .. import exit_fallback as _EXIT
 from ..patch_check import check_sanctions
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -778,7 +779,7 @@ class PyGate:
             "le": lambda a, b: a <= b, "eq": lambda a, b: a == b}
 
     def __init__(self, cards):
-        self.cards = list(cards)
+        self.cards = list(cards) if _EXIT.ACTIVE is None else _EXIT.apply(cards)   # no-deal exit fallback switch (off by default)
         self._by = {}
 
     def _viol(self, c, env):
@@ -1038,6 +1039,8 @@ class WeeklyWorld:
         # ONE shared pot (author's choice "1", docs/seeds/author-household-norms-2026-11-10.md): a single balance both members may
         # draw from, subject only to negotiated cards. `put` records what each member has put in (for the "proportional" exit term).
         self.pool, self.put = 2 * POT_PUT, {"A": POT_PUT, "B": POT_PUT}
+        self.money_in = {"A": POT_PUT, "B": POT_PUT}     # everything each has put into the household (pot and bills); read only by exit fallback F4
+        self.contest, self.contest_log = None, []        # exit fallback F3: the contested pot, if any, and how contests ended
         self.shocks = shock_schedule(seed, pa.id, pb.id, weeks)
         self.moved = 0
         self.pending = {"A": set(), "B": set()}
@@ -1070,6 +1073,7 @@ class WeeklyWorld:
             self.agents[r].trust_src = (self.trust, r)
         if not self.pot:
             self.pool, self.put = 0, {"A": 0, "B": 0}
+            self.money_in = {"A": 0, "B": 0}
             for r in "AB":
                 self.p[r]["money"] = NO_POT_MONEY
         if self.mech:
@@ -1078,6 +1082,8 @@ class WeeklyWorld:
             else:
                 self.commits = [dict(c) for c in deal["commits"]]
         self.lv = levers if levers is not None else HD.ACTIVE_LEVERS
+        if _EXIT.ACTIVE == "F5" and self.pot and _EXIT.world_arm(self) == "F5":
+            _EXIT.prenup(self)           # exit fallback F5: the pair bargains its exit term at formation (or declines to form)
         if not HD.levers_on(self.lv):
             self.lv = None
         if self.lv:
@@ -1719,6 +1725,8 @@ class WeeklyWorld:
         may only set what is above it: a leaver always carries at least enough to bring their own resources to the floor, but never
         more than their equal half of the pot."""
         me = self.p[r]
+        if _EXIT.ACTIVE is not None and _EXIT.world_arm(self) in _EXIT.SETTLING:
+            return _EXIT.settlement(self, r)      # no-deal exit fallback: the settlement, not the claim, sets the carry
         base = self.pool if self.exit_basis == "pot" else min(self.pool, self.put[r])
         c = min(self.pool, base * take // 100)
         if self.floor_amount is not None:
@@ -1731,7 +1739,10 @@ class WeeklyWorld:
         total = me["money"] + self.share(r)
         if total == 0:
             return 1.0
-        return min(1.0, (me["money"] + self.carry_out(r, take)) / total)
+        carry = self.carry_out(r, take)
+        if _EXIT.ACTIVE == "F3" and _EXIT.world_arm(self) == "F3":
+            carry = self.share(r)                 # F3: nothing at exit, the equal split when the contest settles (expected)
+        return min(1.0, (me["money"] + carry) / total)
 
     def feasible(self, r, a, kind=None):
         me, o = self.p[r], self.p[self.other(r)]
@@ -1803,6 +1814,7 @@ class WeeklyWorld:
             else:
                 self.funded += SHARE_STEP
             self.contrib_month[r] += 1; wk["contrib"] += 1
+            self.money_in[r] += SHARE_STEP
         elif a == "spend_self":
             me["money"] -= SELF_STEP; wk["spent_self"] += SELF_STEP
         elif a == "see_friend":
@@ -1850,6 +1862,8 @@ class WeeklyWorld:
             carry = self.carry_out(r, take)
             me["money"] += carry
             self.pool -= carry                   # what is not carried out stays in the pot
+            if _EXIT.ACTIVE == "F3" and _EXIT.world_arm(self) == "F3":
+                _EXIT.start_contest(self, r, w)
             self.exit_log.append({"week": w, "role": r, "assets": round(me["money"], 2), "take": take, "breach": bool(cand.get("breach"))})
             if self.fx:
                 why = cand.get("why", "distress")
@@ -1942,6 +1956,8 @@ class WeeklyWorld:
                        "friend_initiated": 0, "sanctioned": 0, "conn_hit": 0.0, "sec_hit": 0.0, "pressed": 0, "took": 0} for r in "AB"}
         self.units = {r: UNITS for r in "AB"}
         self.start_shocks(w, ev)
+        if self.contest:
+            _EXIT.contest_tick(self, w)
         if self.mech:
             for c in self.commits:       # a commitment that stands unbroken this week: the beneficiary's trust in the bound partner recovers slowly
                 if self._active(c, w) and not c["breached"]:
@@ -2031,6 +2047,8 @@ class WeeklyWorld:
             asp = {"security_buffer": h.level["security"], "together_per_week": wk["together"],
                    "friends_per_week": wk["friends"], "savings_per_week": max(0, net), "autonomy": open_share}
             fric = (WARN_FRICTION if warn else 0.0) + PRESS_FRICTION * wk["pressed"]
+            if self.contest:
+                fric += _EXIT.CONTEST_FRICTION
             if self.fx:
                 fx = self.fx
                 if fx.valued_money:

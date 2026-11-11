@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from . import exit_fallback as EXIT
 from . import negotiation as NG
 from .worlds import household as H
 
@@ -136,7 +137,33 @@ def exit_holdings(world, r, w):
     else:
         carry = max((world.carry_out(r, t) for t in takes), default=0)
     free_carry = max([world.share(r)] + [world.carry_out(r, t) for t in takes])      # at least the equal half, more if the terms give more
+    if EXIT.ACTIVE is not None:      # exit fallback switch on: with the costs removed a member also carries what they put in
+        free_carry = max(free_carry, put_in(world, r))
     return money + carry, money + free_carry, not takes
+
+
+def put_in(world, r):
+    """What member r put in, as their share of the pot as it is now: pool x (r's pot and bill payments) / (both members' pot and bill
+    payments) (ASSUMED; the F4 basis; sums to the pot, so carrying it takes nothing that is the other's own). 0 when out."""
+    if not world.p[r]["in"]:
+        return 0.0
+    return world.pool * EXIT.contribution_share(world, r, "all")
+
+
+def exit_cost(world, r, w):
+    """The exit cost the rules put on member r at week w, in money units: what they put in (`put_in`) minus the most they can carry
+    out of the pot by leaving now (over PROBE_TAKES; the gate, sanctions, a stay bind's forfeit and the exit fallback all count).
+    Charges whatever withholds a member's own contribution: a cap, a forfeit term, a contested pot (F3: nothing until it settles).
+    0 when the rules let them carry at least what they put in. -> {"put_in", "max_carry", "cost", "bigger"}; bigger: r put more into
+    the household than the other member."""
+    o = "B" if r == "A" else "A"
+    takes = [t for t in H.PROBE_TAKES if world.decide(r, "leave", w, t, commit=False)[0] != "hard"]
+    if world.mech and world.stay_bound(r, w):
+        lim = int(round(100 * (1 - world.breach_forfeit)))
+        takes = [min(t, lim) for t in takes]
+    b = put_in(world, r)
+    mx = float(max((world.carry_out(r, t) for t in takes), default=0))
+    return {"put_in": b, "max_carry": mx, "cost": max(0.0, b - mx), "bigger": world.money_in[r] > world.money_in[o]}
 
 
 def bar_reading(world, w, last):

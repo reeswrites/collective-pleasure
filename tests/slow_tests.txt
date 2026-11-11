@@ -23,3 +23,4 @@ tests/test_liberty.py::test_household_liberty_has_the_v2_invariants
 tests/test_liberty.py::test_household_run_liberty_memo_returns_identical_values
 tests/test_miner.py::test_mined_equals_written_both_specs
 tests/test_pleasure_report.py::test_vignette_is_built_from_traced_events
+tests/test_exit_fallback.py::test_off_reproduces_run2_validation_liberty_of_an_elite
