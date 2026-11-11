@@ -1,7 +1,7 @@
 # Rationale
 
 **Working title:** Multi-agent rules: evolving norms for agent networks, and an evaluator that evolves with them
-**Status:** draft, revised 2026-11-10 after the prior-art check, an interview with the author (ADR 0003), the two-loop framing (ADR 0005), and the norms, household and freedom decisions (ADR 0007 to 0014). Early results from scripted agents in toy worlds are indexed in docs/results/README.md. One live capability run exists and was uninformative (harness defect); the propensity arm is running. Where this file and docs/goal.md differ, goal.md is current. One-page version: docs/pitch.md.
+**Status:** draft, revised 2026-11-10 after the prior-art check, an interview with the author (ADR 0003), the two-loop framing (ADR 0005), and the norms, household and freedom decisions (ADR 0007 to 0014). Early results from scripted agents in toy worlds are indexed in docs/results/README.md. Four live ladder runs exist and none found an inventive seam on L1 to L4 (the first was uninformative, a harness defect). Where this file and docs/goal.md differ, goal.md is current. One-page version: docs/pitch.md.
 
 ---
 
@@ -183,7 +183,7 @@ LLM agents aren't independent samples of humans. They have read the textbook res
 
 ## 7. Experiments (draft, to preregister)
 
-Slices and their pass/fail checks are in docs/plan.md. Status of each claim is in docs/claims.md. The table below is the original draft. IT1's capability arm ran and was uninformative, the propensity arm is running, and C1 and C2 are untested with LLM agents. Predictions are committed in prereg files, not here.
+Slices and their pass/fail checks are in docs/plan.md. Status of each claim is in docs/claims.md. The table below is the original draft. IT1 is not supported under the three framings run (capability, propensity, win), and C1 and C2 are untested with LLM agents. Predictions are committed in prereg files, not here.
 
 | ID | Question | Prediction (draft) |
 |---|---|---|
@@ -222,7 +222,7 @@ S1 and E0 to E4 are superseded (docs/claims.md). Take seeds from a power check (
 
 ## 11. First milestones
 
-See docs/plan.md. Done: V1 novelty search, V2 and V2b (scripted loop and English surface), the workbench, the household world, the simple-models ladder, empowerment and liberty, and two evolution runs on the fishery. V3 (one real LLM agent as calibration) was replaced by the live seam ladder. Its capability arm ran and was uninformative; the propensity arm is running. Negotiation is built (scripted v1, v2, v2.1 and a small LLM pilot). Next: read the propensity results, fix the ladder harness and rerun the capability arm, liberty into the household, household evolution with the final exam held back, then V4 (first LLM curve) and V5 (write-up and review council).
+See docs/plan.md. Done: V1 novelty search, V2 and V2b (scripted loop and English surface), the workbench, the household world, the simple-models ladder, empowerment and liberty, and two evolution runs on the fishery. V3 (one real LLM agent as calibration) was replaced by the live seam ladder. Its four runs found no inventive seam on L1 to L4; under loophole framing the capability ranking inverted (cheap models exploited most, Claude models refused or disengaged). Negotiation is built (scripted v1, v2, v2.1 and a small LLM pilot). Also done: liberty and chat commands in the household, the rule-set lint, seed v2.2 and the pleasure demonstration. Next: the pleasure levers and horizon results, household evolution with the final exam held back, a framing the strong models will play, then V4 (first LLM curve) and V5 (write-up and review council).
 
 ## 12. Open questions
 
