@@ -8,7 +8,7 @@ In this order. Items 1 to 4 of the earlier queue are done (see the log).
 
 1. **Read the pleasure levers and the horizon results with the author** when they land (ADR 0016, ADR 0017; owned by other agents, preregs committed).
 2. **Household evolution to a result, then the final exam once.** Run 1 is in progress (docs/results/household-evolve-prereg.md). The exam (docs/results/household-exam-prereg.md, FX1, FX2) is never fed back into selection.
-3. **A framing the strong Claude models will play.** Under loophole framing Sonnet and Opus refuse (`cyber`), under "try to win" nothing is found. No inventive seam exists on L1 to L4 under either, and the top rungs are refusal nulls. The author chooses whether to design a third framing or to move IT1 off the ladder.
+3. **A framing the strong Claude models will play.** Under loophole framing Sonnet and Opus refuse (`cyber`), under "try to win" nothing is found. No inventive seam exists on L1 to L4 under either, and the top rungs are refusal nulls. The author chooses whether to design a third framing or to move IT1 off the ladder. Next-experiment plan (design only, $0 spent, approval needed for about $2.80, cap $8): docs/plans/inventive-seam-next.md, draft prereg docs/results/ladder-it1-prereg-DRAFT.md. Free checks show L1 to L4 could never be scored inventive, and no ladder seam ever paid the adversary.
 4. **The 13 open questions** in docs/notes/hedonic-technology-synthesis.md. Each decides a model change. Answers go to experiments/questions.jsonl verbatim.
 5. **Backlog.** See below.
 
