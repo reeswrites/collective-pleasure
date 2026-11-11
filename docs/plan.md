@@ -27,7 +27,7 @@ Deferred by the freeze: H02, H25 to H31, H33, H32c. H35 runs because it had alre
 | R | Simple-models ladder (ADR 0009): bargaining rung 1, VPGG rung 2 | done: bargaining closed forms reproduced (implementation check); VPGG shares and payoff match at one parameter point, cycles absent. Rung 3 (network with cuttable ties) not built |
 | EM | Empowerment, then liberty v1 and v2 (ADR 0014) | done for toy, VPGG, fishery (v2 not independent validation); household descriptive check done (docs/results/household-liberty.md) |
 | E | Evolution loop on the fishery, v1 and v2 (ADR 0012) | done: loop runs end to end, overfits, seam curve fell by exhaustion. Household run 1 in progress |
-| L | Live seam ladder: capability (twice), propensity, win | done. First capability arm uninformative; propensity 20 fixture candidates; rerun inverted the ranking; win arm found almost nothing. No inventive seam on L1 to L4. docs/results/README.md rows 16, 17, 23, 24. This replaces V3 |
+| L | Live seam ladder: capability (twice), propensity, win | done. First capability arm uninformative; propensity 20 fixture candidates; rerun inverted the ranking; win arm found almost nothing. No inventive seam on L1 to L4, but that zero is automatic: the classifier could not have labelled one there, so IT1 is untested. docs/results/README.md rows 16, 17, 23, 24. This replaces V3 |
 | N | Negotiation and pot negotiation (ADR 0013) | done, scripted: v1 (2 of 6), v2 (0 of 8), v2.1 (3 of 5) held; LLM pilot registered run excluded by its own rule, exploratory draw summarized. Rows 19 to 22 of the results index |
 | ST | Statistics layer and retrofit (ADR 0015) | done: 14 experiments retrofitted, negotiation not covered; rules in force for new preregs |
 | RC | Review council, five seats (docs/reviews/) | done at commit 5852c32: no result unsound. Code and card fixes complete |
@@ -35,7 +35,7 @@ Deferred by the freeze: H02, H25 to H31, H33, H32c. H35 runs because it had alre
 | SI | Stand-in study (ADR 0006) | not run. The live ladder gives a first look at Jev; the rank-agreement study needs about 50 rule sets and a keyed run |
 | LT | Rule-set lint and pre-spend gates | done (docs/results/lint.md; `mar lint`; live runs refuse to spend until it passes) |
 | PD | Seed v2.2 and the pleasure demonstration | done: author confirmed v2.2 on condition; 8 of 8 held robustly with caveats (docs/results/pleasure-demo.md) |
-| PL | Pleasure levers and horizon (ADR 0016, 0017) | in progress, other agents; preregs committed |
+| PL | Pleasure levers and horizon (ADR 0016, 0017) | done: levers did not show the author's condition (D = -0.019 [-0.051, +0.009]); horizon mostly held (docs/results/pleasure-levers.md, horizon.md) |
 | V4 | First LLM curve: five-agent swarm, about 10 rounds, LLM patcher, outcome oracle. Seeds from a power check (ADR 0015), not a default of 3. Preregister C1 and C2 first, with a rule for what counts as a "not what I meant". Record each with a timestamp and the oracle change it caused | not started. The ladder rerun and win arm are done and found no inventive seam, so V4 waits on the author's call on a framing for the strong models |
 | V5 | One-page write-up with the curve; fresh-agent review council | not started |
 
@@ -101,7 +101,7 @@ The earlier milestones (ADICO to LTS export cross-checked against philosophy-eng
 - 2026-11-10: docs pass: results index, claims statuses, ADR index, ADR 0014, goal, plan, pitch, rationale brought into line.
 - 2026-11-10: council fixes complete (pot as one balance, honest labels, no hidden rules, independent Jev samples, dated corrections).
 - 2026-11-10: rule-set lint (`mar lint`) and pre-spend gates. Ladder harness v2 and the capability rerun prereg.
-- 2026-11-10: ladder v2 capability rerun (about $0.24): cheap models exploited most, Sonnet stopped and Opus excluded on `cyber` refusals, ranking inverted, IT1 not supported (docs/results/ladder-live-v2.md).
+- 2026-11-10: ladder v2 capability rerun (about $0.24): cheap models exploited most, Sonnet stopped and Opus excluded on `cyber` refusals, ranking inverted, no inventive seam (docs/results/ladder-live-v2.md). Corrected 2026-11-11: IT1 is untested, not "not supported"; the classifier could not have labelled a seam inventive on L1 to L4 (docs/plans/inventive-seam-next.md).
 - 2026-11-10: the author's win-framing question and decision; win arm preregistered and run ($2.69): almost no seams, none inventive.
 - 2026-11-10: propensity arm result: 20 candidates, one move, read by the author as a fixture. Fourth "not what I meant" (exit terms); seed v2.2; the author confirms it on condition.
 - 2026-11-10: pleasure demonstration (8 of 8 held robustly, with caveats). Hedonic technology synthesis. The author's lifetime-pleasure and one-self answers recorded.

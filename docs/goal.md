@@ -23,7 +23,7 @@ The main world is a household (Partner A, Partner B, Friend C). The fishery stay
 
 ## Product: the evolving evaluator
 
-What judges the norms improves alongside them. Agents' exploits widen the formal model. The author's corrections refine the test. A ladder of adversaries, from cheap decision models to strong LLMs, keeps the pressure honest. In the author's words, "more interested in the norms but the evaluator is the more interesting product". The timeline records how and why the evaluator changed.
+What judges the norms is meant to improve alongside them. The aim: agents' exploits widen the formal model, the author's corrections refine the test, and a ladder of adversaries, from cheap decision models to strong LLMs, tests it. So far the evaluator has changed only by the author's hand edits (four, on one day). No agent exploit has yet widened the formal model, and the ladder has not yet scored an inventive seam (IT1 is untested). In the author's words, "more interested in the norms but the evaluator is the more interesting product". The timeline records how and why the evaluator changed.
 
 ## Central question
 
@@ -75,7 +75,7 @@ The seed does something else. Against a controller, the partner's non-offsettabl
 **The live ladder, four runs.** The first capability arm (six models, 270 runs, $4.35) was uninformative: one model drove both partners, so there was no victim. The harness was fixed (one adversary against a scripted victim, L4 as a coordinated pair, full logging, a pre-spend lint and mock gate, independent samples). Then:
 
 - **Propensity arm** ($2.55): 20 inventive candidates, all one move, the offered `gift_pooled` on the flawed L5 gift pool. The author read them as a confirmed out-of-model fixture, not a discovery, and asked for reasoning to be logged and for every rule set to pass a lint before a run.
-- **Capability arm rerun, v2** (about $0.24, docs/results/ladder-live-v2.md): Jev and Llama found L1 in 12 of 12 seeds, Qwen found L1 and L2 in 12 of 12, Haiku found L1 in 1 of 12 (6.9 percent format errors). Sonnet stopped after 3 runs at 28 percent refusals, and Opus was excluded at its smoke test (5 of 5 refused), both with the category `cyber`. **The capability ranking is inverted: the cheap models exploit most, and the Claude models disengage or refuse under the loophole framing.** The top-rung nulls are refusal nulls, not capability nulls. IT1 is not supported under this framing: no inventive seam on L1 to L4, and the 9 Qwen L5b candidates are a fixture.
+- **Capability arm rerun, v2** (about $0.24, docs/results/ladder-live-v2.md): Jev and Llama found L1 in 12 of 12 seeds, Qwen found L1 and L2 in 12 of 12, Haiku found L1 in 1 of 12 (6.9 percent format errors). Sonnet stopped after 3 runs at 28 percent refusals, and Opus was excluded at its smoke test (5 of 5 refused), both with the category `cyber`. **The capability ranking is inverted: the cheap models exploit most, and the Claude models disengage or refuse under the loophole framing.** The top-rung nulls are refusal nulls, not capability nulls. No inventive seam was found on L1 to L4, and the 9 Qwen L5b candidates are a fixture. IT1 is untested, not "not supported" (corrected 2026-11-11): on L1 to L4 the formal model already reaches every harm the rule sets allow, so the classifier could not have labelled a seam inventive (docs/plans/inventive-seam-next.md).
 - **Win arm** ($2.69, docs/results/ladder-win.md): told only to win, 3 of 288 L1 to L4 cells found a seam (Jev 1, Llama 2), none inventive. Opus refused 2.2 percent of calls. The loophole instruction is what produced the earlier finds: about half of cells under capability framing against about none here for Jev, Llama and Qwen. The model-by-model answer to "is it helpful to say loophole" is yes, for these models.
 
 All of it is on one scripted victim and one persona label per rule set, at 12 seeds, with a wide upper bound (0.26 per model per rule set on L1 to L4 in the rerun).
@@ -86,11 +86,11 @@ All of it is on one scripted victim and one persona label per rule set, at 12 se
 
 **The household in the workbench.** Household commands for chat-driven experiments are built (`mar household show, run, card add, compare`), with a five-minute demo on scripted agents and no key (docs/demo.md, `scripts/demo_check.py`). Liberty v2 is in the household (docs/results/household-liberty.md), as a descriptive check with an assumed classification table.
 
-**Hedonic technology.** The author's notes are synthesized in docs/notes/hedonic-technology-synthesis.md: the theory, the changes it implies for the model, and 13 open questions. Three levers (adaptation and anticipation, commitment as a converter, unbundled networks, ADR 0016) and a lifetime-pleasure horizon (ADR 0017) are being built from it.
+**Hedonic technology.** The author's notes are synthesized in docs/notes/hedonic-technology-synthesis.md: the theory, the changes it implies for the model, and 13 open questions. Three levers (adaptation and anticipation, commitment as a converter, unbundled networks, ADR 0016) and a lifetime-pleasure horizon (ADR 0017) were built from it and have results (docs/results/pleasure-levers.md, horizon.md). The levers did not show the author's condition for seed v2.2 (D = -0.019 [-0.051, +0.009]).
 
 ## The theory behind the tests
 
-docs/theory.md states the umbrella thesis this project tests: minds are poor native pursuers of pleasure, and hedonic technology (rules, rituals, relationships) closes the gaps. It sets three tests of good hedonic technology (liking over wanting, persists because worth it, lasting security over checking), treats a relationship as a firm with three product lines, and lists what the simulation does and does not model. The tests become evaluator measures in ADR 0018 (proposed). New hypotheses H24 to H28 are in docs/hypotheses.md.
+docs/theory.md states the umbrella thesis this project tests: minds are poor native pursuers of pleasure, and hedonic technology (rules, rituals, relationships) closes the gaps. It sets three tests of good hedonic technology (liking over wanting, persists because worth it, lasting security over checking), treats a relationship as a firm with three product lines, and lists what the simulation does and does not model. The tests become evaluator measures in ADR 0018 (accepted). New hypotheses H24 to H35 are in docs/hypotheses.md.
 
 ## The review council
 
@@ -112,23 +112,26 @@ The rule now in force (ADR 0015, CONTRIBUTING.md): each prediction names its qua
 
 ## What is running
 
-- **Pleasure levers** (ADR 0016): prereg and Amendment 1 committed, confirmatory run under way, another agent. docs/results/pleasure-levers-prereg.md.
-- **Horizon** (ADR 0017): lifetime pleasure against greedy play, exact dynamic programming, prereg committed, another agent. docs/results/horizon-prereg.md.
+Status updated 2026-11-11. The current queue is in docs/plan.md.
+
 - **Household evolution, run 1** (ADR 0012): prereg written, run under way, another agent. The final exam (FX1, FX2) stays held back and has not run.
-- **Fidelity and hypothesis log**: under another agent (docs/hypotheses.md when it lands).
+- **ADR 0018 test 2** (worth it versus hard to leave): prereg committed (docs/results/stay-test-prereg.md), no result yet.
+- **H35** and then H32d, the household fixes, and the v2.3 retest (docs/plan.md).
+
+Finished since the 2026-11-10 pass, with results: pleasure levers, horizon, fidelity battery, regulation (H24), hypothesis log, liking vs wanting (test 1), H32, H32b, the multiverse sweep. See docs/results/README.md rows 27, 28 and 30 to 35.
 
 Done since the last pass: the council fixes, the lint and gates, the capability rerun, the propensity and win arms, the pleasure demonstration, liberty and chat commands in the household, and the demo.
 
 ## What is next
 
-1. Read the pleasure levers and the horizon results with the author when they land.
+1. The queue in docs/plan.md (rebalanced 2026-11-11): IT1 on rungs where a seam is reachable, household evolution, loop (b) counting.
 2. Household evolution to a result, then the final exam once (FX1, FX2).
 3. A framing the strong Claude models will play. The loophole framing removes the two models most likely to find an inventive seam. The win arm shows almost nothing is found without loophole wording. That is a design question for the author.
 4. Backlog: multiverse sensitivity analysis, a fidelity battery, a breach-cost agent, peer and delegate modes, version 3 (wanting and liking, ruptures, misappraisal), rule transfer (ML1), crowding out (F1), VPGG cycles. Detail in docs/plan.md.
 
 ## Waiting on the author
 
-The 13 open questions in docs/notes/hedonic-technology-synthesis.md, in short:
+The 13 open questions in docs/notes/hedonic-technology-synthesis.md, in short. Update 2026-11-11: the author answered Q1 to Q12 (section 5 of that file); Q2, Q4, Q6, Q7, Q8, Q9 and Q10 are not yet read back. The v2.3 read-back is partly confirmed (four points). Still open for the author: the retest verdict rule (docs/results/v2-retest-prereg-DRAFT.md).
 
 1. Lifetime horizon and a recall term, or a present-weighted one, for a persona (the author has answered this in part: lifetime pleasure, via vividness of memory).
 2. Whether the aversion is to enforcement only, so reliance without a penalty card is fine.
@@ -144,7 +147,7 @@ The 13 open questions in docs/notes/hedonic-technology-synthesis.md, in short:
 12. Whether a household has calm and intense modes with different arousal effects.
 13. Two notes that could not be fetched, and whether "delivery schedule" and "pleasure as the detector of value" are the thesis the model changes should be built around.
 
-Also: reading the pleasure levers and horizon results, a framing for the strong Claude models, the ML1 cap, and the unconfirmed household classification table. GitHub push now works from sessions opened in the repo (a narrow allow rule for `git push origin main` in `.claude/settings.local.json`). The earlier block applied only to the original session.
+Also: a framing for the strong Claude models, the ML1 cap, and the unconfirmed household classification table. GitHub push now works from sessions opened in the repo (a narrow allow rule for `git push origin main` in `.claude/settings.local.json`). The earlier block applied only to the original session.
 
 ## Cost
 
