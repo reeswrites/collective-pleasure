@@ -126,4 +126,21 @@ Modeled gloss: the lever payoffs are written into the model, so LA2, LB2 and LC1
 
 ## Amendments
 
-[Dated. None yet.]
+### Amendment 1 (2026-11-10, committed before the confirmatory run): exploratory pilot, power check, seed counts
+
+Mechanisms and scripts exist (commit 7f2be8a and scripts/pleasure_levers_run.py). No parameter in this document was changed. The pilot (`--pilot`: seeds 900 to 902, 12 pairings for controlled arms, 6 hand pairings for headline arms) is EXPLORATORY, excluded from every confirmatory number, and changes no threshold. It also showed that satiety is inert on the first weeks only and that adaptation lowers every arm's pleasure level (expected: the same actions pay less); nothing was retuned.
+
+| Quantity | Pilot effect over margin | Pilot sd of the pairing difference | Pairings needed for 80% power (`seeds_for_power`, paired, one-sided; closed form) | Pairings available |
+|---|---|---|---|---|
+| LA1 rotate - repeat (adaptation ON) | +0.044 | 0.061 | 13 (16) | 57 |
+| LA2a ritual - ad hoc, minus margin 0.01 | +0.012 | 0.010 | 7 (6) | 57 |
+| LC1a 3 bonds - 1 bond | +0.005 | 0.027 | 211 | 57 |
+| LC1b non-offsettable share, 1 bond - 3 bonds | -0.020 (wrong sign) | 0.069 | 81 | 57 |
+| LC3 shock loss, 1 bond - 3 bonds | -0.003 (wrong sign) | 0.008 | 61 | 57 |
+| H1 v2.2 - baseline, levers ON | -0.001 | 0.060 | not powerable (effect near 0; more than 2000) | 15 |
+| H2 ritual ON - OFF minus margin 0.03 | -0.024 | 0.025 | 9 | 15 |
+
+Seeds chosen: **8 per pairing for the controlled arms** (the cap; 57 pairings, 32 arms) and **15 per pairing for the headline arms** (the cap and the pleasure demo's count; 15 pairings, 8 arms). More seeds shrink each pairing mean's noise but not the number of pairings, which is the unit, so the pairing counts above are the binding constraint.
+
+Marked DESCRIPTIVE before the run (no verdict wording; estimate, interval and p are reported, with the label "descriptive"): **LC1a, LC1b, LC3** (pilot needs more pairings than the 57 available), and **H1** (the pilot effect is indistinguishable from zero, so 15 pairings cannot resolve a hold; the report will still state the estimate, its interval and whether the interval excludes zero, but the author's condition is then "not shown by this run", not "met"). Every other prediction stays confirmatory. The Holm family stays the 11 tests; descriptive ones keep their p in the family for adjustment of the others (conservative).
+
