@@ -243,28 +243,141 @@ def html(R):
         charts.append(svg_lines(f"Gap between meetings, friendship half-life {h} days", "days between meetings", "score, scaled 0 to 1 per line",
                                 [("one self (lifetime)", norm(c, 1)), ("old experienced", norm(c, 2)), ("old remembered", norm(c, 3))],
                                 vlines=[(R["gap"][h]["best_lifetime"], "best")]))
-    rows = "".join(f"<tr><td>{k}</td><td>{v['total']:.1f}</td><td>{v['pct_of_optimal']:.1f}%</td></tr>" for k, v in R["heuristics"]["0.95"].items()) if "0.95" in R["heuristics"] else \
-        "".join(f"<tr><td>{k}</td><td>{v['total']:.1f}</td><td>{v['pct_of_optimal']:.1f}%</td></tr>" for k, v in R["heuristics"]["0.9"].items())
-    w = R["witness"]["9/10"]["minimal_k_any_reachable_state"] or {}
+    rows = "".join(f"<tr><td>{k}</td><td>{v['total']:.1f}</td><td>{v['pct_of_optimal']:.1f}%</td></tr>" for k, v in R["heuristics"]["0.9"].items())
+    caps = captions(R)
     css = ("""
-:root{--bg:#fff;--fg:#1d1d1f;--mut:#555;--grid:#ddd;--c0:#1f5fbf;--c1:#c25a00;--c2:#2a7d4f;--card:#f6f6f7}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#15161a;--fg:#ececf0;--mut:#a6a6b0;--grid:#33343b;--c0:#7aa8ff;--c1:#ffa45c;--c2:#6fd19b;--card:#1d1e24}}
-body{background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif;margin:0 auto;max-width:1100px;padding:20px 16px}
-h1{font-size:22px}h2{font-size:17px;margin-top:28px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
-.card{background:var(--card);border-radius:8px;padding:8px}svg{width:100%;height:auto}.t{fill:var(--fg);font-size:13px;font-weight:600}.a{fill:var(--mut);font-size:10.5px}
+:root{--bg:#fff;--fg:#1d1d1f;--mut:#555;--grid:#ddd;--c0:#1f5fbf;--c1:#c25a00;--c2:#2a7d4f;--card:#f6f6f7;--box:#eef3fb;--edge:#1f5fbf}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#15161a;--fg:#ececf0;--mut:#a6a6b0;--grid:#33343b;--c0:#7aa8ff;--c1:#ffa45c;--c2:#6fd19b;--card:#1d1e24;--box:#1a2233;--edge:#7aa8ff}}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif;margin:0 auto;max-width:1100px;padding:20px 16px;overflow-wrap:anywhere}
+h1{font-size:22px}h2{font-size:17px;margin-top:28px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px}
+.card{background:var(--card);border-radius:8px;padding:8px;min-width:0}svg{width:100%;height:auto}.t{fill:var(--fg);font-size:13px;font-weight:600}.a{fill:var(--mut);font-size:10.5px}
 .g{stroke:var(--grid)}.v{stroke:var(--mut);stroke-dasharray:3 3}path{stroke-width:2}.s0{stroke:var(--c0)}.s1{stroke:var(--c1)}.s2{stroke:var(--c2)}
 .l0{fill:var(--c0);font-size:11px}.l1{fill:var(--c1);font-size:11px}.l2{fill:var(--c2);font-size:11px}
 table{border-collapse:collapse}td,th{padding:3px 10px;border-bottom:1px solid var(--grid);text-align:left}code{font-size:13px}
+.box{background:var(--box);border-left:4px solid var(--edge);border-radius:6px;padding:4px 14px;margin:14px 0}.box h2{margin:10px 0 4px}
+.cap{margin:6px 4px 4px;font-size:14px}.cap b{display:block;font-size:13px;color:var(--mut)}.tw{overflow-x:auto}
 """)
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Horizon: lifetime pleasure</title><style>{css}</style></head><body>
 <h1>Lifetime pleasure versus greedy (horizon study)</h1>
+{asked(R)}
 <p>A small household decision problem solved exactly ({R['n_states']} reachable states, 7 actions). Every parameter is assumed; see docs/results/horizon.md. Agents feel nothing; pleasure is a gloss for a modeled hedonic state.</p>
 <p>With all carried-over state switched off, greedy loses exactly {R['p1_max_abs_loss_off']:.0f} over {R['p1_cells']} grid cells. With it on, greedy loses up to {max(A['pct_finite']):.1f}% of lifetime pleasure at gamma 1 over 26 weeks.</p>
-<div class="grid">{''.join(f'<div class="card">{c}</div>' for c in charts)}</div>
-<h2>Heuristics against the optimum (gamma 0.9, 26 weeks)</h2><table><tr><th>policy</th><th>total</th><th>% of optimal</th></tr>{rows}</table>
-<h2>Machine-checked witness (gamma 9/10)</h2><p>State: {w.get('state_text','')}. k = {w.get('k','')}. Greedy plan <code>{w.get('greedy_plan','')}</code> totals {w.get('greedy_total_float','')}; plan <code>{w.get('best_plan','')}</code> totals {w.get('best_total_float','')}. z3 results: {w.get('z3','')}.</p>
+<div class="grid">{''.join(f'<div class="card">{c}<div class="cap"><b>What this shows</b>{t}</div></div>' for c, t in zip(charts, caps))}</div>
+<h2>Heuristics against the optimum (gamma 0.9, 26 weeks)</h2><div class="tw"><table><tr><th>policy</th><th>total</th><th>% of optimal</th></tr>{rows}</table></div>
+{proof(R)}
+{answers(R)}
+{surprised(R)}
+{trust(R)}
+{alignment(R)}
 </body></html>"""
 
 
+def _box(title, *paras):
+    return f'<div class="box"><h2>{title}</h2>' + "".join(f"<p>{p}</p>" for p in paras) + "</div>"
+
+
+def asked(R):
+    return _box("What this study asked",
+                "You said lifetime pleasure is the right measure, and that caring about the whole future should mean you plan instead of grabbing the best thing now. "
+                "The question: is grabbing the most pleasure right now ever worse than planning for a whole life? "
+                "This study builds a small model and solves it exactly, so the answer is a computation, not a guess.")
+
+
+def proof(R):
+    w = R["witness"]["9/10"]["minimal_k_any_reachable_state"]
+    return _box("The proof in plain words",
+                "The lemma: grabbing the best thing now is guaranteed to be the best plan only if nothing you do today changes tomorrow. "
+                "If a choice leaves any trace that later pleasure can see, some situation exists where greedy loses.",
+                f"A computer checked one case. You can have the concert now, or a solo treat now and the concert next week. "
+                f"Concert twice in a row totals {w['greedy_total_float']:.2f}. Treat then concert totals {w['best_total_float']:.2f}.",
+                "Greedy cannot see this because it looks one step ahead. Waiting a week makes the concert worth more, "
+                "and that anticipation pays off later, where greedy never looks. "
+                "Discounting the future does not fix it. It only changes how much each later week counts.")
+
+
+def answers(R):
+    con = R["concert"]["0.95"]
+    net = {r["every"]: r["net_carryover"] for r in con}
+    ms = sorted(net)
+    star = next(m for m in ms if net[m] > 0)
+    best_m = max(ms, key=lambda m: net[m])
+    g = R["gap"]
+    hs = sorted(g, key=float)
+    gu = R["gap_mismatch_unified"]
+    v = R["gap_vividness"]
+    sens = R["gap_vividness_sensitivity"]
+    return ('<h2>Your questions, answered by this model</h2>'
+            + _box("The concert",
+                   f"Does a concert steal from future pleasures? It depends on how often you go. Going every week is a net loss of {abs(net[1]):.1f} pleasure units over 26 weeks.",
+                   f"Going every 3 to 4 weeks is a net gain, about +{net[3]:.1f} at 3 weeks and +{net[best_m]:.1f} at {best_m}. The boundary is about {star} weeks.",
+                   "The costs are real but small. The benefits are anticipation, a vivid memory and a bond. Spaced out, the benefits win.")
+            + _box("Seeing someone",
+                   f"The best gap between meetings grows with how deep the friendship is: {g[hs[0]]['best_lifetime']} days for a quick-fading bond, {g[hs[-1]]['best_lifetime']} days for a deep one "
+                   f"(half-lives of {hs[0]} and {hs[-1]} days).",
+                   f"The old remembered-self score says meet every {g[hs[0]]['best_remembered_old']} to {g[hs[-1]]['best_remembered_old']} days. It counts the big reunion and ignores the days apart, so it always wants more meetings.",
+                   f"If two friends have different bonds, one gap cannot suit both. At {gu['best_b']} days the faster-fading friend gets {gu['short_loss_pct']:.0f}% less value than at their own best gap ({gu['best_a']} days). That is the slow fade.",
+                   f"How much memory counts is the biggest lever. Tripling it moves the best gap for the middle friendship from {sens['default']} to {sens['memory weight x3']} days.")
+            + _box("The one-self view",
+                   "You said the experiencing self is the remembering self. So each moment counts what you feel now, plus vivid memories you re-live, plus anticipation.",
+                   f"A good reunion worth {v['good_reunion_15']['in_moment']:.0f} in the moment is worth {v['good_reunion_15']['after_the_fact']:.1f} once remembered. "
+                   f"A betrayal costing {abs(v['bad_betrayal_-20']['in_moment']):.0f} keeps costing, {abs(v['bad_betrayal_-20']['after_the_fact']):.1f} in total. Long mild stretches fade from memory fast.",
+                   "The two old scores are special cases of this one. Switch memory off and you get the experienced score. Switch the present off and you get the remembered score."))
+
+
+def surprised(R):
+    h = R["heuristics"]["0.9"]
+    return _box("What surprised us",
+                f"Simple rules of thumb did worse than greedy. At gamma 0.9, greedy reaches {h['greedy']['pct_of_optimal']:.0f}% of the best total, weekly ritual {h['ritual-weekly']['pct_of_optimal']:.0f}%, rotating every week {h['rotate-1']['pct_of_optimal']:.0f}%. Planning is not the same as rotating.",
+                f"A long commitment only pays when the future counts at least about {R['gamma_commitment_accepted']:.3f}. We predicted it would pay at 0.9, and it did not (prediction P4 missed).",
+                f"Loss does not always grow with the horizon either. At gamma 0.9 it peaks near {max(R['sweep_horizon']['pct_g0.9']):.0f}% and falls back to {R['sweep_horizon']['pct_g0.9'][R['sweep_horizon']['K'].index(26)]:.1f}% by 26 weeks (prediction P2 missed).")
+
+
+def trust(R):
+    return _box("How much to trust this",
+                "This is a toy model. The numbers are assumed, chosen to stand for your ideas, and they are not measured from real people.",
+                "It proves the logic and the shape of the answer. It does not give facts about how any real life goes.",
+                "The philosophical choices (lifetime as the measure, one self, how memory counts) are stated in ADR 0017, where you can change them.")
+
+
+def alignment(R):
+    A = R["sweep_gamma"]
+    return _box("Why it matters for AI alignment",
+                "An AI that optimizes the next reply or the next step is a greedy agent. It can drain things its reward does not show, such as trust or the other person's patience. That is reward hacking.",
+                f"Here is a small exact case of when that costs and how much: up to {max(A['pct_finite']):.0f}% of lifetime pleasure, and it starts once the future counts at all ({R['critical_gamma']['26']:.2f} and up).")
+
+
+def captions(R):
+    A, B, C, D = R["sweep_gamma"], R["sweep_horizon"], R["sweep_delta"], R["sweep_beta"]
+    gi = lambda x: A["gamma"].index(x)
+    ki = lambda k: B["K"].index(k)
+    con = {r["every"]: r["net_carryover"] for r in R["concert"]["0.95"]}
+    best_m = max(con, key=con.get)
+    gp = R["gap"]
+    out = [
+        f"Left means only now counts. Right means the whole future counts as much as now. Greedy loses nothing at the far left, about {A['pct_finite'][gi(0.9)]:.1f}% at 0.9, {A['pct_finite'][gi(0.95)]:.1f}% at 0.95, and {A['pct_finite'][gi(1.0)]:.1f}% over 26 weeks when the future counts fully. "
+        f"Greedy first loses at a discount of {R['critical_gamma']['26']:.2f}. The more you care about your whole life, the more planning matters.",
+        f"Left is a short plan, right is a long one. At gamma 1 the loss climbs from {B['pct_g1.0'][ki(3)]:.1f}% at 3 weeks to {B['pct_g1.0'][ki(52)]:.1f}% at a year, so longer lives need more planning. "
+        f"At gamma 0.9 it peaks at {max(B['pct_g0.9']):.1f}% then falls to {B['pct_g0.9'][ki(26)]:.1f}%, because the best plan settles into the same routine greedy finds. Weeks 1 and 2 show no loss at all.",
+        f"Delta is how fast a pleasure wears off with repeats. Loss runs from {C['pct'][0]:.0f}% with no wearing off to {C['pct'][-1]:.0f}% with strong wearing off, and it is not a smooth line. "
+        f"Wearing off alone is not the whole story. Turning off every carried-over effect is what drives the loss to zero.",
+        f"Beta is the payoff for sticking with a commitment. Up to beta 1.5 loss stays at {D['pct'][0]:.1f}% because the best plan ignores commitments. At beta 2 it jumps to {D['pct'][4]:.1f}% and at beta 3 to {D['pct'][5]:.1f}%. "
+        f"Commitment is worth it only past a threshold. A greedy agent never takes it.",
+        f"Each point is a concert every m weeks. Weekly is a net loss of {abs(con[1]):.1f}. Every 3 to 4 weeks is a net gain, peaking at +{con[best_m]:.1f} at {best_m} weeks. "
+        f"The orange line is the costs alone, always negative. So a concert is worth it when spaced, not when it is constant.",
+    ]
+    for h in ("20", "90"):
+        g = gp[h]
+        out.append(f"Each line scores a gap between meetings, scaled to run from 0 to 1. The dashed line marks the best gap for the one-self score, {g['best_lifetime']} days. "
+                   f"The old remembered score peaks at {g['best_remembered_old']} days because it ignores the wait. A deeper friendship (half-life {h} days) wants a longer gap, and one gap does not fit two different friends.")
+    return out
+
+
 if __name__ == "__main__":
-    main()
+    if "--report-only" in sys.argv:
+        src = Path(sys.argv[sys.argv.index("--report-only") + 1]) if len(sys.argv) > sys.argv.index("--report-only") + 1 else OUT / "results.json"
+        R = json.loads(src.read_text())
+        OUT.mkdir(parents=True, exist_ok=True)
+        (OUT / "report.html").write_text(html(R))
+        print("wrote", OUT / "report.html")
+    else:
+        main()
