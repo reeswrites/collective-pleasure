@@ -36,6 +36,7 @@ A rule set is not rejected by one failing test. The tests are reported beside th
 - The evaluator can warn about a trap quadrant that pleasure scores hide, as the horizon study showed greedy scoring hides carried-over loss.
 - Risk: the measures are built from assumed parameters and will show what the model puts in. Each needs a sweep and, where possible, a control with the mechanism off.
 - Build order decided by the author: test 2 first. Still not decided: thresholds for "fails a test".
+- Test 2 is built (2026-11-10): `src/mar/stay_test.py`, run by `scripts/stay_test_run.py`; prereg docs/results/stay-test-prereg.md, results docs/results/stay-test.md. It uses the code's real stay rule (a distressed agent's leave, blocked or not) as the primary lens and reads the max(outside option, status quo) bar beside it, because in this code that bar never ends a household.
 - Build order changed by the author (2026-11-11T01:27:04Z, experiments/changes.jsonl): "Yes, start test 1", to build test 1 now, in parallel with test 2. The words may be a reply-button label Claude drafted and the author clicked (faithfulness review F11); the decision is the author's.
 - Related hypotheses: H24 to H28 in docs/hypotheses.md.
 - Test 1 built (2026-11-10): model piece src/mar/wanting.py (standalone, flag off by default), run scripts/liking_wanting_run.py, results docs/results/liking-wanting.md. Not yet in the household world.

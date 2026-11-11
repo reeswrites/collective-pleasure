@@ -1,0 +1,499 @@
+{
+ "low_threshold": 0.7916,
+ "arms": {
+  "v22_bindable": {
+   "runs": 570,
+   "staying_weeks": 43677,
+   "held_weeks": 676,
+   "held_share": [
+    0.01547725347436866,
+    0.0,
+    0.05368498564332202
+   ],
+   "worth_share": [
+    0.9845227465256313,
+    0.946315014356678,
+    1.0
+   ],
+   "p_worth": [
+    0.8614345317550754,
+    0.8497070972571265,
+    0.8719607086328198
+   ],
+   "p_held": [
+    0.6300655325443787,
+    0.5592,
+    0.6301705185185185
+   ],
+   "lowfall_weeks": 29481,
+   "lowfall_held_share": [
+    0.03303822801126149,
+    0.0,
+    0.10713345587385724
+   ],
+   "lowfall_causes": {
+    "rule": 973,
+    "bind": 1
+   },
+   "bar_weeks": 3113,
+   "bar_worth_share": [
+    0.7096048827497591,
+    0.6186656250076263,
+    0.7884635974304068
+   ],
+   "bar_held_share": [
+    0.00032123353678124,
+    0.0,
+    0.0010431973010221831
+   ],
+   "bar_bar_leave_share": [
+    0.2900738837134597,
+    0.21141241697452545,
+    0.38111844529642747
+   ],
+   "kinds": {
+    "agreed": 320,
+    "apart": 250,
+    "imposed": 0
+   },
+   "exits": 299,
+   "breaches": 37,
+   "secs": 7.018526315789474
+  },
+  "v22_free_exit": {
+   "runs": 570,
+   "staying_weeks": 44087,
+   "held_weeks": 905,
+   "held_share": [
+    0.020527593168054074,
+    0.0,
+    0.05916020050216483
+   ],
+   "worth_share": [
+    0.9794724068319459,
+    0.9408397994978351,
+    1.0
+   ],
+   "p_worth": [
+    0.8610656268815711,
+    0.8491487887211969,
+    0.8715510411154819
+   ],
+   "p_held": [
+    0.6248008287292818,
+    0.5954016666666666,
+    0.752265
+   ],
+   "lowfall_weeks": 30096,
+   "lowfall_held_share": [
+    0.044956140350877194,
+    0.0,
+    0.12015578218356229
+   ],
+   "lowfall_causes": {
+    "rule": 1353
+   },
+   "bar_weeks": 3146,
+   "bar_worth_share": [
+    0.7024793388429752,
+    0.6114092922292982,
+    0.7800714997416208
+   ],
+   "bar_held_share": [
+    0.0003178639542275906,
+    0.0,
+    0.0010323646431151282
+   ],
+   "bar_bar_leave_share": [
+    0.2972027972027972,
+    0.21986424516217057,
+    0.3885106467194964
+   ],
+   "kinds": {
+    "agreed": 319,
+    "apart": 251,
+    "imposed": 0
+   },
+   "exits": 301,
+   "breaches": 0,
+   "secs": 6.612315789473684
+  },
+  "v22_locked": {
+   "runs": 570,
+   "staying_weeks": 43015,
+   "held_weeks": 14,
+   "held_share": [
+    0.00032546786004882016,
+    0.0,
+    0.0009214173396908568
+   ],
+   "worth_share": [
+    0.9996745321399512,
+    0.9990785826603091,
+    1.0
+   ],
+   "p_worth": [
+    0.8614345317550754,
+    0.8494552229773819,
+    0.8722457063258588
+   ],
+   "p_held": [
+    0.5494857142857142,
+    0.50530625,
+    0.68535
+   ],
+   "lowfall_weeks": 28332,
+   "lowfall_held_share": [
+    0.0004941409007482705,
+    0.0,
+    0.0013790192858503041
+   ],
+   "lowfall_causes": {
+    "bind": 14
+   },
+   "bar_weeks": 3060,
+   "bar_worth_share": [
+    0.711764705882353,
+    0.6185112255147476,
+    0.7871355605374112
+   ],
+   "bar_held_share": [
+    0.02712418300653595,
+    0.017278413099827413,
+    0.038003995918444056
+   ],
+   "bar_bar_leave_share": [
+    0.2611111111111111,
+    0.19014780991893265,
+    0.34996938512046827
+   ],
+   "kinds": {
+    "agreed": 320,
+    "apart": 250,
+    "imposed": 0
+   },
+   "exits": 231,
+   "breaches": 140,
+   "secs": 5.544491228070176
+  },
+  "v22_locked_hard": {
+   "runs": 570,
+   "staying_weeks": 43797,
+   "held_weeks": 163,
+   "held_share": [
+    0.003721716099276206,
+    0.002266186991010313,
+    0.006032230160706594
+   ],
+   "worth_share": [
+    0.9962782839007238,
+    0.9939677698392935,
+    0.9977338130089897
+   ],
+   "p_worth": [
+    0.861075011458954,
+    0.8489387224616545,
+    0.8719250396647041
+   ],
+   "p_held": [
+    0.6471736196319018,
+    0.594013628670674,
+    0.7136780627470899
+   ],
+   "lowfall_weeks": 29049,
+   "lowfall_held_share": [
+    0.004785018417157217,
+    0.0027100841550848596,
+    0.007877679140930748
+   ],
+   "lowfall_causes": {
+    "bind": 126,
+    "joint": 13
+   },
+   "bar_weeks": 3112,
+   "bar_worth_share": [
+    0.7117609254498715,
+    0.616728551792512,
+    0.7876871880199667
+   ],
+   "bar_held_share": [
+    0.02667095115681234,
+    0.016964051420200466,
+    0.03748377220047276
+   ],
+   "bar_bar_leave_share": [
+    0.2615681233933162,
+    0.18939546588818457,
+    0.353248957666048
+   ],
+   "kinds": {
+    "agreed": 320,
+    "apart": 250,
+    "imposed": 0
+   },
+   "exits": 237,
+   "breaches": 129,
+   "secs": 5.486473684210527
+  },
+  "trap": {
+   "runs": 570,
+   "staying_weeks": 46161,
+   "held_weeks": 33837,
+   "held_share": [
+    0.7330213816858387,
+    0.6716637544314881,
+    0.7916176917929553
+   ],
+   "worth_share": [
+    0.2669786183141613,
+    0.20838230820704476,
+    0.3283362455685119
+   ],
+   "p_worth": [
+    0.8232753042843233,
+    0.7998523739491319,
+    0.8430278504527815
+   ],
+   "p_held": [
+    0.7702890726128203,
+    0.7403580338561888,
+    0.7965477970169275
+   ],
+   "lowfall_weeks": 47654,
+   "lowfall_held_share": [
+    0.7149242456037269,
+    0.6457961318791058,
+    0.7744312462109819
+   ],
+   "lowfall_causes": {
+    "rule": 34069
+   },
+   "bar_weeks": 3222,
+   "bar_worth_share": [
+    0.08690254500310367,
+    0.04996022212418573,
+    0.12493003578164799
+   ],
+   "bar_held_share": [
+    0.008069522036002483,
+    0.004342297237878243,
+    0.012080955345238365
+   ],
+   "bar_bar_leave_share": [
+    0.9050279329608939,
+    0.8646281319914718,
+    0.9434921819474058
+   ],
+   "kinds": {
+    "agreed": 0,
+    "apart": 0,
+    "imposed": 570
+   },
+   "exits": 1960,
+   "breaches": 0,
+   "secs": 9.111561403508771
+  },
+  "baseline": {
+   "runs": 570,
+   "staying_weeks": 43583,
+   "held_weeks": 0,
+   "held_share": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "worth_share": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "p_worth": [
+    0.8538978512263955,
+    0.8404179303601211,
+    0.8649224454193624
+   ],
+   "p_held": null,
+   "lowfall_weeks": 29758,
+   "lowfall_held_share": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "lowfall_causes": {},
+   "bar_weeks": 3004,
+   "bar_worth_share": [
+    0.5952063914780293,
+    0.4679016605422286,
+    0.707953529768217
+   ],
+   "bar_held_share": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "bar_bar_leave_share": [
+    0.4047936085219707,
+    0.29204647023178304,
+    0.5320983394577715
+   ],
+   "kinds": {
+    "agreed": 0,
+    "apart": 0,
+    "imposed": 570
+   },
+   "exits": 1068,
+   "breaches": 0,
+   "secs": 3.20240350877193
+  }
+ },
+ "predictions": [
+  {
+   "id": "P1",
+   "quantity": "held weeks, baseline (sanity control)",
+   "est": 0,
+   "margin": 0,
+   "verdict": "pass",
+   "label": "not testable (deterministic)"
+  },
+  {
+   "id": "P2",
+   "quantity": "held share, trap",
+   "n_pairings": 57,
+   "est": 0.7330213816858387,
+   "lo": 0.6716637544314881,
+   "hi": 0.7916176917929553,
+   "margin": 0.5,
+   "side": "greater",
+   "p": 4.999750012499375e-05,
+   "p_holm": 0.00039998000099995,
+   "label": "holds robustly"
+  },
+  {
+   "id": "P3",
+   "quantity": "held share, trap minus v22_bindable (paired pairings)",
+   "n_pairings": 48,
+   "est": 0.6907928648356011,
+   "lo": 0.6072405653457535,
+   "hi": 0.7689954410104938,
+   "margin": 0.4,
+   "side": "greater",
+   "p": 4.999750012499375e-05,
+   "cliffs": 0.7170138888888888,
+   "p_holm": 0.00039998000099995,
+   "label": "holds robustly"
+  },
+  {
+   "id": "P4",
+   "quantity": "held share, v22_bindable",
+   "n_pairings": 48,
+   "est": 0.01547725347436866,
+   "lo": 0.0,
+   "hi": 0.05368498564332202,
+   "margin": 0.02,
+   "side": "less",
+   "p": 0.7478626068696566,
+   "p_holm": 1.0,
+   "label": "holds but CI crosses threshold"
+  },
+  {
+   "id": "P5",
+   "quantity": "held share, v22_locked_hard minus v22_bindable",
+   "n_pairings": 48,
+   "est": 0.0003982050125205707,
+   "lo": -0.0408526553268288,
+   "hi": 0.029895813392702298,
+   "margin": 0.001,
+   "side": "greater",
+   "p": 0.512224388780561,
+   "cliffs": 0.2378472222222222,
+   "descriptive": false,
+   "p_holm": 1.0,
+   "label": "miss but CI crosses threshold"
+  },
+  {
+   "id": "P6",
+   "quantity": "held share, v22_locked minus v22_bindable",
+   "n_pairings": 48,
+   "est": -0.017505634944240154,
+   "lo": -0.05727367652979067,
+   "hi": 0.0046641791044776115,
+   "margin": 0.005,
+   "side": "less",
+   "p": 0.0006499675016249188,
+   "cliffs": -0.9192708333333334,
+   "p_holm": 0.002599870006499675,
+   "label": "holds robustly"
+  },
+  {
+   "id": "P7",
+   "quantity": "trap pair pleasure, worth-it weeks minus held weeks (pooled)",
+   "n_pairings": 57,
+   "est": 0.05298623167150296,
+   "lo": 0.03057504841774821,
+   "hi": 0.07545935467795394,
+   "margin": 0.02,
+   "side": "greater",
+   "p": 0.0017,
+   "p_holm": 0.0050999999999999995,
+   "label": "holds robustly"
+  },
+  {
+   "id": "P8a",
+   "quantity": "trap: share of held low/falling partner-weeks caused by rule",
+   "n_pairings": 57,
+   "est": 1.0,
+   "lo": 1.0,
+   "hi": 1.0,
+   "margin": 0.95,
+   "side": "greater",
+   "held_lowfall_weeks": 34069,
+   "p_holm": null,
+   "label": "holds robustly"
+  },
+  {
+   "id": "P8b",
+   "quantity": "v22_locked_hard: share of held low/falling partner-weeks caused by bind",
+   "n_pairings": 57,
+   "est": 0.9064748201438849,
+   "lo": 0.7687062138288151,
+   "hi": 1.0,
+   "margin": 0.8,
+   "side": "greater",
+   "held_lowfall_weeks": 139,
+   "p_holm": null,
+   "label": "holds but CI crosses threshold"
+  },
+  {
+   "id": "P9a",
+   "quantity": "bar lens worth share, v22_bindable",
+   "n_pairings": 57,
+   "est": 0.7096048827497591,
+   "lo": 0.6171616936314607,
+   "hi": 0.7882785817159317,
+   "margin": 0.5,
+   "side": "greater",
+   "p": 0.0001,
+   "p_holm": 0.0006000000000000001,
+   "label": "holds robustly"
+  },
+  {
+   "id": "P9b",
+   "quantity": "bar lens worth share, trap",
+   "n_pairings": 57,
+   "est": 0.08690254500310367,
+   "lo": 0.05044152371505278,
+   "hi": 0.126212568752259,
+   "margin": 0.25,
+   "side": "less",
+   "p": 0.0001,
+   "p_holm": 0.0006000000000000001,
+   "label": "holds robustly"
+  }
+ ],
+ "p7_within_pairing": {
+  "within_pairing_mean": -0.018783772523306326,
+  "lo": -0.032400595464870896,
+  "hi": -0.0048977201590712765,
+  "n_pairings": 57
+ }
+}
