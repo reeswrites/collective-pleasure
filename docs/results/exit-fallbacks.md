@@ -2,7 +2,7 @@
 
 Wording rule: agents feel nothing; "pleasure" is a gloss for a modeled hedonic state.
 
-Status: slice 1 (money pot only) was run once on 2026-11-11, after its preregistration ([exit-fallbacks-prereg.md](exit-fallbacks-prereg.md), commit b66777d; code a115695). The setup is 18 rule sets (the 16 run-2 elites plus the author's seeds v2.2 and v2.3) × 6 arms × run 2's 30 validation households, with scripted agents and no model calls. Design: [exit-fallbacks-design.md](exit-fallbacks-design.md). Run with `uv run python scripts/exit_fallbacks_run.py --run`, then `--analyze` (534 s on 3 workers). Per-run rows are in runs/exit-fallbacks/ (not committed). Slice 2 (items) is below once it has run.
+Status: slice 1 (money pot only) was run once on 2026-11-11, after its preregistration ([exit-fallbacks-prereg.md](exit-fallbacks-prereg.md), commit b66777d; code a115695). The setup is 18 rule sets (the 16 run-2 elites plus the author's seeds v2.2 and v2.3) × 6 arms × run 2's 30 validation households, with scripted agents and no model calls. Design: [exit-fallbacks-design.md](exit-fallbacks-design.md). Run with `uv run python scripts/exit_fallbacks_run.py --run`, then `--analyze` (534 s on 3 workers). Per-run rows are in runs/exit-fallbacks/ (not committed). Slice 2 (items) is at the end.
 
 Every prediction was preregistered as DESCRIPTIVE, because the context's 30 runs fall short of the 32 the power check asked for.
 
@@ -129,4 +129,93 @@ It cannot be about:
 
 ## Slice 2: indivisible items
 
-Planned and committed as Amendment 1 of the prereg before it runs. Results will follow here.
+Run once on 2026-11-11 under prereg Amendment 1 (commit 7c08d89, code 2b4a357), after slice 1. Three items are held jointly from week 0:
+
+| Item | Price | Weekly pleasure | Brought by |
+|---|---|---|---|
+| home | 60 | 0.02 | A |
+| pet | 10 | 0.02 | B |
+| collection | 20 | none | A |
+
+Each item also carries a sentimental premium per person, and the premiums vary over five cells: V0 price only; V1 both attached; V2 A loves the home, B the pet; V3 crossed; V4 B loves everything.
+
+The setup is 18 rule sets × 6 arms × 30 runs × 5 cells (`--run2`, 576 s on 3 workers). Amendment 1 also removed the slice-1 wall from the settling arms F2 to F5. F1 still walls line 2, so F1's numbers below again carry line 2.
+
+**The valuations are placeholders.** The grid exists to see whether conclusions survive changes in them. A different grid could reorder the arms.
+
+### Slice 2 in one paragraph
+
+**Items do not rescue a clear winner.**
+
+- **Leaving line 2 out, every fallback is within 0.01 of current behaviour on pleasure in every cell.** F4 (contribution plus value) comes first on pleasure only when valuations are lopsided (V3, V4: +0.003 and +0.004 over F0). F2 (keep what you brought) comes first when they are not (V0 to V2).
+- **The arm ranking does not survive the valuation grid.** The lowest Kendall tau between two cells is 0.33 for pleasure and 0.33 for leverage, and 0.60 for net.
+- **Two things do hold in every cell.** F5 is first on net pleasure, because pairs decline to form. F3's contests always end with one partner conceding, never with the settlement.
+
+### Pleasure, arm minus F0, without line 2 (point estimates)
+
+| Cell | F1 | F2 | F3 | F4 | F5 |
+|---|---|---|---|---|---|
+| V0 price only | 0.000 | +0.003 | −0.002 | −0.001 | −0.002 |
+| V1 both attached | 0.000 | +0.002 | −0.002 | −0.001 | −0.009 |
+| V2 split loves | 0.000 | +0.007 | −0.002 | +0.004 | −0.010 |
+| V3 crossed | 0.000 | −0.004 | −0.003 | +0.003 | −0.008 |
+| V4 one-sided B | 0.000 | +0.001 | −0.003 | +0.004 | −0.007 |
+
+With all 18 rule sets (the preregistered quantity), F1 sits at −0.006 to −0.007 in every cell (Holm p 0.0002), all of it from line 2's wall.
+
+The other arms' intervals mostly cross 0. The exceptions:
+
+- F2: +0.006 [+0.003, +0.009] in V2, and −0.004 [−0.007, −0.002] in V3.
+- F4: +0.0035 [+0.0015, +0.0057] in V4.
+
+Net pleasure: F5 is +0.056 to +0.067 in every cell. F3 is about −0.015 in every cell, because the contest's friction lands there.
+
+### Holdout leverage over money and items (each partner's own valuation; reference = the F4 allocation)
+
+| Cell | F0 | F1 | F2 | F3 | F4 | F5 |
+|---|---|---|---|---|---|---|
+| V0 | 0.232 | 0.121 | 0.189 | 0.093 | 0.008 | 0.124 |
+| V1 | 0.376 | 0.274 | 0.137 | 0.072 | 0.016 | 0.108 |
+| V2 | 0.171 | 0.081 | 0.085 | 0.068 | 0.005 | 0.077 |
+| V3 | 0.114 | 0.038 | 0.021 | 0.039 | 0.003 | 0.039 |
+| V4 | 0.130 | 0.039 | 0.183 | 0.040 | 0.003 | 0.041 |
+
+- **The claim rules carry the most leverage.** A partner who walks out first under F0 or F1 takes the items they love most, so when both are attached (V1) F0 reaches 0.38.
+- **"Keep what you brought" (F2) is high whenever the other partner is the one attached to what you brought** (V0, V4): B, who loves everything, gets only the pet.
+- **F4 is near 0 by construction.**
+
+### Stay test, bigger contributor: share of weeks held by the exit rule
+
+| Cell | F0 | F1 | F2 | F3 | F4 | F5 |
+|---|---|---|---|---|---|---|
+| V0 | 0.70 | 0.91 | 0.29 | 0.99 | 0.05 | 0.92 |
+| V1 | 0.45 | 0.61 | 0.28 | 0.98 | 0.03 | 0.92 |
+| V2 | 0.70 | 0.91 | 0.29 | 0.99 | 0.05 | 0.96 |
+| V3 | 0.70 | 0.91 | 0.82 | 0.99 | 0.05 | 0.97 |
+| V4 | 0.70 | 0.91 | 0.29 | 0.99 | 0.05 | 0.97 |
+
+Open cells: 177 to 195 of 540 runs per arm have an exit while items are still joint (F5: 56 to 72). That is about three times slice 1's money-only count, because items do not drain.
+
+### Prereg vs actual (Amendment 1)
+
+| ID | Prediction | Actual | Verdict (descriptive) |
+|---|---|---|---|
+| S1 | in V2 to V4, F4 at or above F1; in V0, F1 to F4 within ±0.005 of F0 except line 2 | F4 − F1: +0.009, +0.008, +0.009; V0 without line 2: 0.000, +0.003, −0.002, −0.001 | holds |
+| S2 | the pleasure ranking does not survive (min tau below 0.6); the leverage ranking does (min tau at least 0.6) | pleasure 0.33; leverage 0.33 | half holds: the pleasure clause holds, the leverage clause misses |
+| S3 | F0 has the highest leverage in all 5 cells; F4 is 0 | F0 highest in 4 of 5 (V4: F2 0.183 > F0 0.130); F4 0.003 to 0.016 | miss (F4 cannot fail, no weight) |
+| S4 | F5 lowest leverage | never; nor in the excluding-F4 reading, where F3, F2 or F1 is lower in every cell | cannot happen as written; the reachable reading misses |
+| S5 | F1 to F3 held share at least 0.9 in every cell | F3 yes (0.98 to 0.99); F1 0.61 in V1; F2 0.28 to 0.82 | miss |
+
+### What slice 2 says, and the weakness
+
+- **The author's lean (F4) is the most robust arm on two counts, but not the best on pleasure.** It is never far from the top on pleasure, it is the only arm with near-zero holdout leverage, and it is the only one that almost never holds the bigger contributor in. Two of those three are close to built in: F4's own allocation is the reference for both leverage and exit cost. The pleasure differences between arms are a few thousandths, inside what a different placeholder grid could reorder.
+- **Holdout over items is real in the model.** Under the claim rules (F0, F1), whoever leaves first takes the thing the other loves.
+- **Contested exits (F3) never settle here.** The partner short of money always concedes everything. That is extraction by patience, and it shows in net pleasure, not in pleasure.
+- **The prenup's effect is through who forms a household, not how it ends.** That is the same as in slice 1.
+
+**Weaknesses, stated plainly:**
+
+- The valuations, prices and weekly item pleasures are placeholders.
+- Pleasure is clipped at 1, and happy households sit near it, which hides some of the item channel.
+- A breach of a stay commitment under a settling arm still gets the settlement (the forfeit is bypassed).
+- The leverage and exit-cost references favour F4.
