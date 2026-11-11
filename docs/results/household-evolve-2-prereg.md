@@ -58,7 +58,7 @@ Reported, no threshold: counts per power against run 1; the loss-report summary 
 
 ## Can every verdict happen? (required; run BEFORE any confirmatory run)
 
-Free check: `uv run pytest -q tests/test_evolve_household2.py -m "slow or not slow"` (6 tests, run before this commit; all pass). The counting and verdict functions are the ones the analysis uses (`scripts/household_evolve2_run.py`).
+Free check: `uv run pytest -q tests/test_evolve_household2.py -m "slow or not slow"` (5 tests, run before this commit; all pass). The counting and verdict functions are the ones the analysis uses (`scripts/household_evolve2_run.py`).
 
 - **Every verdict is reachable.** P1 / P2 "miss": the real run-1 frozen elites give 0 of 16 on every power (`p1_count`, `p2_counts` on docs/results/household-evolve-elites). P1 / P2 "hold": the author's seed repeated 16 times gives 16 of 16. The labels "holds", "meets threshold, not significant" and "miss" are each produced by `verdicts(...)` on synthetic counts (hold: 16 of 16 and p small; miss: all zeros; the threshold-only label on 12 of 16 with a large p). P3 hold and fail: a synthetic member 0.5 bits better than the seed, and the seed itself. P5 hold and fail: the author's seed (both protections) and the trap rule set (neither). P6: a 10% rejection (holds robustly) and 80% (miss).
 - **Every prediction clause can fail.** P1 failed for run 1's elites (0 of 16), so the clause is a real test and not a property of the code. P2's three clauses are separate counts, each failing at 0. P4 fails at a negative mean (-0.01 in the synthetic call). No clause holds whatever the agents do.
