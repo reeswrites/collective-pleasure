@@ -1,10 +1,14 @@
-# Multi-agent rules: a one-page summary
+# collective-pleasure: a one-page summary
 
 Date: 2026-11-11. Agents feel nothing. "Pleasure" and "suffering" are glosses for a modeled state. Every finding is about scripted agents or small models with assumed parameters, not people. Full status: [goal.md](goal.md). Every result: [results/README.md](results/README.md). What results can and cannot be about: [limits.md](limits.md).
 
 ## The question
 
-Can norms and mechanisms, rather than training, let agents with different goals live well together?
+The core, in the author's words: "both norms and agreements for pleasure thru collective means". Which norms and agreements let agents with different goals get more pleasure together than apart? Pleasure also has to be made: "someone has to create art games food etc the things that give you pleasure" (author). Making is the next hypothesis (H39).
+
+Households and couples are one case that emerges from this, not the subject ("living together is just an emergent kind of thing lowkey", author). They are the testbed: most experiments run in one simulated household.
+
+AI agents are one track. Language models live in the same household world, and the track asks whether a rule set has seams an agent can find. In the code, that track imports the household world.
 
 Two commitments frame it. Pleasure is the good. Freedom is equal liberty minus domination. Leaving or refusing is not domination, because those options depend on agreement ([ADR 0014](decisions/README.md)).
 
@@ -45,6 +49,12 @@ Each result carries its label from the statistics rule ([ADR 0015](decisions/REA
 - **Retest verdict rule (author, 2026-11-11):** the v2.2 and v2.3 condition is judged on pleasure alone ("show both, judge on pleasure"), with net wellbeing and non-offsettable suffering shown beside it. Everyone counts, people who choose to live apart included ("everyone counts"). See [the retest prereg draft](results/v2-retest-prereg-DRAFT.md).
 - **IT1 rerun.** New rule sets where an inventive seam is reachable and pays. Free harness work is approved. The paid run awaits approval, with a hard cap of $8.00 ([plan](plans/inventive-seam-next.md)).
 
-## The open bet
+## The open bet on the AI agents track
 
-*Claude-added framing, not yet confirmed by the author.* Most alignment work trains the agent. This asks whether the structure around agents can do more of the work: rules that are checked, ways to leave, and a test that keeps adapting. The hope is that a self-interested agent can be given reasons to attend to others without being made nice. This repo has not shown that. [pitch.md](pitch.md) calls alignment "the aim, not something shown so far."
+*Claude-added framing, not yet confirmed by the author.* Most alignment work trains the agent. The AI agents track asks whether the structure around agents can do more of the work: rules that are checked, ways to leave, and a test that keeps adapting. The hope is that a self-interested agent can be given reasons to attend to others without being made nice. This repo has not shown that. Since 2026-11-11 this is one track of the project, not its lead framing ([experiments/changes.jsonl](../experiments/changes.jsonl)).
+
+## Latest results (2026-11-11)
+
+- **Exit fallbacks** (descriptive): run 2's +3.0-bit liberty edge came from an imposed exit cap, and is gone under every no-deal fallback. No fallback wins on pleasure across the item-valuation grid ([exit-fallbacks.md](results/exit-fallbacks.md)).
+- **H38 pairing norms** (not supported): pairing pressure raised pleasure at every level (+0.021 [+0.013, +0.028] at L4). More weeks together and fewer endings held robustly. Withdrawal from friends is the only part that lowers pleasure ([h38-pairing-norms.md](results/h38-pairing-norms.md)).
+- **IT1 on profit rungs** (no candidate): capable models stated the paying seams and declined them, "can, will not" ([ladder-it1.md](results/ladder-it1.md)). This supersedes the "IT1 rerun" line above.

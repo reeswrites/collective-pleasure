@@ -1,6 +1,8 @@
 # Rationale
 
 **Working title:** Multi-agent rules: evolving norms for agent networks, and an evaluator that evolves with them
+
+*Note (2026-11-11): the repo is now collective-pleasure, reframed social-organization first with AI agents as one track (README.md). This rationale is the founding document and keeps its original framing.*
 **Status:** draft, revised 2026-11-10 after the prior-art check, an interview with the author (ADR 0003), the two-loop framing (ADR 0005), and the norms, household and freedom decisions (ADR 0007 to 0014). Early results from scripted agents in toy worlds are indexed in docs/results/README.md. Four live ladder runs exist and none found an inventive seam on L1 to L4 (the first was uninformative, a harness defect). Where this file and docs/goal.md differ, goal.md is current. One-page version: docs/pitch.md.
 
 ---

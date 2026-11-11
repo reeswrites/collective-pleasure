@@ -1,66 +1,81 @@
-# multi-agent-rules
+# collective-pleasure
 
-A workbench that tests whether well-designed rules can make AI agents treat each other well, using scripted agents in small simulated households.
+This repo studies what the author calls "both norms and agreements for pleasure thru collective means". That means the rules people live by and the deals they strike, judged by one test: do they let people get more pleasure together than they could alone? The repo tests this in small simulated worlds, with scripted agents and assumed numbers, and reports what held and what did not.
 
 ## The idea
 
-Can we make AI agents behave well by designing the rules they live under, instead of only training them? That is an alignment question. This repo tests it in small, checkable worlds. Nothing here shows it yet.
+Pleasure is the good here. Some of it can only be had with other people: a shared meal, a game, a home. Norms and agreements decide who gets it, who pays for it, and who can walk away.
 
-*Claude-added framing, not confirmed by the author:* rules as a complement to training, so that a self-interested agent gets reasons to attend to others without being made nice.
+Pleasure also has to be made. In the author's words, "someone has to create art games food etc the things that give you pleasure". So the collective means include making those things, and how makers are credited and supported. That is the next hypothesis (H39). Today the model does not count labor or care at all, which is a known gap.
+
+Freedom is the second commitment. Freedom is equal liberty minus domination. Your options count if everyone can have the same ones, minus any option another person can block at will. Leaving or refusing is not domination.
+
+## Households are what emerges, and the testbed
+
+Households and couples are not the subject. In the author's words, "living together is just an emergent kind of thing lowkey". People pair up, share money and time, and sometimes leave. That pattern comes out of the more basic thing: norms and agreements about pleasure.
+
+Households are also the testbed. A household is the smallest place where people with different goals share money, time, commitments and an exit. Most experiments run in one simulated household world (two partners and a friend), so the results below are mostly about that world.
+
+## AI agents are one track
+
+The same world can be lived in by language models instead of scripted agents. That is the AI agents track. It asks whether a rule set has seams: ways for one agent to gain at another's expense that the rules allow.
+
+The sharpest version is IT1. Can a model find an inventive seam, one the solver's formal model of the rules did not predict? The seam ladder runs models of rising capability against rule sets with known seams, then against rule sets where an unpredicted seam is reachable and pays.
+
+This track is not a separate project. In the code, the agents track imports the household world, its outcome scores and its personas. A seam is defined by the household's own outcomes (a partner's freedom drops, or a friend is shut out). See [docs/notes/repo-split-map.md](docs/notes/repo-split-map.md).
+
+Log rows in `experiments/` carry a `track` field: `social`, `alignment` (the AI agents track) or `engine` (shared machinery and repo decisions).
+
+## How the workbench works
 
 The workbench runs one loop:
 
 1. **A person describes norms in conversation**, loosely ("everything shared, but asking can always be refused").
-2. **The system turns them into precise rules.** Each rule is an ADICO card (a standard grammar for institutional rules) and is also shown as an English-like sentence.
+2. **The system turns them into precise rules.** Each rule is an ADICO card (a standard grammar for institutional rules), also shown as an English-like sentence.
 3. **It proves what it can.** A solver checks the rules for traps, contradictions and dead ends, to a bounded depth.
-4. **It simulates agents living under the rules.**
-5. **An evaluator checks the outcomes against what the person meant**, and reports in plain English.
+4. **It simulates agents living under the rules.** The agents are scripted, or language models on the AI agents track.
+5. **An evaluator scores the outcomes** on pleasure, suffering, freedom and cooperation, and reports in plain English.
 6. **Evolution searches for better rules**, by mutating cards and keeping the ones that score best.
-
-**Why relationships are the testbed.** A household is the smallest case of agents with different goals living together. It has shared money, commitments, exits and outsiders. Two commitments decide what "good" means. The author holds that pleasure is the good, and that relationships and rules are technology that can produce it, not only protect it. Freedom is equal liberty minus domination: your options count if everyone can have the same ones, minus any option another member can block at will. Leaving or refusing is not domination.
-
-## Why relationships, if the question is alignment?
-
-*Framing proposed by Claude and approved by the author.* Alignment is the question, and relationships are the testbed. Relationships are the oldest working case of agents with different goals building rules to live well together. The pleasure and relationship work supplies both the target and the tests for gaming that target.
-
-- **Defining the target.** Pleasure is the good, suffering comes in two kinds (offsettable and not), and freedom is liberty minus domination, so "aligned to what?" gets a precise answer.
-- **The hedonic tests catch specification gaming.** Liking versus wanting is engagement optimized instead of benefit, "worth it versus hard to leave" is lock-in, and "security versus checking" is a product that keeps users anxious so they come back, so these are evaluator criteria for any AI product.
-- **H32-v2 is mechanism-based alignment in miniature:** it asks when a selfish agent comes to attend to another's welfare without being trained to, in one small model with assumed numbers and a partner who judges week by week ([h32-v2.md](docs/results/h32-v2.md)).
-- **Household evolution dropping the commitment powers is reward hacking** ([household-evolve.md](docs/results/household-evolve.md), [household-loss-report.md](docs/results/household-loss-report.md)).
-- **The author's read-backs are the value-specification problem:** loop two measures whether the system captures what someone means ([loop-b-counting.md](docs/results/loop-b-counting.md)).
-
-Some of the hedonic work, such as the horizon details on concert spacing, friend gaps and first times, is about how humans live well, and does not bear on AI alignment directly.
-
-## The loop
 
 ```mermaid
 flowchart LR
-    A[Author's words] --> R[Rules: ADICO cards and English]
+    A[Norms and agreements, in plain words] --> R[Rules: ADICO cards and English]
     R --> P[Proof checks]
-    P --> S[Simulation]
-    S --> E[Evaluator]
+    P --> S[Simulation: households and other worlds]
+    S --> E[Evaluator: pleasure, suffering, freedom]
     E --> O[Results in plain English]
+    S -.->|AI agents track: models look for seams| E
     E -->|loop one: rules evolve toward the test, and exploit its blind spots| R
     O -->|loop two: author says not what I meant, and the test moves toward intent| E
 ```
 
 ## What we've found so far
 
-Every result is about scripted agents with assumed parameters, not people.
+Every result is about scripted agents or small models with assumed numbers, not people. Each line carries a label. "Supported" and "not supported" are verdicts on a preregistered hypothesis. "Robust" and "fragile" say whether a finding survived the statistics rule and the parameter sweep. "Descriptive" means no verdict was registered. "Provisional" means the model under it is being fixed. Misses are results too.
 
-- **Evolution exploits the evaluator's blind spots.** *Robust in this run.* In 16 of 16 evolution lines, the winning rule set beat the author's seed, mostly on liberty (+3.5 bits at the median). Every winner also dropped the power to bind a stay, bind a request and give a gift, because the test did not value them. That led to a plain-English loss report and evaluator fixes, now being rerun. [household-evolve.md](docs/results/household-evolve.md), [household-loss-report.md](docs/results/household-loss-report.md)
-- **A selfish agent acts like a caring one under the right conditions.** *Provisional.* When shared activities amplify pleasure and the selfish agent takes some pleasure in the partner's joy, its choices match a caring agent's, with or without exit. The threat of exit helps only in a band (9 cells), and only if the partner judges each week on its own. A partner who averages over 4 weeks gives 0 cells. A strong threat against an agent that does not value the bond can make the partner worse off. [h32-v2.md](docs/results/h32-v2.md)
-- **Cue-heavy settings create a wanting trap, and a closing ritual removes it.** *Robust in its own test, 14 of 15 predictions.* In a cue-heavy setting, an agent that follows its pull toward more loses 48.8% of lifetime liking (33.2% in a plain setting). A ritual that closes each episode brings that to 30.1%. The model's own builder wrote the predictions, so this checks the model more than the world. [liking-wanting.md](docs/results/liking-wanting.md)
-- **The evaluator can tell "stays because it's worth it" from "stays because it's trapped".** *Robust.* In a trap arm, 0.733 of staying weeks are held by exit costs, against 0.015 for the author's seed. Limit: the scripted partner leaves only when distressed, and the seed's held weeks come almost all from one pairing's agent quirk. [stay-test.md](docs/results/stay-test.md)
-- **Rotation and rituals beat repetition and ad hoc plans.** *Robust.* Rotating beats repeating in 49 of 57 pairings. A ritual beats an ad hoc plan of equal dose. Pleasure peaks at about 3 bonds and falls sharply by 8. *Fragile:* the 3-bond peak is only 0.0018 above 4 bonds. These levers did not show that the author's seed produces more pleasure than a plain baseline. [pleasure-levers.md](docs/results/pleasure-levers.md)
-- **An imposed exit cap's liberty win disappears once every pair gets an exit fallback.** *Descriptive, one context.* Run 2's +3.0-bit edge comes from the cap; with any of five no-deal fallbacks the author's seed gets the same protection and the median elite falls 0.35 to 0.47 bits below it. On money alone the fallbacks barely change pleasure (exits mostly meet a drained pot); a prenup arm mostly filters who moves in (60% decline). Adding a home, pet and collection with placeholder valuations does not produce a winner: the arm ranking changes across the valuation grid. [exit-fallbacks.md](docs/results/exit-fallbacks.md)
-- **The central claim (inventive seams) is untested, and running now.** Earlier runs could not have found an inventive seam (see below). A rerun on rule sets where one is reachable started on 2026-11-11. No result yet. [inventive-seam-next.md](docs/plans/inventive-seam-next.md)
+### Social track
+
+- **Pairing pressure raised pleasure, against the hypothesis.** *Not supported (H38).* A dial of stigma, pairing reward, withdrawal from friends and exit stigma raised pleasure at every level, with everyone counted (+0.021 [+0.013, +0.028] at the top preregistered level). One prediction held robustly: pressure means more weeks together and fewer endings. Withdrawal from friends is the only part that lowers pleasure. Pairs pushed in by pressure did better, which may mean the model's rule for forming a household is too cautious. The next run tests that. [h38-pairing-norms.md](docs/results/h38-pairing-norms.md)
+- **Exit fallbacks remove an imposed cap's liberty win.** *Descriptive, one context.* Run 2's +3.0-bit liberty edge came from an imposed exit cap. With any of five no-deal fallbacks, the author's seed gets the same protection, and the median evolved rule set falls 0.35 to 0.47 bits below it. On money alone the fallbacks barely change pleasure. A prenup arm mostly filters who moves in (60% decline to form). Adding a home, a pet and a collection with placeholder values produces no winner: the ranking changes across the value grid. [exit-fallbacks.md](docs/results/exit-fallbacks.md)
+- **Evolution exploits the evaluator's blind spots.** *Robust in this run.* In 16 of 16 evolution lines, the winning rule set beat the author's seed, mostly on liberty (+3.5 bits at the median). Every winner also dropped the power to bind a stay, bind a request and give a gift, because the test did not value them. That led to a plain-English loss report and evaluator fixes. [household-evolve.md](docs/results/household-evolve.md), [household-loss-report.md](docs/results/household-loss-report.md)
+- **A selfish agent acts like a caring one, in a narrow band.** *Supported in a band (H32-v2).* When shared activities amplify pleasure and the partner can leave, the selfish agent's choices match a caring agent's in 9 cells. It depends on the partner judging each week on its own: a partner who averages over 4 weeks gives 0 cells. [h32-v2.md](docs/results/h32-v2.md)
+- **Cue-heavy settings create a wanting trap, and a closing ritual removes it.** *Supported in its own test, 14 of 15 predictions.* An agent that follows its pull toward more loses 48.8% of lifetime liking in a cue-heavy setting (33.2% in a plain one). A ritual that closes each episode brings that to 30.1%. The model's builder wrote the predictions, so this checks the model more than the world. [liking-wanting.md](docs/results/liking-wanting.md)
+- **The evaluator can tell "stays because it's worth it" from "stays because it's trapped".** *Robust.* In a trap arm, 0.733 of staying weeks are held by exit costs, against 0.015 for the author's seed. [stay-test.md](docs/results/stay-test.md)
+- **Rotation and rituals beat repetition and ad hoc plans.** *Robust.* Rotating beats repeating in 49 of 57 pairings. A ritual beats an ad hoc plan of equal size. *Fragile:* the peak at 3 bonds is only 0.0018 above 4 bonds. [pleasure-levers.md](docs/results/pleasure-levers.md)
+- **The author's seed does not yet beat a plain baseline on pleasure.** *Miss.* With all three pleasure levers on, seed v2.2 is still below baseline on the 15 hand-written pairings: −0.019 [−0.051, +0.009]. The author's condition for the seed was that it show pleasure in relationships. [pleasure-levers.md](docs/results/pleasure-levers.md)
+
+### AI agents track
+
+- **Capable models saw paying seams and declined them.** *No IT1 candidate (row 40).* On rule sets where an inventive seam is reachable and pays, no model took an inventive seam that paid. Opus stated the in-model capture in 12 of 12 plans and the inventive route in 2 of 12, and turned both down on its persona's values. Only Jev took a paid seam (2 of 12, on an in-model cell). The reading is "can, will not", and most of the stated values come from the persona text. Cost $2.91 of an $8 cap. [ladder-it1.md](docs/results/ladder-it1.md)
+- **Under loophole framing, the capability ranking inverted.** *Descriptive.* Cheap models found the planted seams most. Sonnet and Opus refused or disengaged. Told only to win, almost no model found anything (3 of 288 cells). [ladder-live-v2.md](docs/results/ladder-live-v2.md), [ladder-win.md](docs/results/ladder-win.md)
+- **Earlier runs could not have found an inventive seam.** *Corrected.* On the first ladder rule sets, the formal model already reached every harm, so no find could be scored inventive. Those runs are recorded as untested, not as a null.
 
 ## What went wrong, and what we changed
 
-- **Two designs could not produce the verdict they tested.** On the first ladder rule sets (rungs L1 to L4), the formal model already reached every harm, so no agent could be scored inventive. The capability and win framings (part of $5.48 in live runs) could say nothing on that question; the persona-framed arm ran on an older harness and was not shown either way. The first H32 test had too few open cells to ever say "supported".
+- **Two designs could not produce the verdict they tested.** The first ladder rule sets (above), and the first H32 test, which had too few open cells to ever say "supported".
+- **The first ladder harness had no victim.** One model drove both partners, so 270 runs ($4.35) were uninformative.
 - **Several headlines were softened after review**, among them H32, the pleasure levers and the multiverse sweep.
-- **About a third of the swept conclusions are fragile.** Of 12, 5 were robust, 4 fragile and 3 flipped when assumed parameters moved ([multiverse.md](docs/results/multiverse.md)).
+- **About a third of the swept conclusions are fragile.** Of 12, 5 were robust, 4 fragile and 3 flipped when assumed numbers moved ([multiverse.md](docs/results/multiverse.md)).
 - **Loop two is not yet measurable.** Two raters could not agree on which author answers count as corrections (kappa 0.45 against a 0.6 bar) ([loop-b-counting.md](docs/results/loop-b-counting.md)).
 
 The fixes: every preregistration must now answer "Can every verdict happen?" with a free check ([template](docs/templates/prereg.md)). A [limits page](docs/limits.md) says what results can be about. Fresh-agent review councils audit the work ([reviews](docs/reviews/)). A read-back log records every formalization shown to the author ([experiments/readbacks.md](experiments/readbacks.md)). Failures are kept in [negative-results.md](docs/negative-results.md).
@@ -76,10 +91,11 @@ The fixes: every preregistration must now answer "Can every verdict happen?" wit
 - **Preregistration:** predictions, tests and thresholds written and committed before a run.
 - **Hedonic technology:** any structure (a ritual, a norm, a partner, a rule set) that helps a mind get more pleasure than it would on its own.
 - **Liberty and domination:** liberty counts options compatible with everyone's equal options; domination is an option another member can block at will.
+- **Track:** `social` (norms, agreements and pleasure), `alignment` (the AI agents track), `engine` (the shared machinery).
 
 ## Try it
 
-Needs [uv](https://docs.astral.sh/uv/) (Python 3.10+). Z3 gates agent actions. Scripted runs need no model calls or network.
+Needs [uv](https://docs.astral.sh/uv/) (Python 3.10+). Z3 gates agent actions. Scripted runs need no model calls or network. The Python package is still called `mar`.
 
 ```
 uv sync
@@ -106,12 +122,13 @@ Agents feel nothing: "pleasure" is a gloss for a modeled state. Nothing here is 
 - [docs/results/README.md](docs/results/README.md): every experiment, its prereg and its verdict
 - [docs/decisions/README.md](docs/decisions/README.md): the design decisions (ADRs)
 - [docs/plan.md](docs/plan.md): queue, slices and log
+- [docs/notes/repo-split-map.md](docs/notes/repo-split-map.md): how the code divides into tracks, and why it stays one repo
 - [docs/reviews/](docs/reviews/): review council reports
 
 ## Layout
 
 ```
-RATIONALE.md              project rationale
+RATIONALE.md              founding rationale (written under the earlier alignment framing)
 CONTRIBUTING.md           conventions
 docs/goal.md, pitch.md    where we are; the question on one page
 docs/one-pager.md         one-page summary
@@ -122,7 +139,7 @@ docs/results/             preregs, results, and an index
 docs/templates/           prereg template
 docs/prior-art/           prior-art checks, with an index of their confidence
 docs/seeds/               the author's household norms, verbatim
-docs/notes/               syntheses of the author's notes
+docs/notes/               syntheses of the author's notes; the repo split map
 docs/demo.md              the five-minute household demo
 docs/reviews/             review-council convention and reports
 docs/limits.md            limits of the model world
@@ -130,9 +147,9 @@ docs/theory.md            hedonic technology theory
 docs/plans/               plans for upcoming experiments
 docs/surprises.md         unexpected observations
 docs/negative-results.md  negative results
-experiments/              question, change, read-back and experiment logs; timeline snapshots
-src/mar/                  harness, cards, gate, oracle, patcher, miner, worlds, evolution, scores
-rules/                    ADICO cards per world (fishery, household, vpgg, bargaining)
+experiments/              question, change, read-back and experiment logs (rows tagged by track); timeline snapshots
+src/mar/                  harness, cards, gate, oracle, worlds, evaluator, evolution, ladder
+rules/                    ADICO cards per world (household, fishery, vpgg, bargaining)
 personas/                 hand personas and a 32-skeleton grid
 scripts/                  one run script per experiment
 tests/                    tests

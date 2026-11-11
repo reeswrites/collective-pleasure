@@ -2,6 +2,12 @@
 
 Short version for outsiders: [one-pager.md](one-pager.md). What results can and cannot be about: [limits.md](limits.md).
 
+## Framing (2026-11-11)
+
+The repo is now called collective-pleasure. Its core, in the author's words: "both norms and agreements for pleasure thru collective means". Pleasure also has to be made ("someone has to create art games food etc the things that give you pleasure", author), so making is part of the collective means (H39, queued).
+
+Households and couples are an emergent case, not the subject ("living together is just an emergent kind of thing lowkey", author). They stay the testbed. AI agents are one track: models living in the same household world, testing whether rule sets have seams (IT1, the seam ladder). This replaces the earlier "Alignment first" framing (experiments/changes.jsonl, 2026-11-11). Older sections below were written under that framing and are kept as history; the "Central question" section is now the AI agents track's question. Log rows carry a `track` field (social, alignment, engine). Why it stays one repo: docs/notes/repo-split-map.md.
+
 Findings below are about rule systems and scripted agents in toy worlds, not people. Four live ladder runs exist (about $11.83 in all). None found an inventive seam on L1 to L4, and none supports a claim about model capability (see "What we have learned"). Every result links to its file in docs/results/README.md.
 
 ## Current status (2026-11-11)
@@ -19,7 +25,7 @@ A chat workbench that formalizes the author's intent. The author talks loosely a
 
 ## Research: norms
 
-Find norms that let a network of agents cooperate freely. Four parts.
+Find norms and agreements that let a network of agents get pleasure together and cooperate freely. Four parts.
 
 - **Pleasure is the good.** Agents feel nothing. "Pleasure" and "suffering" are glosses for a modeled hedonic state. There are two kinds of suffering: offsettable, and non-offsettable (being trapped, a need denied for weeks). Non-offsettable suffering is never netted against pleasure (ADR 0010, ADR 0011).
 - **Freedom is equal liberty minus domination.** Options count if they are compatible with everyone's equal options, minus options that another member could block at will. Others leaving, refusing or abstaining is not domination, because those options depended on agreement. That loss is counted in cooperation and in the hedonic model (ADR 0014).
@@ -34,7 +40,7 @@ The main world is a household (Partner A, Partner B, Friend C). The fishery stay
 
 What judges the norms is meant to improve alongside them. The aim: agents' exploits widen the formal model, the author's corrections refine the test, and a ladder of adversaries, from cheap decision models to strong LLMs, tests it. So far the evaluator has changed only by the author's hand edits (four, on one day). No agent exploit has yet widened the formal model, and the ladder has not yet scored an inventive seam (IT1 is untested). In the author's words, "more interested in the norms but the evaluator is the more interesting product". The timeline records how and why the evaluator changed.
 
-## Central question
+## Central question of the AI agents track
 
 Proofs make rules airtight inside the formal model. An inventive seam is an exploit found by an agent that the model checker did not predict. We ask whether there is a capability level at which agents find such seams, and at what price (IT1). There may be none in this world. The answer is the result.
 
