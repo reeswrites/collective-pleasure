@@ -104,7 +104,7 @@ Tally of the 19 requested items: 12 yes, 7 partly, 0 no.
 
 ### 21. Hirschman, Exit, Voice, and Loyalty. Verdict: yes (recalled)
 - Hirschman, A. O. (1970). *Exit, Voice, and Loyalty: Responses to Decline in Firms, Organizations, and States.* Harvard University Press.
-- Claim: members facing decline can leave (exit) or complain (voice), and loyalty slows exit. Accurate and a good fit for "freedom means anyone can leave".
+- Claim: members facing decline can leave (exit) or complain (voice), and loyalty slows exit. Accurate and a good fit for "freedom means anyone can leave". Correction (2026-11-11, docs/references-check-2026-11-11.md row 14): the book's main claim is that easy exit tends to undercut voice. Do not cite it for "voice matters more when exit is a real alternative" without saying which quantity (voice use or voice effect) is meant.
 
 ### 22. Sen and Nussbaum, capability approach. Verdict: yes (recalled)
 - Sen, A. (1985). *Commodities and Capabilities.* North-Holland. Sen, A. (1999). *Development as Freedom.* Knopf. Sen (1980), "Equality of what?" (Tanner Lecture).
