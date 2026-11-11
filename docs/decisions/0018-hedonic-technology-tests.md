@@ -1,6 +1,6 @@
 # 0018. The three tests of hedonic technology are evaluator criteria
 
-Status: proposed (2026-11-10). Not yet accepted by the author.
+Status: accepted (2026-11-10). The author answered "Yes, test 2 first" when asked to accept this ADR and build test 2 first.
 
 Wording rule: agents feel nothing; "pleasure" and "suffering" are glosses for a modeled hedonic state (ADR 0010).
 
@@ -35,5 +35,5 @@ A rule set is not rejected by one failing test. The tests are reported beside th
 - The model gains version 3 pieces (wanting and liking split, a checking loop) before tests 1 and 3 can run. Test 2 can run on the current negotiation and exit machinery.
 - The evaluator can warn about a trap quadrant that pleasure scores hide, as the horizon study showed greedy scoring hides carried-over loss.
 - Risk: the measures are built from assumed parameters and will show what the model puts in. Each needs a sweep and, where possible, a control with the mechanism off.
-- Not decided: thresholds for "fails a test", and whether the first build is test 2 (cheapest) or test 1 (the author's central worry).
+- Build order decided by the author: test 2 first. Still not decided: thresholds for "fails a test".
 - Related hypotheses: H24 to H28 in docs/hypotheses.md.
