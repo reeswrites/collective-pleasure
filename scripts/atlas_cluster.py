@@ -57,10 +57,22 @@ def main():
         if kk >= 2:
             la, _, _ = AT.best_kmedoids(D, kk, restarts=10)
             alt[kk] = AT.ari(lab, la)
+    # duplicates: the EF context often plays the same household identically across arms and the two seeds. Sensitivity check:
+    # recluster one copy of each distinct trajectory and compare with the full-sample labels on those runs.
+    first = {}
+    for i, r in enumerate(recs):
+        sig = json.dumps([[x["A"]["acts"], x["B"]["acts"], x["A"]["pl"], x["B"]["pl"]] for x in r["rows"]])
+        first.setdefault(sig, i)
+    uq = np.array(sorted(first.values()))
+    Xu, Zu, _, _ = AT.matrix([feats[i] for i in uq])
+    ku, silu = AT.choose_k(Zu)
+    lu, _, _ = AT.best_kmedoids(AT.dist(Zu), k, restarts=20)
+    dedup = {"distinct": int(len(uq)), "k_rule_on_distinct": int(ku), "silhouette_distinct": {int(a): b for a, b in silu.items()},
+             "ari_same_k_vs_full": AT.ari(lab[uq], lu)}
     gs = [groups(r) for r in recs]
     out = {"n": len(recs), "k": int(k), "silhouette": {int(a): b for a, b in sil.items()}, "ari_resample": st["ari"],
            "ari_mean": float(np.mean(st["ari"])), "jaccard": st["jaccard"], "ari_neighbor_k": {int(a): b for a, b in alt.items()},
-           "features": list(AT.CLUSTER_FEATURES), "overall_mean": dict(zip(AT.CLUSTER_FEATURES, mu.round(4).tolist())),
+           "dedup": dedup, "features": list(AT.CLUSTER_FEATURES), "overall_mean": dict(zip(AT.CLUSTER_FEATURES, mu.round(4).tolist())),
            "clusters": []}
     for c in range(k):
         idx = np.where(lab == c)[0]
@@ -127,6 +139,7 @@ def main():
 def dump(out):
     L = [f"n {out['n']}, k {out['k']}, silhouette {out['silhouette']}, ARI resample mean {out['ari_mean']:.3f} "
          f"(min {min(out['ari_resample']):.3f}), neighbor-k ARI {out['ari_neighbor_k']}"]
+    L.append("dedup: " + json.dumps(out["dedup"]))
     L.append("overall means: " + json.dumps(out["overall_mean"]))
     for c in out["clusters"]:
         L.append(f"\n## cluster {c['id']}: size {c['size']}, Jaccard {c['jaccard']}")
