@@ -12,7 +12,7 @@ Rebalanced 2026-11-11 at the author's word ("Rebalance"), after the scope review
 4. **H05, the breach-cost agent** (free, scripted), once the machine load allows.
 5. **The v2.3 retest** after the household fixes (pleasure minus suffering; baseline may decline). Then pause the hedonic list.
 
-Deferred by the freeze: H02, H25 to H31, H33, H32c, and the attune-style ladder variant. H35 runs because it had already started.
+Deferred by the freeze: H02, H25 to H31, H33, H32c. H35 runs because it had already started. The attune-style ladder variant (H32d: the partner calms only when its own pleasure improves, never on a concession) was approved by the author separately and runs after H35.
 
 ## Slices
 
