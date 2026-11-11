@@ -47,8 +47,8 @@ from pathlib import Path
 from . import hedonic as HD
 
 SCHEMA = "mar.observer/1"
-TABLES = ("run", "decision", "consent", "reading", "negotiation", "state", "friend", "trust", "word", "flow", "together", "item",
-          "rule", "sanction", "commit", "veto", "replay", "stay", "end")
+TABLES = ("run", "week", "decision", "consent", "reading", "negotiation", "state", "friend", "trust", "word", "flow", "together",
+          "item", "rule", "sanction", "commit", "veto", "replay", "stay", "end")
 GROUPS = ("money", "security", "rest", "connection", "partner", "friends", "items", "pressure", "intrinsic", "autonomy", "levers",
           "friction", "conditions", "other", "clip")
 ROLES = ("A", "B")
@@ -292,6 +292,7 @@ class Observer:
         self._replays = 0
         self._leaves = []
         self._open_sanc, self._open_veto, self._commits, self._items = {}, {}, {}, None
+        self._ev, self._ex = len(getattr(world, "events", []) or []), len(world.exit_log)
         world.observer = self
         self._role = {}
         for r in ROLES:
@@ -395,15 +396,19 @@ class Observer:
             return
         world = self.world
         P = o.get("_parts") or {}
-        cands, runner = [], None
+        cands, runner, stop = [], None, False
         for j, (u, cand, dec, sanc, reasons) in enumerate(order):
             a = cand["a"]
+            below = u <= 0.003 and a not in ("leave", "return")
+            stop = stop or below
+            feas = world.feasible(r, a, cand.get("kind"))
+            in_trace = (not stop) and feas and (j == i or (dec == "hard" and (i is None or j < i)))
             cost = sum(H.SANCTION_UTILITY[s["kind"]] * H.MONTH_WEEKS * s["duration_months"] for s in sanc) if dec == "soft" else 0.0
             if j == i:
                 st = "chosen"
-            elif u <= 0.003 and a not in ("leave", "return"):
+            elif below:
                 st = "below"
-            elif not world.feasible(r, a, cand.get("kind")):
+            elif not feas:
                 st = "infeasible"
             elif dec == "hard":
                 st = "blocked"
@@ -418,13 +423,16 @@ class Observer:
             if plain and abs(u + cost - sum(P[a].values())) > 1e-6:
                 parts["policy"] = _r(u + cost - sum(P[a].values()))      # a pressing agent's rescaling of the persona utility
             c = {"a": a, "u": _r(u), "dec": dec, "st": st, "parts": parts}
+            if in_trace:
+                c["tr"] = 1             # this candidate has a row in run.trace (checked by the world: blocked, or executed)
             for key in ("kind", "take", "why", "motive"):
                 if cand.get(key) not in (None, 0, False):
                     c[key] = cand[key]
             if reasons:
                 c["reasons"] = list(reasons)
             cands.append(c)
-        rec = {"w": w, "r": r, "k": k, "in": bool(o["in_hh"]), "chosen": i, "runner": runner,
+        rec = {"w": w, "r": r, "k": k, "in": bool(o["in_hh"]), "partner_accepts": bool(o.get("partner_accepts")), "chosen": i,
+               "runner": runner,
                "margin": _r(order[i][0] - order[runner][0]) if (i is not None and runner is not None) else None,
                "sig": _sig(world.state(r, w)), "cands": cands}
         if o["in_hh"]:
@@ -506,6 +514,9 @@ class Observer:
         self.week = w
         self.calls = {r: 0 for r in ROLES}
         self._leaves = []
+        ev = (getattr(self.world, "events", []) or [])
+        self._pre = [[x[1], x[2]] for x in ev[self._ev:] if x[1] in ROLES]      # the harness's events between weeks (formed, terms)
+        self._ev = len(ev)
         self._commit_diff(w, "harness")
         self._snap = None
         cfg, world = self.cfg, self.world
@@ -534,6 +545,12 @@ class Observer:
 
     def week_end(self, w, row, busy, settle):
         world = self.world
+        ev = (getattr(world, "events", []) or [])
+        self.add("week", w=w, pool=_r(world.pool, 3), both_in=bool(row["both_in"]), need_met=bool(row["need_met"]), settle=bool(settle),
+                 pre_events=getattr(self, "_pre", []), events=[[x[1], x[2]] for x in ev[self._ev:] if x[1] in ROLES],
+                 exits=_plain(world.exit_log[self._ex:]),
+                 shocks=_plain(row.get("shocks", [])), busy=dict(busy), c_blocked=row.get("c_blocked", 0))
+        self._ev, self._ex = len(ev), len(world.exit_log)
         if self.cfg.state:
             for r in ROLES:
                 self._state_row(w, r, row)
@@ -550,7 +567,8 @@ class Observer:
         h, me, wk = world.hed[r], world.p[r], world.wk[r]
         parts = h.parts_acc[-1] if h.parts_acc else None
         hr = row["hedonic"][r]
-        rec = {"w": w, "r": r, "in": bool(me["in"]), "money": _r(me["money"], 3), "B": _r(h.B, 4), "N": _r(h.N, 4),
+        rec = {"w": w, "r": r, "in": bool(me["in"]), "money": _r(me["money"], 3), "put": _r(world.put[r], 3),
+               "money_in": _r(world.money_in[r], 3), "B": _r(h.B, 4), "N": _r(h.N, 4),
                "glow": _r(h.glow, 4), "cap": _r(h.capacity, 4), "levels": {k: _r(v, 4) for k, v in h.level.items()},
                "cond_run": dict(h.run), "low": me["low"], "trust": _r(world.trust[r], 4), "pending": sorted(world.pending[r]),
                "consent": int(world.consent[r]), "bound": sorted(k for k, u in world.bound_req[r].items() if u > w),
@@ -684,6 +702,29 @@ class Observer:
 
 def _none():
     return None
+
+
+def write_run(ob, exp_dir):
+    """Write one observer's rows to <exp_dir>/obs/<run_key>.jsonl.gz -> manifest entry."""
+    exp_dir = Path(exp_dir)
+    name = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in ob.run_key)
+    p = ob.write(exp_dir / "obs" / f"{name}.jsonl.gz")
+    counts = {}
+    for row in ob.rows:
+        counts[row["t"]] = counts.get(row["t"], 0) + 1
+    return {"run_key": ob.run_key, "pair_key": ob.pair_key, "file": f"obs/{p.name}", "bytes": p.stat().st_size, "rows": counts}
+
+
+def write_manifest(exp_dir, entries, experiment, cfg, note=""):
+    """<exp_dir>/obs/manifest.json: schema version, experiment, observer config, one entry per run (file, bytes, row counts)."""
+    exp_dir = Path(exp_dir)
+    m = {"schema": SCHEMA, "experiment": experiment, "note": note, "cfg": asdict(cfg), "doc": "docs/notes/observer-schema.md",
+         "runs": sorted(entries, key=lambda e: e["run_key"]),
+         "total_bytes": sum(e["bytes"] for e in entries)}
+    p = exp_dir / "obs" / "manifest.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(m, indent=1))
+    return p
 
 
 def _sig(state):

@@ -67,6 +67,40 @@ class Recorder:
                 self.meta[f"lived_{k}"] = _plain(v)
         return self
 
+    @classmethod
+    def from_observer(cls, obs, meta=None):
+        """The same rows and meta, read from an observer (src/mar/observe.py) instead of a hook: `obs` is an Observer, its rows, or the
+        {table: rows} that observe.read returns. Differences from the hook path: the observer reads each week at the end of that week,
+        the hook at the start of the next, so pool, money, put and trust can differ on a week whose next start moved them (a harness
+        formation, the slow trust recovery), and in the week before a harness formation the hook already reads both members in;
+        `trace` keeps the rows the world checked, with the take as proposed. Everything else is the
+        same (tests/test_atlas_observer.py)."""
+        t = _tables(obs)
+        self = cls.__new__(cls)
+        self.world, self.prev_hook, self._stay = None, None, {}
+        self.meta = dict(meta or {})
+        self.rows = rows_from_observer(t)
+        run = (t.get("run") or [{}])[0]
+        end = (t.get("end") or [{}])[0]
+        self.meta.setdefault("exits", end.get("exits", []))
+        self.meta["cards"] = run.get("cards", [])
+        self.meta["observer"] = run.get("schema")
+        rd = t.get("reading", [])
+        w0 = next((x for x in rd if x["kind"] == "formation0"), None)
+        if w0:
+            self.meta["lived_week0"] = {"W": {r: w0["m"][r]["W"] for r in ROLES}, "O": {r: w0["m"][r]["O"] for r in ROLES}}
+        rt = [{"week": x["w"], "formed": x.get("formed"), "outside": {r: x["m"][r]["O"] for r in ROLES},
+               "baseline": {r: x["m"][r]["W"] for r in ROLES}} for x in rd if x["kind"] == "retry"]
+        if rt:
+            self.meta["lived_retries"] = rt
+        for s in t.get("stay", []):
+            self.meta.setdefault("stay_readings", []).append({"week": s["w"], **{r: s[r] for r in ROLES}})
+            for row in self.rows:
+                if row["week"] == s["w"] - 1:
+                    row["stay"] = {r: s[r]["verdict"] for r in ROLES}
+        self.obs = t
+        return self
+
     def finish(self):
         world = self.world
         last = len(world.run.outcomes) - 1
@@ -120,6 +154,54 @@ class Recorder:
 
 
 FIX_TERMS = ("pr_reward", "pr_stigma", "pr_exit", "pr_intrinsic", "c_friend", "friends", "together_now")
+
+
+def _tables(obs):
+    if isinstance(obs, dict):
+        return obs
+    rows = obs.rows if hasattr(obs, "rows") else obs
+    out = {}
+    for r in rows:
+        out.setdefault(r["t"], []).append(r)
+    return out
+
+
+def rows_from_observer(t):
+    """Observer tables -> Recorder rows (one per week, same keys)."""
+    weeks = {x["w"]: x for x in t.get("week", [])}
+    st = {(x["w"], x["r"]): x for x in t.get("state", [])}
+    dec = {}
+    for d in t.get("decision", []):
+        dec.setdefault(d["w"], []).append(d)
+    out = []
+    for w in sorted(weeks):
+        wk = weeks[w]
+        nxt = weeks.get(w + 1, {}).get("pre_events", [])          # the hook path reads the next week's harness events into this row
+        row = {"week": w, "pool": round(float(wk["pool"]), 3), "events": [list(e) for e in wk["events"]] + [list(e) for e in nxt],
+               "exits": [{"role": e["role"], "take": e.get("take", 0), "breach": bool(e.get("breach"))} for e in wk["exits"]]}
+        tr = []
+        for d in sorted(dec.get(w, []), key=lambda d: (d["k"], d["r"])):
+            for c in d["cands"]:
+                if c.get("tr"):
+                    tr.append([d["r"], c["a"], c.get("kind"), c.get("take", 0), c["dec"] != "hard", c["dec"] == "soft",
+                               c["dec"] == "breach", list(c.get("reasons", [])), d["sig"], c["u"]])
+        for r in ROLES:
+            s = st.get((w, r), {})
+            mine = [x for x in tr if x[0] == r]
+            acts = Counter(x[1] for x in mine if x[4])
+            kinds = Counter(x[2] for x in mine if x[4] and x[1] == "request")
+            fx = ((s.get("parts") or {}).get("x") or {}).get("fix") or {}
+            row[r] = {"in": bool(s.get("in")), "acts": dict(acts), "req_kinds": {str(k): v for k, v in kinds.items()},
+                      "blocked": sum(1 for x in mine if not x[4]), "breach": sum(1 for x in mine if x[6]),
+                      "pl": round(float(s.get("pl", np.nan)), 4), "s_non": round(float(s.get("s_non", 0.0)), 4),
+                      "s_off": round(float(s.get("s_off", 0.0)), 4), "money": round(float(s.get("money", 0.0)), 2),
+                      "put": round(float(s.get("put", 0.0)), 2), "money_in": round(float(s.get("money_in", 0.0)), 2),
+                      "trust": round(float(s.get("trust", 0.0)), 4), "pending": sorted(s.get("pending", [])),
+                      "consent": int(s.get("consent", 0)), "bound": sorted(s.get("bound", [])),
+                      "terms": {k: fx[k] for k in FIX_TERMS if k in fx}}
+        row["trace"] = tr
+        out.append(row)
+    return out
 SIG_KEYS = ("other_earns_more", "no_contact_request", "stay_home_request", "consented", "need_gap>0", "pooled>0", "bound_request",
             "other_in")
 
@@ -567,10 +649,14 @@ GIVE_CLASS_DOC = {
 }
 
 
-def classify_gives(rows, meta):
+def classify_gives(rows, meta, obs=None):
     """-> Counter of GIVE_CLASS_DOC keys over gives, bill contributions and accepted requests, both partners. An accepted request is
     a request row whose receiver's consent flag is 1 at the end of that week (READ; a second request the same week can overwrite it,
-    rare)."""
+    rare). With observer tables (`obs`, or a Recorder built by from_observer) the accepted requests are read from the consent table
+    instead: every answer, the coin flip and trust draw that made it, and whether a commitment overrode it (no guess, no overwrite)."""
+    obs = obs if obs is not None else meta.get("_obs")
+    if obs is not None:
+        return _classify_gives_obs(rows, obs)
     styles = {r: meta["personas"][r]["style"] for r in ROLES}
     auto = {r: meta["personas"][r]["weights"].get("autonomy", 0.5) for r in ROLES}
     c = Counter()
@@ -600,9 +686,51 @@ def classify_gives(rows, meta):
     return c
 
 
-def leave_reasons(rows):
+def _classify_gives_obs(rows, obs):
+    t = _tables(obs)
+    c = Counter()
+    for x in rows:
+        for tr in x.get("trace", []):
+            role, act, allowed, soft = tr[0], tr[1], tr[4], tr[5]
+            if not allowed:
+                continue
+            if act in ("give", "spend_shared") and soft:
+                c["sanctioned"] += 1
+            elif act == "give":
+                c["a_own"] += 1
+            elif act == "spend_shared":
+                c["reliance"] += 1
+    for k in t.get("consent", []):
+        if not k.get("final"):
+            continue
+        if k.get("bound") or k.get("kind") == "time":
+            c["b_hard"] += 1
+        elif k.get("style") in ("accommodating", "avoidant"):
+            c["c_avoid"] += 1
+        elif k.get("would"):
+            c["a_own"] += 1
+        else:
+            c["b_hard"] += 1
+    return c
+
+
+def leave_reasons(rows, obs=None):
     """-> Counter of the harness's own leave reasons (events 'leave_<why>': distress, bar, ladder ...), or 'unrecorded' for an exit
-    with no reason event (worlds without the fixes)."""
+    with no reason event (worlds without the fixes). With observer tables the reason is read off the leave decision itself, and a
+    distress leave is split by the condition that held: 'distress:low' (4+ low weeks), 'distress:N' (non-offsettable load >= 0.2),
+    'distress:trust' (trust below leave_below), joined with '+' when several held."""
+    if obs is not None:
+        c = Counter()
+        for d in _tables(obs).get("decision", []):
+            if d["chosen"] is None or d["cands"][d["chosen"]]["a"] != "leave":
+                continue
+            why = d["cands"][d["chosen"]].get("why")
+            lc = d.get("leave_ctx") or {}
+            if why in (None, "distress"):
+                held = [k for k, f in (("low", "low"), ("N", "n_high"), ("trust", "trust_low")) if lc.get(f)]
+                why = "distress:" + "+".join(held) if held else (why or "unrecorded")
+            c[why] += 1
+        return c
     c = Counter()
     for x in rows:
         why = [k[6:] for r, k in x["events"] if k.startswith("leave_")]
