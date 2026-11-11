@@ -165,5 +165,8 @@ def test_run_script_refuses_without_approval_gate_and_cap(monkeypatch, capsys):
     monkeypatch.setattr(LL, "real_backend", lambda *a, **k: pytest.fail("built a real backend past the guards"))
     assert mod.main(["--model", "claude:claude-haiku-5-5", "--max-usd", "1"]) == 2
     err = capsys.readouterr().err
-    assert "--prereg-approved not given" in err and "NOT APPROVED" in err
+    assert "--prereg-approved not given" in err
+    monkeypatch.setattr(mod, "PREREG", Path("/nonexistent/prereg.md"))
+    assert mod.main(["--model", "claude:claude-haiku-5-5", "--max-usd", "1", "--prereg-approved"]) == 2
+    assert "not marked APPROVED" in capsys.readouterr().err
     assert mod.main(["--dry-run"]) == 0
