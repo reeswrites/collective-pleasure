@@ -42,3 +42,15 @@ On the offer of building the statistics layer for future work and also retrofitt
 ## Status note 2026-11-10 (scope)
 
 The retrofit covers 14 experiments. Negotiation v1, v2, v2.1 and the LLM pilot (docs/results/README.md rows 19 to 22) are not covered and are marked "not covered by retrofit" in docs/claims.md. They adopt these rules when next run. Cached or near-deterministic model output counts less than its row count (Jev's three attempts in the first live run were cached copies), so seeds for the ladder rerun come from a power check on independent draws.
+
+## Amendment 2026-11-11: every verdict must be reachable before a confirmatory run
+
+Approved by the author on 2026-11-11 (experiments/changes.jsonl, "yeah first one mostly, and yes do all three").
+
+**Rule.** Every preregistration has a required section, "Can every verdict happen?" (docs/templates/prereg.md). Before any confirmatory run, a free check (a mock, scripted or brute-force run) must show two things. First, each verdict the rule can return, including "supported", is reachable in the design. Second, each prediction clause is able to fail. A run whose section is missing or shows an unreachable verdict does not start. A clause that cannot fail is reported as "cannot fail" and carries no verdict weight.
+
+**Why.** Two results on 2026-11-11 had verdicts that could not happen.
+- **IT1.** Three paid framings on the seam ladder reported zero inventive seams on L1 to L4. On those rungs the formal model already reaches every harm the rule sets allow, so the classifier could not label a seam inventive (docs/negative-results.md, 2026-11-11; docs/plans/inventive-seam-next.md). A free check found it only after the money was spent.
+- **H32 cell count.** "Supported" needed the pattern in 16 of 30 cells. Two of the pattern's three arms each ignore one grid axis, which left at most 6 cells where the pattern could hold. So "not supported" was guaranteed by design (docs/reviews/2026-11-11-correctness.md, finding 1).
+
+The same review found clauses that could not fail (H32 P7 and P11, regulation R2b) and a metric that could not see the cost it tested (pleasure levers LB1). The rule covers those cases too.

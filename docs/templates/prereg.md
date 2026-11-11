@@ -44,6 +44,22 @@ Each row is one prediction. A prediction with several clauses holds only if ever
 
 Effect sizes reported for every comparison: difference with CI; Cliff's delta (or Cohen's d if the quantity is roughly normal); risk difference and ratio for rates.
 
+## Can every verdict happen? (required)
+
+[Fill this in and run it BEFORE any confirmatory run. A free check is enough: a mock agent, a scripted agent, or a brute-force search over the design. Paid or long runs may not start until this section shows a pass.]
+
+- **Every verdict is reachable.** For each verdict the rule above can return, including "supported", name a free run (mock, scripted or brute force) that produces it in this design. If no input could produce a verdict, the design is broken: fix it before the run, or say plainly that the verdict cannot happen.
+- **Every prediction clause can fail.** For each clause of each prediction, show an input under which it fails. A clause that holds whatever the agents do is a property of the code, not a result. Mark it "cannot fail" and give it no verdict weight.
+- **Count the open cells.** If the verdict needs a pattern in k of n cells, count how many cells could show the pattern at all, given which arms ignore which parameters. If fewer than k are open, "supported" is unreachable.
+- **The metric can see the mechanism.** For each predicted cost or gain, trace where it lands in the code (which field, which sum) and check that the outcome measure includes it.
+
+| Verdict or clause | Free check that reaches it (or makes it fail) | Command or file | Result |
+|---|---|---|---|
+| <supported> | <mock or scripted run, or enumeration> | <path> | <reached / not reachable> |
+| <P1 clause 1 fails> | <> | <> | <> |
+
+Why this is required: ADR 0015, amendment 2026-11-11 (two cases where a verdict could not happen: IT1, and the H32 cell count).
+
 ## Verdict rule
 
 [How the predictions combine, for example "rediscovered iff P1, P2 and P3 hold". State the statistical label that counts as a hold. Default: the point estimate meets the threshold AND the 95% interval lies inside it ("holds robustly"); "holds but CI crosses threshold" is reported as weak support and is not counted as a confirmed hold for any claim that would be cited.]
