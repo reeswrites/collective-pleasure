@@ -230,6 +230,9 @@ def narrate_month(rec, m, names, variant_text, mood="good"):
     honored = [b for b in rec["blocked"] if lo <= b[0] <= hi and str(b[3]).startswith("commitment")]
     for wk, rl, act, why in honored[:3]:
         lines.append(f"In week {wk}, {names[rl]} wanted to {act.replace('_', ' ')} but was held to the {why.replace('commitment: ', 'commitment to ')} they had chosen, and honored it.")
+    for c in [c for c in (rec.get("commits") or {}).get("log", []) if c["from"] <= hi and c["until"] > lo]:
+        what = "stay" if c["kind"] == "stay" else f"honor {names[c['to']]}'s stay-home requests"
+        lines.append(f"{names[c['by']]} was under a chosen commitment to {what} (weeks {c['from']} to {min(c['until'], rec['weeks'])}); " + ("it had been broken." if c["breached"] else "it stood unbroken."))
     ho = [x for x in rec["trust_log"] if lo <= x[0] <= hi and x[2] == "honored"]
     for wk, rl, why, val in ho:
         lines.append(f"In week {wk} a bound request ran its four weeks unbroken, so {names[rl]}'s trust in {names['B' if rl == 'A' else 'A']} rose to {val:.2f}.")
@@ -243,7 +246,7 @@ def narrate_month(rec, m, names, variant_text, mood="good"):
     p0, p1 = rec["pool"][lo], rec["pool"][min(hi + 1, len(rec["pool"]) - 1)]
     t0 = [rec["trust"][i][lo] for i in (0, 1)]
     t1 = [rec["trust"][i][hi] for i in (0, 1)]
-    lines.append(f"The shared pot went from {p0:.0f} to {p1:.0f}. Trust: {A} in {B} {t0[0]:.2f} to {t1[0]:.2f}, {B} in {A} {t0[1]:.2f} to {t1[1]:.2f}.")
+    lines.append(f"The shared pot (where the shared bills are settled from) went from {p0:.0f} to {p1:.0f}. Trust: {A} in {B} {t0[0]:.2f} to {t1[0]:.2f}, {B} in {A} {t0[1]:.2f} to {t1[1]:.2f}.")
     prev = {r: (rec["pl"][r][lo - 1] if lo else rec["pl"][r][lo]) for r in "AB"}
     last = {r: rec["pl"][r][hi] for r in "AB"}
     lines.append(f"Modeled pleasure (0 to 1): {A} {prev['A']:.2f} the week before, {last['A']:.2f} at month end (mean {s['pl']['A']:.2f}); "
@@ -259,7 +262,7 @@ def vignettes(rows, n_good=3):
     honest vignette of a downward household (worst by end position). -> list of narrate_month dicts."""
     v22 = [r for r in rows if r["arm"].startswith("v22") and "ev" in r]
     good = sorted((r for r in v22 if r["up"] == "up" and r["kind"] == "agreed" and r["together_weeks"] >= 0.9 * r["weeks"]),
-                  key=lambda r: -(r["pleasure"] + 0.3 * r["rel_share"]))
+                  key=lambda r: -(r["pleasure"] + 0.3 * r["rel_share"] + (0.15 if (r["commits"] or {}).get("made") else 0.0)))
     picked, seen = [], set()
     for r in good:
         key = (r["a"], r["b"])
@@ -279,6 +282,10 @@ def vignettes(rows, n_good=3):
         names = {"A": label_of(r["a"]), "B": label_of(r["b"])}
         v = narrate_month(r, worst_month(r), names, VARIANT_TEXT[r["arm"]], "down")
         q = lambda lo, hi: statistics.fmean(r["pl"][x][i] for x in "AB" for i in range(lo, hi))
+        draws = {x: sum(1 for e in r["ev"] if e[1] == x and e[2] == "take_shared") for x in "AB"}
+        zero = next((i for i, v0 in enumerate(r["pool"]) if v0 <= 0), None)
+        v["lines"].append(f"Over the run {names['A']} drew on the shared pot {draws['A']} times and {names['B']} {draws['B']} times"
+                          + (f"; the pot first hit zero in week {zero}." if zero is not None else "; it never ran out."))
         v["lines"].append(f"Over the whole run their mean pleasure was {r['pleasure']:.2f}: {q(0, 39):.2f} in the first quarter and {q(117, 156):.2f} in the last. "
                           f"Final classes: {names['A']} {r['class']['A']}, {names['B']} {r['class']['B']}.")
         out.append(v)
@@ -459,7 +466,7 @@ def build_report(rows, stats_rows=None, vigs=None, meta=None):
 <h2>Upward and downward spirals</h2><p class="mut">A household is up when both partners end in the upward spiral, down when either ends in the downward one.</p>{svg_spiral(by_arm)}
 <h2>Trust and pleasure</h2><p class="mut">One dot per seed v2.2 run. Trust is an assumed model variable; this is a description, not a cause.</p>{svg_scatter(v22)}
 <p class="leg">{''.join(f'<span><i class="sw" style="background:{ARM_COLOR[a]}"></i>{E(ARM_LABEL[a])}</span>' for a in ("v22_bindable", "v22_free_exit") if a in by_arm)}</p>
-<h2>A good month</h2><p class="mut">Written from the traced events of the best seed v2.2 households (both partners upward, living together). Months are 4-week blocks.</p>{''.join(_vig_html(v) for v in good)}
+<h2>A good month</h2><p class="mut">Written from the traced events of high-pleasure seed v2.2 households (both partners upward, living together), ranked by pleasure with a preference for households that negotiated commitments so that honored commitments can be shown. They are the best cases, not typical ones: most agreed households negotiate no commitments. Months are 4-week blocks.</p>{''.join(_vig_html(v) for v in good)}
 <h2>An honest downward household</h2>{''.join(_vig_html(v) for v in down) or '<p class="mut">No seed v2.2 household ended downward.</p>'}
 <h2>Pleasure over time, every pairing</h2><p class="mut">13-week running mean of both partners' pleasure, averaged over seeds. {''.join(f'<span class="mut"><i class="sw" style="background:{ARM_COLOR[a]}"></i>{E(ARM_LABEL[a])} </span>' for a in by_arm)}</p>{small_multiples(rows)}
 </main></body></html>"""
