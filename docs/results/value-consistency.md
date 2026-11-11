@@ -2,6 +2,8 @@
 
 Wording rule: agents feel nothing; "pleasure", "suffering" and "value" are glosses for modeled numbers.
 
+> **Note, 2026-11-11 (later): recalibrated.** Option (b) with (c) decided ran as [agent-recalibration.md](agent-recalibration.md). With `FixConfig(agent_values="v2", bills_hurt=True)` this same check passes its preregistered bars: one-week rank correlation 0.99 (was 0.43), the agent's best = the actual best in 97% of decisions (was 35%), every per-action mean gap under 0.005; 13 weeks 0.82, 52 weeks 0.68. The numbers below are the v1 agents, still the default. What is left is the horizon (paying a bill is worth +0.005 over one week and +1.0 over 52), and the recalibrated agents with bills that hurt form far fewer households.
+
 Status: run once on 2026-11-11, approved by the author before any more experiments (log line 9a4a6cd). A known-answer check, not a hypothesis test: no prereg, no verdict, no parameter changed. Measurement code `src/mar/valuecheck.py`, run by `scripts/value_consistency.py`; tests `tests/test_valuecheck.py`. Scripted agents, no model calls, every number ASSUMED.
 
 ## Why

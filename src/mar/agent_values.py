@@ -79,6 +79,7 @@ def snapshot(world, r, w):
             s["pick"] = world._pick_bond(r)
             s["_strand_memo"] = {}          # shared by the snapshot's advanced copies: bond quality depends on sessions and visits only
     s["extra"], s["fric"] = extra, fric
+    s["_wn_memo"] = {}               # week_net memo, shared by this snapshot's advanced copies
     if fx.contact:
         s["cx"] = dict(world.cx[r])
         s["overlap_ab"] = world.overlap_ab
@@ -161,13 +162,33 @@ def _strands_calc(s):
     return HD.strand_terms(lv, HD.strand_cover(lv, q0, qx, s["sets"]))
 
 
+_KEY = ("rests", "works", "friends", "together", "eff_fr", "eff_tog", "spent", "money", "funded", "pool", "income", "fi", "partner_tog",
+        "n_sess")
+
+
 def week_net(s, parts=None):
-    """Projected net of this week's close for the snapshot s (its counts are the week as it would end). parts: a dict to fill."""
+    """Projected net of this week's close for the snapshot s (its counts are the week as it would end). parts: a dict to fill.
+    Memoized per snapshot family (a snapshot and its advanced copies share the memo; the key is every field advance moves)."""
+    memo = s.get("_wn_memo")
+    if memo is None or parts is not None:
+        return _week_net(s, parts)
+    key = tuple(s.get(k) for k in _KEY) + (tuple(sorted(s["visits"].items())) if "visits" in s else (),)
+    v = memo.get(key)
+    if v is None:
+        v = memo[key] = _week_net(s, None)
+    return v
+
+
+def _c01(x):
+    return 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
+
+
+def _week_net(s, parts=None):
     h, c, cap, L, fx = s["h"], s["h"].cfg, s["cap"], s["L"], s["fx"]
-    rest = _clip(L["rest"] + c.rest_base + c.rest_action * cap * s["rests"] - c.rest_decay - c.work_fatigue * s["works"]
-                 - (0.3 if s["ill"] else 0.0))
-    conn = _clip(L["connection"] + (c.conn_cohabit if s["cohab"] else 0.0) - c.conn_decay - s["conn_pen"]
-                 + cap * (c.conn_friend * s["eff_fr"] + c.conn_together * s["eff_tog"] + c.conn_friend_initiated * s["fi"]))
+    rest = _c01(L["rest"] + c.rest_base + c.rest_action * cap * s["rests"] - c.rest_decay - c.work_fatigue * s["works"]
+                - (0.3 if s["ill"] else 0.0))
+    conn = _c01(L["connection"] + (c.conn_cohabit if s["cohab"] else 0.0) - c.conn_decay - s["conn_pen"]
+                + cap * (c.conn_friend * s["eff_fr"] + c.conn_together * s["eff_tog"] + c.conn_friend_initiated * s["fi"]))
     m, pool = s["money"] - s["out_cost"], s["pool"]
     if m < 0:
         d = min(pool, -m + 2)
@@ -194,25 +215,33 @@ def week_net(s, parts=None):
             if short - d > 0.01 and s["in"]:
                 sec_hit += 0.15
     share = (pool / 2 if s["both"] else pool) if s["in"] else 0.0
-    sec = _clip(L["security"] - c.sec_decay - sec_hit + c.sec_refill * _clip((m + share) / c.sec_assets))
-    lv = {"rest": rest, "connection": conn, "money": _clip(m / c.money_scale), "security": sec}
+    sec = _c01(L["security"] - c.sec_decay - sec_hit + c.sec_refill * _c01((m + share) / c.sec_assets))
+    mon = _c01(m / c.money_scale)
     sal = h.sal
+    sr, sc, sm, ss = sal["rest"], sal["connection"], sal["money"], sal["security"]
     if fx.valued_money:
         v_s = s["v_s"]
-        lost = sal["security"] * (1.0 - v_s)
-        rc = sal["rest"] + sal["connection"]
+        lost = ss * (1.0 - v_s)
+        rc = sr + sc
         up = 1.0 + (lost / rc if rc > 0 else 0.0)
-        p_need = (sum(sal[n] * up * _clip((lv[n] - 0.5) / 0.5) for n in ("rest", "connection"))
-                  + sal["money"] * _clip((lv["money"] - 0.5) / 0.5) + sal["security"] * v_s * _clip((lv["security"] - 0.5) / 0.5))
+        p_need = ((0 + sr * up * _c01((rest - 0.5) / 0.5)) + sc * up * _c01((conn - 0.5) / 0.5)
+                  + sm * _c01((mon - 0.5) / 0.5) + ss * v_s * _c01((sec - 0.5) / 0.5))
     else:
-        p_need = sum(sal[n] * _clip((lv[n] - 0.5) / 0.5) for n in HD.NEEDS)
-    s_need = sum(sal[n] * _clip((0.5 - lv[n]) / 0.5) for n in HD.NEEDS)
+        p_need = (((0 + sr * _c01((rest - 0.5) / 0.5)) + sc * _c01((conn - 0.5) / 0.5)) + sm * _c01((mon - 0.5) / 0.5)
+                  ) + ss * _c01((sec - 0.5) / 0.5)
+    s_need = (((0 + sr * _c01((0.5 - rest) / 0.5)) + sc * _c01((0.5 - conn) / 0.5)) + sm * _c01((0.5 - mon) / 0.5)
+              ) + ss * _c01((0.5 - sec) / 0.5)
     net = s["income"] - HD.DEFAULT.living_cost - 2.5 - s["spent"]          # BILLS_WEEKLY = 2.5
     av = {"security_buffer": sec, "together_per_week": s["together"], "friends_per_week": s["friends"],
           "savings_per_week": max(0, net), "autonomy": s["autonomy"]}
-    sat = {k: h.satisfaction(k, av.get(k, 0.0)) for k in h.targets}
-    p_asp = sum(h.asp_w[k] * sat[k] for k in sat)
-    s_asp = c.unmet_aspiration * sum(h.asp_w[k] * (1 - sat[k]) for k in sat)
+    tg, aw = h.targets, h.asp_w
+    p_asp = s_asp0 = 0
+    for k in tg:
+        t = tg[k]
+        x = 1.0 if t <= 0 else _c01(av.get(k, 0.0) / t)
+        p_asp = p_asp + aw[k] * x
+        s_asp0 = s_asp0 + aw[k] * (1 - x)
+    s_asp = c.unmet_aspiration * s_asp0
     extra, fric = s["extra"], s["fric"] + bill_fric
     if fx.contact:
         n_f = s["friends"] + s["fi"]
@@ -226,7 +255,8 @@ def week_net(s, parts=None):
     raw = c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * s["eff_tog"] + extra
     s_off, s_non = s_need + s_asp + fric, 0.0
     run = h.run
-    denied = any(lv[n] < c.denied_below and sal[n] >= c.denied_min_salience for n in HD.NEEDS)
+    dmin, dsal = c.denied_below, c.denied_min_salience
+    denied = ((rest < dmin and sr >= dsal) or (conn < dmin and sc >= dsal) or (mon < dmin and sm >= dsal) or (sec < dmin and ss >= dsal))
     for name, on, inten in (("trapped", run["trapped"] > 0, c.trapped_intensity), ("denied", denied, c.denied_intensity),
                             ("diminished", run["diminished"] > 0, c.diminished_intensity)):
         if on:
@@ -234,9 +264,10 @@ def week_net(s, parts=None):
                 s_non += inten
             else:
                 s_off += c.pre_onset_share * inten
-    out = _clip(raw) - _clip(s_off) - _clip(s_non)
+    out = _c01(raw) - _c01(s_off) - _c01(s_non)
     if parts is not None:
-        parts.update(pleasure=_clip(raw), s_off=_clip(s_off), s_non=_clip(s_non), raw=raw, levels=lv, bill_fric=bill_fric)
+        parts.update(pleasure=_c01(raw), s_off=_c01(s_off), s_non=_c01(s_non), raw=raw,
+                     levels={"rest": rest, "connection": conn, "money": mon, "security": sec}, bill_fric=bill_fric)
     return out
 
 
