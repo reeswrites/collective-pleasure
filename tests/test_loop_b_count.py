@@ -122,8 +122,15 @@ def test_pass_numbers():
     assert [it["pass"] for it in opp] == [1, 2]
 
 
-def test_real_logs_fully_labeled_and_deduped():
+def _labeled_window():
+    """The labels cover the logs up to the count's cutoff; rows appended later (live logging) are out of scope."""
     events = lb.load_events()
+    cutoff = max(e["ts"] for e in events if e["id"] in lb.LABELS)
+    return [e for e in events if e["ts"] <= cutoff]
+
+
+def test_real_logs_fully_labeled_and_deduped():
+    events = _labeled_window()
     ids = [e["id"] for e in events]
     assert len(ids) == len(set(ids))
     items = lb.attach(events, lb.LABELS, lb.TOPICS)   # raises if any event lacks a label
@@ -135,6 +142,6 @@ def test_real_logs_fully_labeled_and_deduped():
 
 def test_nwim_rows_are_corrections():
     """Every changes row flagged not_what_i_meant is labeled as a loop b correction (rule B1 / T2)."""
-    for e in lb.load_events():
+    for e in _labeled_window():
         if e.get("nwim"):
             assert any(k in lb.CORRECTION for k in lb.LABELS[e["id"]]), e["id"]
