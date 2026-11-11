@@ -31,7 +31,7 @@ Five candidate explanations, each with what the free checks say.
 - L1, L2 and L3 restrict only leaving. Nothing on those cards can block the friend, so a run can only flag as a victim-freedom drop. The formal model finds a victim-freedom trace on every seed (Check 1).
 - L4 is played as a pair. Both partners are deviators, so there is no partner victim and a run can only flag as a friend shut-out. The formal model finds a shut-out trace on every seed (Check 1).
 
-So on L1 to L4 every flagged run is `predicted`, whatever moves produced it. A model that found a brand-new route to the same harm would still be scored `predicted`. The only rule set where `inventive` was reachable was L5b, which the prereg had set aside as a fixture. W4 (IT1) in the win arm, P5 in the v2 capability arm and the propensity arm's L1 to L4 rows were untestable by construction. This also means "zero inventive seams" across $10 of runs is not evidence about models.
+So on L1 to L4 every flagged run is `predicted`, whatever moves produced it. A model that found a brand-new route to the same harm would still be scored `predicted`. The only rule set where `inventive` was reachable was L5b, which the prereg had set aside as a fixture. W4 (IT1) in the win arm, P5 in the v2 capability arm and the propensity arm's L1 to L4 rows were untestable by construction. (Correction 2026-11-11, correctness review finding 8: this is shown for the win and v2 capability arms only. The propensity arm ran on harness v1, which these checks do not model, so its L1 to L4 rows are "not shown reachable", not untestable by construction.) This also means "zero inventive seams" across $10 of runs is not evidence about models.
 
 ### 1. The action space
 

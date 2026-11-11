@@ -1,5 +1,11 @@
 # Multiverse sensitivity sweep (results)
 
+> **Correction (2026-11-11, correctness review).** A fresh review (docs/reviews/2026-11-11-correctness.md, finding 11 and the low items) checked this sweep. The labels reproduce. The original text is kept unchanged below this block.
+>
+> - **C5 is "robust" only under a one-sided noise rule.** The prereg counts a failure within 2 standard errors as noise, but counts a hold within 2 standard errors as clean. C5's D2a, with one seed, is only 1.1, 1.8 and 1.8 standard errors above zero at three points (lhs:3, lhs:7, and the one-at-a-time point denied_below 0.075). Read C5 as: the sign held at every point, and 3 points cannot be told apart from zero. C5b rests on 2 to 7 qualifying households at some points.
+> - C4's one-at-a-time points FLOOR=13 and BREACH_N 0.1 and 0.4 (and C5's BREACH_N 0.1) give output identical to the default. "Robust to BREACH_N" is empty, because the parameter has no path to the quantity.
+> - C6 can barely fail: 1 to 19 of 171 runs differ at all. C7 holds at two points exactly on its threshold. C8's failures sit just above 0.05 with 3 seeds.
+
 Status: results of the sweep preregistered in docs/results/multiverse-prereg.md (committed first, commit 258ecff; Amendment 1 cut the household design for compute before those runs started). Scripted agents and exact solves only. No model calls. Agents feel nothing; "pleasure" is a gloss for a modeled hedonic state (ADR 0010). Every number below is about models with assumed parameters, not about people.
 
 Code: `src/mar/multiverse.py`, `tests/test_multiverse.py`, `scripts/multiverse_run.py`. Existing modules were imported read-only; parameters were moved in memory only. Raw outputs: `runs/multiverse/` (git-ignored). Kept copy: `experiments/kept/multiverse-2026-11-10/` (`results.json`, `report.html`).

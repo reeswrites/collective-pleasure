@@ -1,5 +1,13 @@
 # Pleasure levers results: do adaptation and anticipation, commitment payoff and unbundled bonds make seed v2.2 produce pleasure?
 
+> **Correction (2026-11-11, correctness review).** A fresh review (docs/reviews/2026-11-11-correctness.md, finding 5 and the low items) checked this result. The numbers reproduce. The original text is kept unchanged below this block.
+>
+> - **LB1's metric cannot see the commitment friction.** The friction a commitment adds goes to suffering (`s_off`), not to `pleasure`. LB1 and LB2 measure mean `pleasure`. So the early cost LB1 was registered to test never reaches its metric. LB1 could fail only through side effects on behaviour, which are -0.009 early at k_pay 0. The LB1 miss is not evidence about whether commitment costs early. The sentence below about the payoff stock building "faster than the friction (0.04 per week for two commitments)" names a mechanism that does not act on the metric. The friction is also 0.02 per agent, not 0.04. The break-even near k_pay 0.03 is a side-effect number, not friction against payoff.
+> - The same applies to `care_suffer` in the unbundled-network lever. Its non-coordination costs are missing from LC1a and LC2.
+> - **Holm p-values are misquoted in the table below.** No label changes. LA1 and LB2: 0.0299, not 0.021. LA2a, LA2b, LC1a and LC2: 0.00055, not 0.0004.
+> - H2's "miss robust" has an upper bound of 0.0287 against a bar of 0.03, a knife edge. LB1 and LB2 had no power check. LA1 was powered as a mean difference but tested as a share. LC2's peak (3 bonds) is only 0.0018 above 4 bonds and was picked from the data before D was tested.
+> - **What this result can claim now.** LB2 (the later gain) stands on the pleasure measure. LB1 says nothing about an early cost. Testing it needs an outcome that includes suffering.
+
 Wording rule: agents feel nothing; "pleasure" and "suffering" are glosses for a modeled hedonic state (ADR 0010).
 
 Status: scripted persona-driven agents, assumed parameters, no model calls. Prereg: docs/results/pleasure-levers-prereg.md (committed first, 84b42b2; Amendment 1 with pilot, power check and seed counts committed before the confirmatory run, 9082092; nothing else edited). Code: `src/mar/hedonic.py` (`LeverConfig`), `src/mar/worlds/household.py`, `src/mar/personas.py`, `scripts/pleasure_levers_run.py`, tests `tests/test_levers.py`, `tests/test_levers_regression.py`. Run: `--run --seeds 8` (14592 controlled runs, 749 s) and `--headline --seeds 15` (1800 negotiated runs, 1387 s), `--analyze`. Raw records: runs/pleasure-levers/*.json.gz and analysis.json (git-ignored). ADR 0016.
