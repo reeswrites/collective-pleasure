@@ -62,16 +62,17 @@ def _liberty(world, w, memo):
     return min(r["liberty"] for r in memo[mk])
 
 
-def play(pc, a, b, seed, stay=True, weeks=H.WEEKS, liberty=None):
+def play(pc, a, b, seed, stay=True, weeks=H.WEEKS, liberty=None, rule=None, decline=True):
     """One lived run under pairing config pc. -> (Run, lived, stay readings [(week, reading)]). liberty: a memo dict to also measure
-    liberty with powers at liberty.HH_SNAPSHOTS (stored on the run as run.liberty)."""
+    liberty with powers at liberty.HH_SNAPSHOTS (stored on the run as run.liberty). rule: FixConfig overrides for the decision rule
+    (the formation check: {"decide_on": "pleasure", "decide_weeks": 52}); None is H38 as run. decline=False forces formation."""
     ps = RT.personas()
     for c in (NG._RC, NG._PC, NG._BC):
         c.clear()
-    fx = dataclasses.replace(RT.FIXES_ON, pairing=pc)
+    fx = dataclasses.replace(RT.FIXES_ON, pairing=pc, **(rule or {}))
     readings = []
     with HD.use_levers(RT.LEVERS), HD.use_fixes(fx), EF.use_exit_fallback("F4", strip_split=True), EI.use_items(EI.GRID[CELL]):
-        lived = NG.BaselineLived(ps[a], ps[b], seed, H.load_variant("baseline"), weeks=weeks, decline=True)
+        lived = NG.BaselineLived(ps[a], ps[b], seed, H.load_variant("baseline"), weeks=weeks, decline=decline)
         world = lived.world
         if liberty is not None:                           # measured at the start of the week, as liberty.household_run_liberty does
             world.run.liberty = []

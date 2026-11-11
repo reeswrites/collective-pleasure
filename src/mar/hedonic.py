@@ -233,6 +233,12 @@ class FixConfig:
     skip_n: float = 0.4
     # H38 pairing norms (docs/results/h38-pairing-norms-design.md): a mar.pairing.PairingConfig, or None (off, the default)
     pairing: object = None
+    # H38 formation check (docs/results/h38-formation-check-prereg.md): the yardstick and window agents decide to form and stay on.
+    # "net" with 0 weeks is the old rule (net wellbeing = pleasure - suffering over 26-week rollouts), bit for bit. "pleasure" scores
+    # each member's own clipped weekly pleasure (the verdict's measure, from that member's point of view); decide_weeks > 0 replaces the
+    # 26-week windows of the formation, retry, reading and outside-option rollouts.
+    decide_on: str = "net"
+    decide_weeks: int = 0
 
 
 ACTIVE_FIXES = None      # module default, set by `use_fixes`; WeeklyWorld(fixes=None) reads it
@@ -254,7 +260,8 @@ _FIX_FLAGS = ("contact", "contact_motive", "valued_money", "real_outside", "nash
 
 
 def fixes_on(cfg):
-    return cfg is not None and (any(getattr(cfg, f) for f in _FIX_FLAGS) or cfg.trust_words is not None or cfg.pairing is not None)
+    return cfg is not None and (any(getattr(cfg, f) for f in _FIX_FLAGS) or cfg.trust_words is not None or cfg.pairing is not None
+                                or cfg.decide_on != "net" or cfg.decide_weeks)
 
 
 def active_fixes():

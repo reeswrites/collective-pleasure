@@ -99,7 +99,7 @@ def exit_anticipation(world, out_weeks=None):
     if pc is None or not pc.exit_stigma:
         return 0.0
     from . import negotiation as NG
-    n = out_weeks or NG.OUT_WEEKS
+    n = out_weeks or NG.decide_weeks(NG.OUT_WEEKS)
     return pc.exit_stigma * min(pc.exit_weeks, n) / n
 
 
@@ -107,7 +107,7 @@ def exit_anticipation(world, out_weeks=None):
 
 def _forward(world, w, last, fx, weeks=None):
     from . import negotiation as NG
-    weeks = weeks or NG.FORWARD_WEEKS
+    weeks = weeks or NG.decide_weeks(NG.FORWARD_WEEKS)
     hook, world.hook = world.hook, None
     try:
         c = copy.deepcopy(world)

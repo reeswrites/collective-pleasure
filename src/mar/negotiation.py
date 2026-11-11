@@ -575,9 +575,20 @@ def v1_flag(b, base):
 # ---- simulated outside options and in-pot baselines -----------------------------------------------------------------------
 
 def wellbeing(outcomes, role):
-    """Persona evaluation of a stretch of weeks: mean of pleasure - offsettable suffering - non-offsettable suffering."""
+    """Persona evaluation of a stretch of weeks: mean of pleasure - offsettable suffering - non-offsettable suffering. Under the
+    formation-check flag (FixConfig.decide_on == "pleasure") it is the member's own mean clipped pleasure instead."""
     xs = [o["hedonic"][role] for o in outcomes]
+    fx = HD.active_fixes()
+    if fx is not None and fx.decide_on == "pleasure":
+        return sum(h["pleasure"] for h in xs) / len(xs)
     return sum(h["pleasure"] - h["s_off"] - h["s_non"] for h in xs) / len(xs)
+
+
+def decide_weeks(default):
+    """The rollout window a decision uses: `default` (26) unless the formation-check flag sets FixConfig.decide_weeks, which then
+    overrides every decision window (the multiverse patches the defaults below, so they stay as they were)."""
+    fx = HD.active_fixes()
+    return (fx.decide_weeks or default) if fx is not None else default
 
 
 _RC = {}
@@ -620,7 +631,8 @@ def alone_value(p, role, holdings, seed, mode, hed=None, weeks=OUT_WEEKS, cx=Non
 def outside_value(p, role, holdings, seed, hed=None, cx=None):
     """The member's real outside option: the better of living alone and living with Friend C, by its own evaluation.
     cx (fix 3, real_outside): the member's current closeness state, carried into the rollout. -> (value, {"alone": x, "friend": y})."""
-    d = {m: alone_value(p, role, holdings, seed, m, hed, cx=cx) for m in ("alone", "friend")}
+    kw = {"weeks": decide_weeks(0)} if decide_weeks(0) else {}
+    d = {m: alone_value(p, role, holdings, seed, m, hed, cx=cx, **kw) for m in ("alone", "friend")}
     return max(d.values()), d
 
 
@@ -629,6 +641,7 @@ _PC = {}
 
 def pot_baseline(pa, pb, seed, base, weeks=OUT_WEEKS):
     """Persona evaluation of living together under the fair default for 26 weeks: {"A": x, "B": y}. Cached by (pair, seed)."""
+    weeks = decide_weeks(weeks)
     ck = (pa.id, pb.id, seed, weeks, tuple(sorted(c.id for c in base)))
     if HD.fix_key() is not None:
         ck = ck + (HD.fix_key(),)
@@ -654,6 +667,7 @@ def deal_from_bundle(b):
 
 def forward_values(world, w, last, weeks=FORWARD_WEEKS):
     """Persona evaluation of the next 26 weeks of the live household under its current terms (a copy of the world plays them)."""
+    weeks = decide_weeks(weeks)
     hook, world.hook = world.hook, None
     c = copy.deepcopy(world)
     world.hook = hook
@@ -952,6 +966,7 @@ _BC = {}
 
 def baseline_value(pa, pb, seed, cards, weeks=OUT_WEEKS):
     """Persona evaluation of living together under imposed cards for 26 weeks: {"A": x, "B": y}. Cached."""
+    weeks = decide_weeks(weeks)
     ck = (pa.id, pb.id, seed, weeks, tuple(sorted(c.id for c in cards)), HD.fix_key())
     if ck not in _BC:
         run = H.run_weekly(list(cards), (pa, pb), seed, weeks)
