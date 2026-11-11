@@ -89,6 +89,16 @@ def main():
     R["sweep_delta"], R["sweep_beta"] = C, D
     R["delta_large10"] = first_at(DELTAS, C["pct"], 10.0); R["beta_large10"] = first_at(BETAS, D["pct"], 10.0)
 
+    # ---- DESCRIPTIVE, added after the confirmatory run (not preregistered): the discount at which the optimal plan first honors the commitment
+    lo, hi = 0.5, 1.0
+    for _ in range(30):
+        mid = (lo + hi) / 2
+        if any(a == Hz.H_ for a in Hz.greedy_loss(tab, S0, HORIZON, mid)["opt_plan"][:6]):
+            hi = mid
+        else:
+            lo = mid
+    R["gamma_commitment_accepted"] = hi
+
     # ---- optimal plans and heuristics
     R["plans"] = {}
     for g in (.9, 1.0):
@@ -169,7 +179,7 @@ def main():
     R = conv(R)
     (OUT / "results.json").write_text(json.dumps(R, indent=1))
     (OUT / "report.html").write_text(html(R))
-    print(json.dumps({k: R[k] for k in ("n_states", "p1_max_abs_loss_off", "p1b_adapt_commit_off_only", "gamma_large10", "horizon_large10_g1", "critical_gamma",
+    print(json.dumps({k: R[k] for k in ("n_states", "p1_max_abs_loss_off", "p1b_adapt_commit_off_only", "gamma_large10", "horizon_large10_g1", "critical_gamma", "gamma_commitment_accepted",
                                          "delta_large10", "beta_large10", "plans")}, indent=1))
     print("wrote", OUT / "results.json", OUT / "report.html")
 
@@ -182,6 +192,7 @@ def svg_lines(title, xlabel, ylabel, series, xs_log=False, W=520, H=300, vlines=
     pts = [p for _, s in series for p in s if p[1] is not None]
     xmin, xmax = min(p[0] for p in pts), max(p[0] for p in pts)
     ymin, ymax = min(0.0, min(p[1] for p in pts)), max(p[1] for p in pts)
+    ymin = 0.0 if abs(ymin) < 1e-9 else ymin
     if ymax == ymin:
         ymax = ymin + 1
     import math
@@ -234,7 +245,7 @@ def html(R):
                                 vlines=[(R["gap"][h]["best_lifetime"], "best")]))
     rows = "".join(f"<tr><td>{k}</td><td>{v['total']:.1f}</td><td>{v['pct_of_optimal']:.1f}%</td></tr>" for k, v in R["heuristics"]["0.95"].items()) if "0.95" in R["heuristics"] else \
         "".join(f"<tr><td>{k}</td><td>{v['total']:.1f}</td><td>{v['pct_of_optimal']:.1f}%</td></tr>" for k, v in R["heuristics"]["0.9"].items())
-    w = R["witness"]["0.9"]["minimal_k_any_reachable_state"] or {}
+    w = R["witness"]["9/10"]["minimal_k_any_reachable_state"] or {}
     css = ("""
 :root{--bg:#fff;--fg:#1d1d1f;--mut:#555;--grid:#ddd;--c0:#1f5fbf;--c1:#c25a00;--c2:#2a7d4f;--card:#f6f6f7}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#15161a;--fg:#ececf0;--mut:#a6a6b0;--grid:#33343b;--c0:#7aa8ff;--c1:#ffa45c;--c2:#6fd19b;--card:#1d1e24}}
