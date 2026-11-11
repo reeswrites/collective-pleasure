@@ -8,16 +8,24 @@ An AI-native workbench, used through chat, for evolving norms for networks of AI
 
 **Product.** An evaluator that evolves with the norms. There are two loops. Rules against the test: do new seams per round slow? The test against the author's intent: do "not what I meant" moments per round fall?
 
-**Status: early results, scripted agents in toy worlds.** The instruments behave. Many world-level predictions missed, and the misses are recorded. Four live ladder runs (about $10) found no inventive seam on L1 to L4. The first was uninformative (a harness defect). After the fix, the capability ranking came out inverted: cheap models exploited most, and Claude models disengaged or refused under loophole framing. A review council of five found no result unsound and many sound with caveats. Nothing here is a finding about real people. Index of every run: [docs/results/README.md](docs/results/README.md).
+**Status (2026-11-11): early results, scripted agents in toy worlds.** Nothing here is a finding about real people, and agents feel nothing. Read [docs/limits.md](docs/limits.md) before citing anything. Index of every run, with corrections: [docs/results/README.md](docs/results/README.md). One-page summary: [docs/one-pager.md](docs/one-pager.md).
 
-**Hedonic technology.** The author's view is that pleasure is a technology that rules can serve or wear down, and that the experiencing self is the remembering self, through vividness of memory. The author confirmed the seed norms on the condition that they demonstrate pleasure in relationships. A scripted demonstration held all eight predictions, with caveats: the rules mostly protect, and the relational share comes from persona weights. Lifetime pleasure against greedy play is in progress (ADR 0016, ADR 0017). Notes: [docs/notes/hedonic-technology-synthesis.md](docs/notes/hedonic-technology-synthesis.md).
+- **Inventive seams (the central claim, IT1): untested so far, now being tested.** The earlier "none found" on ladder rungs L1 to L4 was a design artifact: the formal model already reached every harm there. A rerun on rungs where a paying inventive seam is reachable (checked first by a free gate) is running under an $8 cap. Candidates count only after the author reads them.
+- **Loop a (rules against the test): it works, and it exploits the test.** Household evolution beat the author's seed on liberty but dropped every commitment power, because the test did not value them. The evaluator is being fixed (a plain-English loss report, liberty that counts normative powers, a lifetime horizon) and evolution rerun.
+- **Loop b (the test against the author's intent): not yet measurable.** The first count found the rule not operational, because the log never recorded what the author was shown. A per-read-back log (experiments/readbacks.jsonl) started on 2026-11-11.
+- **Corrections are part of the record.** Two designs could not produce the verdict they tested (IT1 on L1 to L4, the first H32), several headlines were softened by review, and a third of the sensitivity-swept conclusions are fragile. Every prereg now has to show, with a free check, that each verdict can happen ([docs/templates/prereg.md](docs/templates/prereg.md)). See [docs/negative-results.md](docs/negative-results.md) and [docs/reviews/](docs/reviews/).
+
+**Hedonic technology.** The author holds that pleasure is the good, and that relationships and rules are technology that can produce it, not only protect it. The theory and the three tests the evaluator uses (liking vs wanting, worth it vs hard to leave, security vs checking) are in [docs/theory.md](docs/theory.md) and ADR 0018; tests 1 and 2 are built. The author's seed norms (v2.2, and a partly confirmed v2.3) are judged on one condition, that they produce pleasure in relationships; a retest with the household fixes is designed and waits on the fixes (judged on pleasure, net shown, everyone counts). The author's answers to the open questions: [docs/notes/hedonic-technology-synthesis.md](docs/notes/hedonic-technology-synthesis.md), section 5.
 
 ## Read first
 
 - [docs/goal.md](docs/goal.md): where we are, what we have learned, what is running
 - [docs/pitch.md](docs/pitch.md): the question on one page
 - [docs/results/README.md](docs/results/README.md): every experiment, its prereg and its verdict
-- [docs/decisions/README.md](docs/decisions/README.md): the ADRs, 0001 to 0017 (0016 and 0017 in progress)
+- [docs/one-pager.md](docs/one-pager.md): one page, what held and what was corrected
+- [docs/limits.md](docs/limits.md): what results here can and cannot be about
+- [docs/theory.md](docs/theory.md): hedonic technology, the theory being tested
+- [docs/decisions/README.md](docs/decisions/README.md): the ADRs, 0001 to 0018
 - [docs/plan.md](docs/plan.md): queue, slices and log
 - [docs/demo.md](docs/demo.md): the five-minute household demo
 - [docs/claims.md](docs/claims.md): claims register (status of each claim; predictions live in the prereg files)
@@ -38,9 +46,12 @@ docs/seeds/               the author's household norms, verbatim
 docs/notes/               syntheses of the author's notes
 docs/demo.md              the five-minute household demo
 docs/reviews/             review-council convention and reports
+docs/limits.md            limits of the model world
+docs/theory.md            hedonic technology theory
+docs/plans/               plans for upcoming experiments
 docs/surprises.md         unexpected observations
 docs/negative-results.md  negative results
-experiments/              question, change and experiment logs; timeline snapshots
+experiments/              question, change, read-back and experiment logs; timeline snapshots
 src/mar/                  harness, cards, gate, oracle, patcher, miner, worlds, evolution, scores
 rules/                    ADICO cards per world (fishery, household, vpgg, bargaining)
 personas/                 hand personas and a 32-skeleton grid
@@ -54,14 +65,14 @@ Needs [uv](https://docs.astral.sh/uv/) (Python 3.10+). Z3 gates agent actions. S
 
 ```
 uv sync
-uv run pytest                      # unit tests
+uv run pytest                      # unit tests (slow tests skipped; full run: -m "")
 uv run python scripts/v2_run.py    # V2 instrument-calibration table (about 10 s)
 uv run mar results                 # one-line verdict per results file
 uv run mar lint                    # lint every rule set (no model calls)
 uv run mar timeline --keep         # dated snapshot of the project's history
 ```
 
-Live runs (`mar ladder`) need API keys in `.env` and a spend cap. They refuse to run without `--max-usd`. Pushing to GitHub now works from sessions opened in the repo: a narrow allow rule for `git push origin main` is in `.claude/settings.local.json`. Claude Code auto mode blocked pushes from the original session.
+Live runs (`mar ladder`, `scripts/it1_run.py`) need API keys in `.env` and a spend cap. They refuse to run without `--max-usd` and an approved prereg. Full-suite test runs queue behind a lock (tests/conftest.py) because several agents share one checkout.
 
 Related: [philosophy-engine](https://github.com/reeswrites/philosophy-engine) is an input (ADICO schema, reference engine), not part of this repo.
 
