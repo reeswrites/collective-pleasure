@@ -73,6 +73,13 @@ def play(pc, a, b, seed, stay=True, weeks=H.WEEKS, liberty=None):
     with HD.use_levers(RT.LEVERS), HD.use_fixes(fx), EF.use_exit_fallback("F4", strip_split=True), EI.use_items(EI.GRID[CELL]):
         lived = NG.BaselineLived(ps[a], ps[b], seed, H.load_variant("baseline"), weeks=weeks, decline=True)
         world = lived.world
+        if liberty is not None:                           # measured at the start of the week, as liberty.household_run_liberty does
+            world.run.liberty = []
+
+            def hook(wd, wk_):
+                if wk_ in (0, 52):
+                    wd.run.liberty.append(_liberty(wd, wk_, liberty))
+            world.hook = hook
         last = {"busy": {"A": False, "B": False}}
         for w in range(world.weeks):                      # = BaselineLived.play, plus the stay lens before each reading
             if w and w % NG.REVIEW_EVERY == 0:
@@ -84,8 +91,6 @@ def play(pc, a, b, seed, stay=True, weeks=H.WEEKS, liberty=None):
                     lived.reading(w, last)
             if world.early_review:
                 world.ladder_reviewed(w)
-            if liberty is not None and w in (0, 52):
-                world.run.liberty = getattr(world.run, "liberty", []) + [_liberty(world, w, liberty)]
             last = {"busy": world.step_week(w, last)}
         world.run.final = {r: {**world.p[r], "pooled": world.pool, "put": world.put[r]} for r in "AB"}
         world.run.fix = world.fix_report()
@@ -446,6 +451,52 @@ def reach_model():
     return out
 
 
+def extras(f=OUT / "rows.jsonl"):
+    """Descriptive extras for the results file: per-agent change by values-pairing (losers), pushed-in pairs net and without the
+    direct terms, households formed at L0, stay-lens class shares. -> dict (also printed)."""
+    rows = load(f)
+    idx = {(r["arm"], r["a"], r["b"], r["seed"]): r for r in rows}
+
+    def agent(arm):
+        d = {}
+        for (a_, x, y, s), r in idx.items():
+            if a_ == arm:
+                for R, pid in (("A", x), ("B", y)):
+                    d.setdefault((pid, x, y, R), []).append(r[R])
+        return d
+    out = {"by_v": {}, "pushed_in": {}, "stay": {}}
+    L0 = agent("L0")
+    for arm in [a for a in ARMS if a != "L0"]:
+        H_ = agent(arm)
+        out["by_v"][arm] = {}
+        for v in PR.V_LEVELS:
+            ks = [k for k in L0 if L0[k][0]["v"] == v]
+            dl = np.array([np.mean([h["pl"] for h in H_[k]]) - np.mean([h["pl"] for h in L0[k]]) for k in ks])
+            dn = np.array([np.mean([h["net"] for h in H_[k]]) - np.mean([h["net"] for h in L0[k]]) for k in ks])
+            st = float(np.mean([np.mean([h["stigma"] + h["exit"] for h in H_[k]]) for k in ks]))
+            out["by_v"][arm][str(v)] = {"d_pl": float(dl.mean()), "losers_0.01": float(np.mean(dl < -0.01)), "d_net": float(dn.mean()),
+                                        "stigma_exit_paid": st, "n_agents": len(ks)}
+    for hi in ("L0.5", "L1", "L2", "L4", "L8", "S4", "R4"):
+        d, dn, dw = [], [], []
+        for (arm, a, b, s), r in idx.items():
+            if arm == "L0" and not r["formed0"]:
+                h = idx[(hi, a, b, s)]
+                if h["formed0"]:
+                    d.append(h["pl"] - r["pl"]); dn.append(h["net"] - r["net"])
+                    dw.append(np.mean([h[x]["p_nopress"] for x in "AB"]) - np.mean([r[x]["p_nopress"] for x in "AB"]))
+        out["pushed_in"][hi] = {"n": len(d), "d_pl": float(np.mean(d)), "d_net": float(np.mean(dn)), "d_pl_wo_direct": float(np.mean(dw)),
+                                "share_worse": float(np.mean(np.array(d) < 0))}
+    d = [idx[("L4", a, b, s)]["pl"] - r["pl"] for (arm, a, b, s), r in idx.items() if arm == "L0" and r["formed0"]]
+    out["formed_at_L0_L4_minus_L0"] = {"n": len(d), "d_pl": float(np.mean(d))}
+    for arm in ARMS:
+        t = {c: sum(r["stay"][c] for r in rows if r["arm"] == arm) for c in PR.STAY_CLASSES}
+        n = sum(t.values())
+        out["stay"][arm] = {**{c: v / n for c, v in t.items()}, "readings": n}
+    print(json.dumps(out, indent=1))
+    (OUT / "extras.json").write_text(json.dumps(out, indent=1))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pilot", action="store_true")
@@ -453,6 +504,7 @@ def main():
     ap.add_argument("--run", action="store_true")
     ap.add_argument("--analyze", action="store_true")
     ap.add_argument("--liberty", action="store_true")
+    ap.add_argument("--extras", action="store_true")
     ap.add_argument("--workers", type=int, default=WORKERS)
     a = ap.parse_args()
     if a.reach:
@@ -466,6 +518,8 @@ def main():
         (OUT / "pilot_analysis.json").write_text(json.dumps(res, indent=1))
     if a.run:
         run(CONFIRM, OUT / "rows.jsonl", list(ARMS), a.workers)
+    if a.extras:
+        extras()
     if a.liberty:
         liberty_sub()
     if a.analyze:
