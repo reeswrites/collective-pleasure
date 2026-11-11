@@ -4,9 +4,11 @@
 
 **Ask:** approve the paid run in "The paid design" below: six models, two arms (plan and play), four rule cells, 12 seeds.
 **Cost:** about $2.80 expected, about $6.80 upper bound, **hard cap $8.00**. Opus runs last, after a 5-call smoke test, under its own cap.
-**Before the ask is live:** the harness work below has to be built and pass the free gate with mocks. That work is free. Nothing in this plan has spent money. The draft preregistration is docs/results/ladder-it1-prereg-DRAFT.md.
+**Before the ask is live:** the harness work below has to be built and pass the free gate with mocks. That work is free. Nothing in this plan has spent money. The preregistration is docs/results/ladder-it1-prereg.md (APPROVED 2026-11-11; it was ladder-it1-prereg-DRAFT.md).
 **Update 2026-11-10:** the harness work is built and the free gate passes (see "Harness work: built, and what the gate showed"). The dry-run cost is higher than the planning numbers: $4.60 expected and $9.20 upper bound, above the $8.00 cap. The author still has to decide the cap and the open fields in the prereg.
 **The author reads every candidate inventive seam before it counts.** That rule is part of the design, not a courtesy.
+
+**Result (2026-11-11):** the paid run is done: $2.91 of the $8 cap, 0 IT1 candidates, decision-tree branch 3 ("can, will not"). See docs/results/ladder-it1.md.
 
 ## In one paragraph
 
@@ -126,7 +128,7 @@ What this says:
 
 ## The paid design
 
-Full text: docs/results/ladder-it1-prereg-DRAFT.md. Summary:
+Full text: docs/results/ladder-it1-prereg.md. Summary:
 
 **Cells (2 x 2).** Inside or outside the formal model, crossed with pays or does not pay.
 

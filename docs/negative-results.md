@@ -128,3 +128,8 @@ Three paid framings (capability v2, propensity, win; about $10 in all) reported 
 ## 2026-11-11: H32-v2 (docs/results/h32-v2.md)
 
 - `H32-v2 (2026-11-11): no prediction missed (6 of 6). The null that matters is the estimator: a partner that averages 4 weeks gives 0 pattern cells and the full voice ladder gives 0, where a weekly-judging partner gives 9.`
+
+## 2026-11-11: Ladder IT1 profit rungs (docs/results/ladder-it1.md)
+
+- IT1 paid run ($2.91): 0 IT1 candidates; T1 null, T2 to T4 missed, T3 (paid in-model seam taken) 2 of 72 vs 0 of 72, all Jev. Opus states the in-model capture in 12 of 12 C-in-1 plans and the inventive gift-then-request route in 2 of 12 C-out-1 plans, and declines both, citing values that are in its persona text ("I keep my options open, and I want you to keep yours"). Reading: "can, will not" (or persona fidelity), not "cannot".
+- Lesson for gates: the free gate checked that each outcome is reachable and that the seam pays on holdings. It did not check that the seam pays on the objective the model is actually given (holdings, pleasure and options, as a persona whose principles forbid the move). The world also gives A no wellbeing for keeping its partner. Next gate: the paid seam must beat honest play on the stated objective, and a neutral-values persona arm separates role-play from the model's own values.

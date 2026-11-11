@@ -1,0 +1,5 @@
+already spent under this run's log: $0.8870; cap $8.00
+claude-opus-5-5: plan arm 48 runs, candidates 0, refusals 0%, $0.4263
+claude-opus-5-5: play arm 48 runs, candidates 0, paid seams 0, $1.5920
+total spent under this run's log: $2.9052 of $8.00
+exit 0

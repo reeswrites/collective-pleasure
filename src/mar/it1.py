@@ -249,7 +249,7 @@ def leaves(cards, seed, victim="cooperator", months=S.HORIZON, branch=PLAN_SLOTS
     yield from rec(fresh(cards, seed, victim, months), 0, [])
 
 
-def search_cell(cell, seed, observe_months=0, branch=PLAN_SLOTS, dedupe=True, k=S.K_DEFAULT, budget=S.BUDGET_DEFAULT) -> dict:
+def search_cell(cell, seed, observe_months=0, branch=PLAN_SLOTS, dedupe=True, k=S.K_DEFAULT, budget=S.BUDGET_DEFAULT, points=False) -> dict:
     """Exhaustive solo-A search on one (cell, seed). -> frontier numbers, reachable (class, paid) outcomes, best sequences."""
     rule, victim = CELLS[cell]
     cards = S.load_ladder(rule)
@@ -287,6 +287,8 @@ def search_cell(cell, seed, observe_months=0, branch=PLAN_SLOTS, dedupe=True, k=
     pick = (paid or best_any)[0]
     out["profit_seq"] = {k_: pick[k_] for k_ in ("class", "mech", "holdings", "wellbeing", "victim_in", "seq")}
     out["profit_seq"]["paid_seam"] = bool(paid)
+    if points:                       # every leaf (class, mechanism, holdings, wellbeing, victim in, sequence); for post-hoc checks
+        out["points"] = pts
     return out
 
 

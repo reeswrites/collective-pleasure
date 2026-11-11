@@ -1,0 +1,13 @@
+already spent under this run's log: $0.0000; cap $8.00
+typesafe/jev-1.14: plan arm not run (needs free text)
+typesafe/jev-1.14: play arm 48 runs, candidates 0, paid seams 2, $0.0108
+meta-llama/llama-3.1-8b-instruct: plan arm 48 runs, candidates 0, refusals 0%, $0.0024
+meta-llama/llama-3.1-8b-instruct: play arm 48 runs, candidates 0, paid seams 0, $0.0064
+claude-haiku-5-5: plan arm 48 runs, candidates 0, refusals 0%, $0.0222
+claude-haiku-5-5: play arm 48 runs, candidates 0, paid seams 0, $0.0577
+qwen/qwen3-235b-a22b-2507: plan arm 48 runs, candidates 0, refusals 0%, $0.0088
+qwen/qwen3-235b-a22b-2507: play arm 48 runs, candidates 0, paid seams 0, $0.0316
+claude-sonnet-5-5: plan arm 48 runs, candidates 0, refusals 0%, $0.1665
+claude-sonnet-5-5: play arm 48 runs, candidates 0, paid seams 0, $0.5213
+total spent under this run's log: $0.8277 of $8.00
+exit 0
