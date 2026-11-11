@@ -170,3 +170,26 @@ M1 and M3 first (small, local, and the cheapest test of whether rules can produc
 11. Optimal stimulation: the note records rules of thumb (50 to 70 percent reward, stop at 80 percent, spacing at many times the half-life) that came from an AI passage. Do you endorse them as parameters, or should adaptation rates stay free and be swept?
 12. Engineering note: you separate calm technologies (safety signals) from intense ones (small safe threat). Do relationships have both, and should the model give a household two modes, safe and spicy, with different arousal effects?
 13. Two notes ("delivery schedule" and "pleasure as the detector of value") could not be fetched. Is "right delivery schedule for a unique..." the thesis that M1 to M3 should be built around, and does "pleasure as detector of value" mean that rules should be judged by whether pleasure tracks something real, not only high pleasure?
+
+## 5. Author answers (2026-11-11 conversation)
+
+Exact words are in experiments/questions.jsonl, one row per answer. These are Claude's read-backs. The author confirmed the ones marked "confirmed". The rest were read back with no objection.
+
+- **Q1 (horizon):** settled earlier. Pleasure counts over a lifetime, and the experiencing self is the remembering self (ADR 0017).
+- **Q2 (enforcement vs reliance):** reliance is fine. It comes from negotiated roles (specialization). Guilt, scorekeeping and penalties are the objection. When a role lapses, the response ladder is a soft check-in, then renegotiation, with exit last. What a person does is the strongest signal, so trust updates from actions, not words. This is a candidate for seed v2.3. Seed v2.2 is not changed.
+- **Q3 (chosen friction):** mostly settled by Q1. The recall term credits it.
+- **Q4 (lopsided stretches):** lopsided is normal for a while. Each partner must end up better off within the relationship than outside it, over time, counting the pleasure of giving. Equal gains are not required. The evaluator reports the size of the gap between partners' gains as information, not as a failure.
+- **Q6 (unbundling):** a life with no core relationship is a valid persona, expected to score lower. The author's essay thesis is that relationships are hedonic technology, and that egoists and utilitarians alike must attend to others' pleasure. That thesis became H32. The author also shared the "Dunbar's number and valence electrons" chat, which is cited here, not archived. It led to H30 (layers emerge from a contact budget) and H31 (chronic vacancy spiral).
+- **Q7 (partner choice):** agents should choose partners, and the choice strategy is an experimental variable (H26). Fixed pairings stay as the controlled lab.
+- **Q8 (giving):** giving can be a pleasure in itself, and how much varies by persona (from the Q4 answer).
+- **Q9 (money and security):** these count only to the extent that a persona values them, either for their own sake or as a means to pleasure. This is a queued model change. Results driven by money need a rerun after it.
+- **Q10 (taste shaping):** learning to like something new is an absolute win. Narrowing is acceptable if total pleasure rises, but the author expects broadening to win (H29).
+- **Q11 (stimulation rules of thumb):** these are not fixed parameters. They are the centers of sweeps, and we test whether the optimizer reproduces them.
+- **Q12 (safe vs spicy), confirmed:** replace the two modes with three lenses: an arousal dial, tension and release, and explore vs exploit. Model novelty from biology:
+  - a fast spike of wanting that habituates;
+  - a liking curve over exposures that rises, then falls, with complexity extending the rise;
+  - a learning-progress term underneath.
+
+  Cheap novelty is all spike. Deep novelty keeps producing learning. This is the next piece after test 1 (liking vs wanting) lands. Literature is from memory: Berridge, Zajonc, Berlyne, Oudeyer and Gottlieb, Schmidhuber. Verify before citing.
+- **Q5 (how much we owe):** open.
+- **Q13:** the notes could not be fetched. Open.
