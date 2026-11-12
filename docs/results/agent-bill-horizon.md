@@ -109,7 +109,19 @@ What this says, plainly:
 - **The corrected rule still does not form more households at week 0** (−0.05, interval crossing 0), so C3 fails as under v2, though the corrected rule still yields more pleasure (+0.010).
 - **Pleasure is high everywhere (0.97 to 0.99)** and the arms differ by less than 0.015: with accurate one-week agents who also pay their bills, the household world sits near the pleasure cap whatever the pairing norm. Unclipped pleasure still separates them (C1 +0.080 [+0.070, +0.090]).
 
-**Descriptive, v2b without bills** (G-L0, G-L4, O-L0, O-L4): running at the time of writing; added below when done.
+**Descriptive, v2b without bills** (G-L0, G-L4, O-L0, O-L4; 1,920 runs, runs/h38-formation-v2b-nobills/). Almost identical to v2 without bills: G-L0 forms at week 0 in 0.77 of pair-seeds and 97% of formed households end (v2 without bills: the same to two decimals); C1 −0.042 [−0.047, −0.037] (v2 without bills −0.042); old L4 − L0 −0.047 (same). Without bills that hurt, an unfunded bill comes out of the pot at no felt cost, so the settlement credit is almost always 0 and v2b is v2.
+
+So the three switches separate cleanly:
+
+| | G-L0 formed at week 0 | of formed, end | C1 (G-L4 − G-L0) | old L4 − L0 |
+|---|---|---|---|---|
+| v2, no bills | 0.77 | 0.97 | −0.042 | −0.047 |
+| v2b, no bills | 0.77 | 0.97 | −0.042 | −0.047 |
+| v2 + bills | 0.06 | 0.81 | −0.038 | −0.046 |
+| v2b + bills | 0.42 | 0.72 | −0.004 | −0.003 |
+| v1 (original) | 0.84 | 0.29 | +0.003 | +0.021 |
+
+The horizon does nothing on its own. Bills alone stop households forming. Bills with agents that pay them form fewer households than no bills at all, but these last longer than in any v2 world and pressure stops costing pleasure. The recalibration's own effect (accurate one-week agents leave households that pressure holds them in) is what bills paid on time largely undo.
 
 ## Is a general planning horizon needed?
 
