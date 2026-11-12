@@ -43,6 +43,7 @@ ARMS = {"G-L0": (PR.dial(0), "good"), "G-L4": (PR.dial(4), "good"), "G-W4": (PR.
         "G-L1": (PR.dial(1), "good")}
 OLD_ARMS = {"O-L0": "L0", "O-L4": "L4", "O-W4": "W4"}    # Amendment 1 (v2): H38's own arms, old rule, rerun under the new agents
 V2 = {"agent_values": "v2", "bills_hurt": True}
+V2B = {"agent_values": "v2b", "bills_hurt": True}         # Amendment 2: the bill horizon (docs/results/agent-bill-horizon-prereg.md)
 FORCED = "F-L0"     # descriptive: old rule, formation forced at week 0 (decline=False), for the diagnosis
 MARGIN = 0.007      # prereg: the L4 gain "falls to within the margin" if G-L4 minus G-L0 is below this (a third of H38's +0.021)
 
@@ -242,15 +243,18 @@ def main():
     ap.add_argument("--reach", action="store_true")
     ap.add_argument("--v2", action="store_true", help="Amendment 1: agent_values v2 and bills_hurt; runs/h38-formation-v2/")
     ap.add_argument("--v2nobills", action="store_true", help="descriptive: v2 with bills off; G-L0, G-L4, O-L0, O-L4")
+    ap.add_argument("--v2b", action="store_true", help="Amendment 2: agent_values v2b and bills_hurt; runs/h38-formation-v2b/")
+    ap.add_argument("--v2bnobills", action="store_true", help="descriptive: v2b with bills off; G-L0, G-L4, O-L0, O-L4")
     a = ap.parse_args()
     global OUT
-    if a.v2 or a.v2nobills:
-        OUT = ROOT / "runs" / ("h38-formation-v2" if a.v2 else "h38-formation-v2-nobills")
+    if a.v2 or a.v2nobills or a.v2b or a.v2bnobills:
+        OUT = ROOT / "runs" / ("h38-formation-v2" if a.v2 else "h38-formation-v2-nobills" if a.v2nobills else
+                               "h38-formation-v2b" if a.v2b else "h38-formation-v2b-nobills")
         if a.run:
-            if a.v2:
-                run([*ARMS, *OLD_ARMS], OUT / "rows.jsonl", fix=V2)
+            if a.v2 or a.v2b:
+                run([*ARMS, *OLD_ARMS], OUT / "rows.jsonl", fix=V2 if a.v2 else V2B)
             else:
-                run(["G-L0", "G-L4", "O-L0", "O-L4"], OUT / "rows.jsonl", fix={"agent_values": "v2"})
+                run(["G-L0", "G-L4", "O-L0", "O-L4"], OUT / "rows.jsonl", fix={"agent_values": "v2" if a.v2nobills else "v2b"})
         if a.analyze:
             rows = H38.load(OUT / "rows.jsonl")
             new = [r for r in rows if r["arm"] in ARMS]

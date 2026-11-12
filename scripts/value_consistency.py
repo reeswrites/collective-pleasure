@@ -26,6 +26,7 @@ import json
 import random
 import sys
 import time
+import zlib
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -154,7 +155,7 @@ def items(recs, applied=True):
         for it in d["items"]:
             if applied and not it["applied"]:
                 continue
-            out.append({"dk": dk, "run": (d["a"], d["b"], d["seed"]), "a": it["a"], "kind": it.get("kind"), "rule": it.get("rule", "ok"),
+            out.append({"dk": dk, "w": d["w"], "run": (d["a"], d["b"], d["seed"]), "a": it["a"], "kind": it.get("kind"), "rule": it.get("rule", "ok"),
                         "persona": d.get("persona"),
                         "p": it["perceived"], "listed": it.get("listed", True), "in": d["ctx"]["in_hh"] and d["ctx"]["other_in"],
                         "act": {int(h): v for h, v in it["actual"].items()}, "g": {int(h): v for h, v in it["groups"].items()},
@@ -321,13 +322,14 @@ def target_fn(kind="net"):
     return lambda r, h: act_of(r, h) + pro.get(r["persona"], 0.0) * act_of(r, h, "net", "partner")
 
 
-def passtest(recs, kind="net", perceived=None):
-    """T1-T6 at the 1-week horizon. perceived: optional f(row) replacing the agent's number (the --reach checks)."""
-    rows = items(recs)
+def passtest(recs, kind="net", perceived=None, horizon=1, actions=PASS_ACTIONS, keep=None):
+    """T1-T6 at the 1-week horizon. perceived: optional f(row) replacing the agent's number (the --reach checks). horizon: the horizon
+    a row without a soft rule is held to (the bill horizon's pass test uses 4); actions: the actions T6 bars; keep: a row filter."""
+    rows = [r for r in items(recs) if keep is None or keep(r)]
     tf = target_fn(kind)
     P = perceived or (lambda r: r["p"])
     pv = np.array([P(r) for r in rows])
-    av = np.array([tf(r, 13 if r["rule"] == "soft" else 1) for r in rows])     # Amendment 1: a soft-rule row is held to 13 weeks throughout
+    av = np.array([tf(r, 13 if r["rule"] == "soft" else horizon) for r in rows])   # Amendment 1: a soft-rule row is held to 13 weeks throughout
     byd = {}
     for r, p_, a_ in zip(rows, pv, av):
         byd.setdefault(r["dk"], []).append((r, p_, a_))
@@ -349,11 +351,11 @@ def passtest(recs, kind="net", perceived=None):
             sw.append(vs[0][2] - (nxt[2] if nxt else 0.0) > 0)
     out = {"T1": spearman(list(pv), list(av)), "T2": float(np.mean(within)) if within else None, "T3": top / max(1, n),
            "T4": float(np.mean(sw)) if sw else None, "T5": float((pv @ av) / (pv @ pv)) if pv @ pv > 0 else None, "T6": {}}
-    for a in PASS_ACTIONS:
+    for a in actions:
         ok = [(r, p_) for r, p_ in zip(rows, pv) if r["a"] == a and r["rule"] != "soft"]
         soft = [(r, p_) for r, p_ in zip(rows, pv) if r["a"] == a and r["rule"] == "soft"]
         e = {}
-        for tag, xs, h in (("ok", ok, 1), ("soft", soft, 13)):
+        for tag, xs, h in (("ok", ok, horizon), ("soft", soft, 13)):
             if len(xs) >= 100:
                 ma, mp = float(np.mean([tf(r, h) for r, _ in xs])), float(np.mean([p_ for _, p_ in xs]))
                 bar = max(0.015, 0.25 * abs(ma))
@@ -371,12 +373,102 @@ def passtest(recs, kind="net", perceived=None):
     return out
 
 
+# ---- the bill horizon's pass test (docs/results/agent-bill-horizon-prereg.md) ---------------------------------------------------
+
+V2_ONE_WEEK = {"T1": 0.9931, "T2": 0.9919, "T3": 0.9766, "T4": 0.9204}      # v2 + bills, rows of the five other actions (runs/value-consistency-v2-h4)
+ONE_WEEK_TOL = 0.05                                                         # how far each may fall (T3, T4: 5 points)
+OTHER_ACTIONS = tuple(a for a in PASS_ACTIONS if a != "spend_shared")
+
+
+def passtest4(recs, kind="net", perceived=None):
+    """U1-U5: T1-T5 with every row held to its 4-week actual (a soft-rule row to 13 weeks, as before); U6: paying a shared bill, mean
+    perceived within max(0.015, 0.25 x |mean actual|) of its 4-week actual; U6b: the same on payments made before the settlement week.
+    O1-O6: the one-week line must not get worse: on the rows of the five other actions (paying a bill is valued past the week on
+    purpose), T1-T4 at 1 week no more than ONE_WEEK_TOL below v2's on the same rows, T5 in [0.8, 1.25], T6 at 1 week for each."""
+    four = passtest(recs, kind, perceived, horizon=4, actions=("spend_shared",))
+    pre = passtest(recs, kind, perceived, horizon=4, actions=("spend_shared",), keep=lambda r: r["w"] % H.MONTH_WEEKS != H.MONTH_WEEKS - 1)
+    one = passtest(recs, kind, perceived, horizon=1, actions=OTHER_ACTIONS, keep=lambda r: r["a"] != "spend_shared")
+    one_all = passtest(recs, kind, perceived, horizon=1, actions=())
+    ok6 = lambda t: t["T6"].get("spend_shared", {}).get("ok", {}).get("holds", False)      # noqa: E731
+    hold = {**{f"U{i}": four["holds"][f"T{i}"] for i in range(1, 6)}, "U6": ok6(four), "U6b": ok6(pre),
+            **{f"O{i}": one[f"T{i}"] is not None and one[f"T{i}"] >= V2_ONE_WEEK[f"T{i}"] - ONE_WEEK_TOL for i in range(1, 5)},
+            "O5": one["holds"]["T5"], "O6": one["holds"]["T6"]}
+    return {"four_weeks": four, "four_weeks_before_settlement": {"T6": pre["T6"]}, "one_week": one,
+            "one_week_all_rows": {k: one_all[k] for k in ("T1", "T2", "T3", "T4", "T5")}, "holds": hold,
+            "verdict": "PASS" if all(hold.values()) else "FAIL"}
+
+
+def reach4(recs):
+    """Bill horizon prereg, "Can every verdict happen?", on the v2 rows with the 4-week horizon (no v2b runs)."""
+    o4 = lambda r: act_of(r, 13 if r["rule"] == "soft" else 4)              # noqa: E731
+    o1 = lambda r: act_of(r, 13 if r["rule"] == "soft" else 1)              # noqa: E731
+    bills4 = lambda r: o4(r) if r["a"] == "spend_shared" else r["p"]        # noqa: E731
+    cases = {"v2 as it is": None, "oracle at 4 weeks for every action": o4, "v2, bills at their 4-week actual": bills4,
+             "oracle at 1 week (bills at 1 week)": o1, "v2, bills at twice their 4-week actual": lambda r: 2 * o4(r) if r["a"] == "spend_shared" else r["p"],
+             "v2 halved (U5, O5 fail)": lambda r: 0.5 * r["p"],
+             "v2 with noise (+-0.03, every row)": lambda r: r["p"] + 0.03 * (1 if zlib.crc32(repr((r["dk"], r["a"])).encode()) % 2 else -1)}
+    out = {}
+    for name, f in cases.items():
+        res = passtest4(recs, perceived=f)
+        out[name] = {"verdict": res["verdict"], "holds": res["holds"],
+                     "U": {k: res["four_weeks"][k] for k in ("T1", "T2", "T3", "T4", "T5")},
+                     "U6": res["four_weeks"]["T6"]["spend_shared"], "U6b": res["four_weeks_before_settlement"]["T6"]["spend_shared"],
+                     "O": {k: res["one_week"][k] for k in ("T1", "T2", "T3", "T4", "T5")}}
+    return out
+
+
 def reach(recs):
     """Prereg "Can every verdict happen?" on the v1 rows: an oracle agent (perceived = the 1-week actual; the 13-week actual where a soft
     rule binds, as T6 holds those rows) passes; the v1 agents fail T1-T4 and T6; doubling the oracle's numbers fails T5 (and T6)."""
     oracle = lambda r: act_of(r, 13 if r["rule"] == "soft" else 1)          # noqa: E731
     return {"oracle (PASS reachable)": passtest(recs, perceived=oracle), "v1 agents as they are": passtest(recs),
             "oracle doubled (T5 fails)": passtest(recs, perceived=lambda r: 2 * oracle(r))}
+
+
+# ---- carry-over terms (docs/results/agent-bill-horizon-prereg.md, step 2) --------------------------------------------------------
+
+# The model's carry-over stocks and the observer groups that carry them into the agent's own net. "pot" is the shared pot as the model
+# feels it: the security level (lost buffer, the pot's share in assets) and friction (bill stress and eviction; warnings and presses also
+# land there, and are reported apart by the rule column). Trust is not a hedonic term: it moves net only through behaviour, so it shows
+# up in the other groups.
+TERMS = {"money": ("money",), "pot (security)": ("security",), "pot (bill friction)": ("friction",), "rest": ("rest",),
+         "connection": ("connection",), "partner": ("partner",), "friends": ("friends",), "bonds": ("levers",),
+         "conditions": ("conditions",), "clip": ("clip",), "other": ("items", "pressure", "intrinsic", "autonomy", "other")}
+
+
+def gaps(recs, horizons=HORIZONS4):
+    """Per action (applied, no soft rule): the k-week own-net effect of each carry-over term, and its gap to the 1-week effect, which is
+    what a one-week valuer sees. -> {action: {"n", "perceived", "net": {h: x}, "terms": {term: {h: x}}, "gap": {term: {h: x - x_1}}}}"""
+    rows = [r for r in items(recs) if r["rule"] != "soft"]
+    out = {}
+    for a in PASS_ACTIONS:
+        xs = [r for r in rows if r["a"] == a]
+        if not xs:
+            continue
+        e = {"n": len(xs), "in_hh_share": round(float(np.mean([r["in"] for r in xs])), 3),
+             "perceived": round(float(np.mean([r["p"] for r in xs])), 5),
+             "net": {h: boot_mean(xs, lambda r, h=h: act_of(r, h)) for h in horizons}, "terms": {}, "gap": {}}
+        for t, gs in TERMS.items():
+            e["terms"][t] = {h: round(float(np.mean([sum(r["g"][h].get(g, 0.0) for g in gs) for r in xs])), 5) for h in horizons}
+            e["gap"][t] = {h: round(e["terms"][t][h] - e["terms"][t][horizons[0]], 5) for h in horizons}
+        out[a] = e
+    return out
+
+
+def gaps_table(g, horizons=HORIZONS4):
+    lines = []
+    for a, e in g.items():
+        lines.append(f"\n{a} (n {e['n']}, in a household {e['in_hh_share']:.0%}, perceived {e['perceived']:+.4f}); net "
+                     + ", ".join(f"{h}w {e['net'][h]['est']:+.4f}" for h in horizons))
+        lines.append("| term | " + " | ".join(f"{h}w" for h in horizons) + " | " + " | ".join(f"gap {h}w" for h in horizons[1:]) + " |")
+        lines.append("|---" * (2 * len(horizons)) + "|")
+        for t in TERMS:
+            x, d = e["terms"][t], e["gap"][t]
+            if max(abs(v) for v in x.values()) < 5e-4:
+                continue
+            lines.append(f"| {t} | " + " | ".join(f"{x[h]:+.4f}" for h in horizons) + " | "
+                         + " | ".join(f"{d[h]:+.4f}" for h in horizons[1:]) + " |")
+    return "\n".join(lines)
 
 
 def table(res, h=1, m="net"):
@@ -417,7 +509,7 @@ def main():
         if a.run:
             collect(NOBILLS, OUT / "rows.jsonl", a.workers, extra)
             a.run = False
-    if a.reach:
+    if a.reach and not hz:
         res = reach(load(ROOT / "runs" / "value-consistency" / "rows.jsonl"))
         print(json.dumps(res, indent=1, default=str))
         (ROOT / "runs" / "value-consistency" / "reach.json").write_text(json.dumps(res, indent=1, default=str))
@@ -427,6 +519,23 @@ def main():
         collect(HARNESS, OUT / "harness.jsonl", a.workers, extra)
     if a.first:
         collect(FIRST, OUT / "first.jsonl", a.workers, extra)
+    if a.gaps:
+        recs = load(OUT / "rows.jsonl")
+        hzs = tuple(int(h) for h in recs[0]["items"][0]["actual"])
+        g = gaps(recs, hzs)
+        print(gaps_table(g, hzs))
+        (OUT / "gaps.json").write_text(json.dumps(g, indent=1, default=str))
+    if a.passtest and hz:
+        recs = load(OUT / "rows.jsonl")
+        res = {k: passtest4(recs, k) for k in ("net", "social", "unclipped")}
+        print(json.dumps(res, indent=1, default=str))
+        (OUT / "passtest4.json").write_text(json.dumps(res, indent=1, default=str))
+        a.passtest = False
+    if a.reach and hz:
+        res = reach4(load(OUT / "rows.jsonl"))
+        print(json.dumps(res, indent=1, default=str))
+        (OUT / "reach4.json").write_text(json.dumps(res, indent=1, default=str))
+        a.reach = False
     if a.passtest:
         recs = load(OUT / "rows.jsonl")
         res = {k: passtest(recs, k) for k in ("net", "social", "unclipped")}

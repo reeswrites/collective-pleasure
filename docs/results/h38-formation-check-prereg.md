@@ -131,3 +131,11 @@ Committed before the run. Follows [agent-recalibration-prereg.md](agent-recalibr
 **What I expect, no verdict weight.** None strongly. Bills that hurt make living together cost more when the pot runs dry, and agents that value rest and friends at full levels may spend weeks differently in the rollouts, so formation shares under both rules may move.
 
 **Can every verdict happen?** Unchanged: the same analysis code, and `--reach` above.
+
+### Amendment 2 (2026-11-12): rerun under the bill horizon
+
+Committed before the run. Follows [agent-bill-horizon-prereg.md](agent-bill-horizon-prereg.md) and the author's decision ("yes let's try that"): the bill horizon, then this check first.
+
+**What changes.** Every world, rollouts included, runs with `FixConfig(agent_values="v2b", bills_hurt=True)`: v2 plus a shared-bill payment credited by the settlement it feeds. Arms as Amendment 1 (G-L0, G-L4, G-W4, G-L1, O-L0, O-L4, O-W4; `--v2b --run`; rows in runs/h38-formation-v2b/). Descriptive, no verdicts: v2b with bills off, G-L0, G-L4, O-L0, O-L4 (`--v2bnobills --run`). **Nothing else changes**: pairings, seeds 0 to 3, world, the corrected rule, C1 to C3, the margin 0.007, the tests and Holm. It runs after the bill horizon's pass test, whatever its verdict, on the last version the pass test checked.
+
+**Which findings survive** (fixed now; the full rule is in the bill-horizon prereg, "Survival rules"): C1 to C3 by their own rules; signed findings (H38's old-rule gain, old-rule withdrawal, C1 without the direct terms, C1 weeks together, C1 net, C2, C3 pleasure and formation share, G-L1 − G-L0) by the H39b rule (same sign, interval excluding 0); each labelled v1 restored, v2 confirmed, stable or neither across v1, v2 and v2b (`scripts/bill_horizon_compare.py`). Households "form and persist at plausible rates" (descriptive) if G-L0 forms at week 0 in at least 50% of pair-seeds and at most 67% of formed households end.
