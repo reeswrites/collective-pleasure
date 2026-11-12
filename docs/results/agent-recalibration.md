@@ -8,6 +8,8 @@ Status: run on 2026-11-11 after the preregistration ([agent-recalibration-prereg
 
 **The pass test passes, by a wide margin, and it buys accurate agents at a price.** With `agent_values="v2"` and `bills_hurt=True`, the agents' own values agree with the hedonic model's one-week answer almost exactly: rank correlation 0.99 (v1: 0.43), the agent's best action is the actual best in 97% of decisions (v1: 34%), every action's mean gap is under 0.005. Agreement over longer horizons rose too (13 weeks 0.82, was 0.30; 52 weeks 0.68, was 0.19). But a one-week forecaster pays a monthly bill only in the settlement week, and only when the partner's share tips it. With bills that hurt, the pot drains and bills hurt every month, so households mostly stop forming: 16% of sampled decisions are inside a household, against 61% with the old agents. That changes the world the two reruns measure.
 
+**The reruns.** H39b: households almost never form; the crediting nulls survive, the tally still raises making, and "makers lower pleasure" reverses (+0.003). Formation check: C1 is within the margin but as clear harm (−0.038), C2 and C3 fail, and H38's own gain under the old rule reverses (+0.021 → −0.046). The descriptive v2-without-bills runs show the reversals come from the recalibration (accurate agents leave households that pressure holds them in), while the bills decide whether households form at all.
+
 ## What changed
 
 Two switches, both fields of `hedonic.FixConfig`, both off by default. Every past run reproduces with them off (`tests/test_agent_values.py`, pinned from commit 36a6460 before any change, and the older pins).
@@ -158,4 +160,43 @@ What this says, plainly:
 
 ## Descriptive: what the recalibration does without the bills
 
-Running at the time of this commit (Amendment 2: the check under v2 with bills off; H39b M0, Z, BP and the formation check's G-L0, G-L4, O-L0, O-L4 under v2 with bills off). Results follow in this file.
+Amendment 2's arm sets, `agent_values="v2"` with `bills_hurt=False`. No verdicts.
+
+**The check.** Every third pairing, seeds 0 and 1, 960 decisions: the pass test's bars all hold here too (T1 0.99, T2 0.98, T3 95%, T4 87%, T5 1.02, every gap under 0.005), and 36% of decisions are inside a household (v1 61%, v2 with bills 16%). Paying a shared bill is now a pure loss to the payer (−0.029 over one week), as gap 5 of the check said it would be.
+
+**Formation without bills.** Households form at week 0 as often as before (0.77 to 0.95) and then end almost always (96% to 99% of formed households). Pressure harms just as much: G-L4 − G-L0 −0.042 [−0.047, −0.036], old L4 − L0 −0.047 [−0.053, −0.041], without the direct terms −0.010 under both. The corrected rule still beats the old one (+0.022 [+0.017, +0.028]).
+
+**H39b without bills** (M0, Z, BP): week-0 formation 0.74 (M0), 0.41 (Z), 0.35 (BP); weeks together 0.20, 0.13, 0.11. Makers on is above makers off (Z − M0 +0.005 [+0.001, +0.010]) and the tally is now above nothing credited (BP − Z +0.003 [+0.002, +0.006]); the tally still adds blocks (+0.22).
+
+So the two switches do different things. **The recalibration alone reverses H38** (pressure harms) and **H39b's "makers lower pleasure"**: v2 agents, who value their own weeks accurately, leave households they would have stayed in, and pressure that holds them there costs pleasure. **The bills decide whether households form at all**: with them, a one-week forecaster lets the pot drain and few pairs move in.
+
+## Story spot-check
+
+The prereg asked for three runs; two were read week by week (single replays, 13-week blocks), plus the first one again under v1 and under v2 without bills:
+
+- **H39b BP, p-anchor with p-bargainer, seed 0, v2 + bills.** Never forms. Each partner settles into the same week, every week: work, rest, a friend; pleasure 0.97 and 1.00, suffering 0.11 to 0.13, for three years. With v2 and no bills, the same. With v1, they live together for 39 weeks and pay the bills, then A leaves. The measure's story (accurate agents doing well apart) is what happens.
+- **Formation G-L4, p-anchor with p-host, seed 0, v2 + bills.** Pushed in at week 0. Lots of time together, pleasure at the cap; they pay about a third of the bills, the pot drains, suffering rises from 0.08 to 0.16 over a year; A's stay readings say "held" from week 13 and "leave" from week 52; A leaves at week 65 with nothing. After the split pleasure falls to 0.8 to 0.95 and suffering rises (stigma, bills alone). That is the C1 harm, seen in one life.
+
+They look like what the measure claims: households that underpay their bills and come apart. The match is close because the measure and the story are the same mechanism, not two independent checks.
+
+## What is still inconsistent
+
+- **The horizon.** v2 sees one week. Paying a shared bill is worth +0.005 over one week and +1.01 over 52. Formation and stay decisions already use 52-week rollouts, but the weeks inside those rollouts are played by one-week agents, so the rollouts forecast households that underpay. This is limit 13's open half, and it now decides the household results.
+- **Time together** at one week (rank correlation 0.54 within the action): it uses the partner's units and the partner reacts.
+- **The partner's consent to time together** still uses the v1 threshold (`together_utility` ≥ 0.02), in v1 units.
+- **Unclipped pleasure.** v2 values only what the clipped close counts; at the cap, rest, friends and time together look worthless to it for the week.
+- **The bill numbers** are ASSUMED, one point each.
+
+## Recommendation
+
+Do not cite any v2 result that runs through forming or keeping a household until the horizon is decided. The smallest next step is a bill horizon: let v2 value a shared-bill payment by the settlement it feeds (the month's close, not the week's), a known answer the check can test at its 4-week horizon, preregistered the same way. Then rerun the formation check first (it is the cheaper of the two and the one whose verdicts moved most). Option (b2), a persona's own discounting, comes after: a chosen bias is a finding; the one-week horizon is an accident of the recalibration's scope.
+
+## Can be about / cannot be about
+
+This can be about whether scripted persona agents that value their actions by the hedonic model's one-week answer agree with it (they do), and what H39b and the H38 formation check show under such agents in this household, with and without bills that hurt.
+
+It cannot be about how people forecast, pay bills or decide to live together; about any horizon past one week for the agents' own choices; or about the bill numbers, which are ASSUMED.
+
+## Reproduction
+
+`uv run python scripts/value_consistency.py --v2 --run`, `--v2 --passtest`, `--v2 --analyze`, `--reach`, `--v2nobills --run`; `uv run python scripts/h39b_makers_rerun.py --v2 --run` and `--analyze` (and `--v2nobills`); `uv run python scripts/h38_formation_check.py --v2 --run` and `--analyze` (and `--v2nobills`); `uv run python scripts/agent_recalibration_compare.py`. Tests: `uv run pytest tests/test_agent_values.py -m ""`. Rows in runs/ (not committed). Wall time on 3 workers: check 36 minutes, H39b about 4 hours, formation check about 80 minutes.
