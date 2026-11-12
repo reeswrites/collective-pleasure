@@ -1718,7 +1718,7 @@ class WeeklyWorld:
     def sanction_cost(self, r, w, sanc):
         """What the agent subtracts for a soft rule's sanctions. v1: SANCTION_UTILITY per week (the old estimate, bit for bit); v2: the
         friction the sanctions would really add (agent_values.sanction_cost)."""
-        if self.fx and self.fx.agent_values == "v2":
+        if self.fx and self.fx.agent_values in ("v2", "v2b"):
             return _AV.sanction_cost(self, r, w, sanc)
         return sum(SANCTION_UTILITY[s["kind"]] * MONTH_WEEKS * s["duration_months"] for s in sanc)
 
@@ -1891,7 +1891,7 @@ class WeeklyWorld:
             ob["partner_accepts"] = self.agents[oth].together_utility(oo) >= 0.02 and self.units[oth] >= V2_COST["together"]
         if self.fx:
             self._fix_obs(r, w, ob)
-            if self.fx.agent_values == "v2":
+            if self.fx.agent_values in ("v2", "v2b"):
                 ob["v2"] = _AV.snapshot(self, r, w)
                 if me["in"] and o["in"]:
                     ob["v2_partner"] = _AV.snapshot(self, oth, w)
@@ -2215,7 +2215,7 @@ class WeeklyWorld:
                     h.xparts["bills"] = wk.get("bill_fric", 0.0)
             if self.makers:                                                 # H39: what was made for r, and craving (0 when off)
                 mp, mf = _MAKERS.week_terms(self, r, w)
-                if self.fx and self.fx.agent_values == "v2":
+                if self.fx and self.fx.agent_values in ("v2", "v2b"):
                     self._mk_last = {**getattr(self, "_mk_last", {}), r: (mp, mf)}     # agent values v2 reads last week's makers terms
                 ip, fric = ip + mp, fric + mf
             if self.fx:

@@ -258,6 +258,30 @@ def _week_net(s, parts=None):
     return out
 
 
+# ---- the bill horizon (agent_values="v2b"; docs/results/agent-bill-horizon-prereg.md) -------------------------------------------
+
+def _paid(s, step):
+    """s with one payment of `step` into the month's bills as the world applies it (the bill first, any surplus into the pot); money is
+    not touched (the payer's money is counted where the payment is made)."""
+    t = dict(s)
+    if t["funded"] >= t["need"]:
+        t["pool"] += step
+    else:
+        t["funded"] += step
+    return t
+
+
+def settle_credit(s, step):
+    """What one payment does to the agent's own close in the settlement week it feeds, projected from now: the settlement's terms with the
+    month's funding as it stands (nobody else pays before then) against the same with this payment added. The week's levels and counts
+    so far stand in for the settlement week's; money is held (the payment's money cost is counted this week, by week_net). In the
+    settlement week itself the week's own close already holds the bill, so the credit is 0; it is 0 too for a member who is not in."""
+    if s["settle"] or not s["in"]:
+        return 0.0
+    at = dict(s, settle=True)
+    return week_net(_paid(at, step)) - week_net(at)
+
+
 # ---- the agent's values ---------------------------------------------------------------------------------------------------------
 
 def utilities(agent, o, parts=None):
@@ -289,13 +313,12 @@ def utilities(agent, o, parts=None):
     u["spend_self"] = own(self_spends=1, self_step=H.SELF_STEP)
     mine = own(shared=1, share_step=H.SHARE_STEP)
     theirs = 0.0
-    if ps is not None and s["settle"] and s["bills_hurt"]:
-        t = dict(ps)
-        if t["funded"] >= t["need"]:
-            t["pool"] += H.SHARE_STEP
-        else:
-            t["funded"] += H.SHARE_STEP
-        theirs = week_net(t) - week_net(ps)
+    if s["fx"].agent_values == "v2b":          # the bill horizon: a payment is also worth what it does to the settlement it feeds
+        mine += settle_credit(s, H.SHARE_STEP)
+        if ps is not None:
+            theirs = settle_credit(ps, H.SHARE_STEP) if not ps["settle"] else week_net(_paid(ps, H.SHARE_STEP)) - week_net(ps)
+    elif ps is not None and s["settle"] and s["bills_hurt"]:
+        theirs = week_net(_paid(ps, H.SHARE_STEP)) - week_net(ps)
     u["spend_shared"] = mine + agent.prosocial * theirs
     pp["spend_shared"] = (mine, theirs)
     if o.get("withdraw") and "see_friend" in u:     # H38 dyadic withdrawal: a manipulated norm, kept

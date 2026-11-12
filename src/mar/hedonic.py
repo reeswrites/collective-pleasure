@@ -241,7 +241,8 @@ class FixConfig:
     decide_weeks: int = 0
     # Agent recalibration and bills (docs/results/agent-recalibration-prereg.md). Defaults are the old behaviour, bit for bit
     # (tests/test_agent_values.py). Read only in worlds where the fixes are on; not part of fixes_on.
-    agent_values: str = "v1"         # "v1": PersonaAgent.utilities as before; "v2": the change to this week's close (mar.agent_values)
+    agent_values: str = "v1"         # "v1": PersonaAgent.utilities as before; "v2": the change to this week's close (mar.agent_values);
+                                     # "v2b": v2 plus the bill horizon (a shared-bill payment credited by the settlement it feeds)
     bills_hurt: bool = False         # an unfunded bill costs a late fee, security (the lost buffer) and stress as the pot runs dry
     late_fee: float = 0.05           # share of the unfunded bill added when the pot pays it (ASSUMED)
     bill_stress: float = 0.30        # friction per member at settlement x unfunded share x dryness (ASSUMED)
