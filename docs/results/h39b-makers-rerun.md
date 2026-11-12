@@ -2,6 +2,8 @@
 
 Wording rule: agents feel nothing; "pleasure", "liking" and "wanting" are glosses for modeled values.
 
+> **Note, 2026-11-11 (later): rerun under the recalibrated agents and bills that hurt** ([agent-recalibration.md](agent-recalibration.md), Amendment 2 of the prereg). Households almost never form under them (week-0 formation 0, weeks together 7% to 13%), so the crediting question is barely asked. The crediting nulls survive; the tally still raises making and still lowers unclipped pleasure a little; **"makers lower pleasure" reverses** (Z − M0 +0.003 [+0.001, +0.005], was −0.022). Cite the numbers below only as results of the v1 agents.
+
 Status: run once on 2026-11-11, after the preregistration ([h39b-makers-rerun-prereg.md](h39b-makers-rerun-prereg.md), commit 27f8eb4; Amendment 1 and the code, commit fdd8b36). It reruns H39 ([h39-makers.md](h39-makers.md)) with the fitted time cost removed. 13 arms × 120 pairings × 4 seeds = 6,240 runs, 3,856 s on 3 workers. Scripted agents, no model calls, every number ASSUMED. By the power check the H39 and H20a verdicts are DESCRIPTIVE again.
 
 ## What changed from H39

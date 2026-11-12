@@ -72,6 +72,50 @@ The two lines of "One other way to measure it" (prereg): on own + prosocial × p
 
 A free probe of the week-0 formation rule, 12 pairings (Amendment 2): 9 of 12 form with v1, 9 with v1 and bills that hurt, 7 with v2 alone, 0 with v2 and bills that hurt. Each switch alone leaves formation near where it was; together they collapse it. The reruns below, and the descriptive v2-without-bills arms, show how much.
 
-## The reruns
+## Rerun 1: H39b under the new agents
 
-Running at the time of this commit: H39b (13 arms) and the formation check (G arms plus H38's L0, L4, W4 as O arms), both under v2 + bills; then the descriptive v2-without-bills sets. Results follow in this file.
+As preregistered ([H39b Amendment 2](h39b-makers-rerun-prereg.md)): 13 arms × 120 pairings × seeds 0 to 3, 6,240 runs, both switches on. Rows in runs/h39b-makers-v2/; the comparison in runs/agent-recalibration/compare.json (`scripts/agent_recalibration_compare.py`).
+
+**Households almost never form, so H39b's question is barely asked.** Week-0 formation is 0 in every makers arm and 0.002 in M0 (H39b: 0.29 to 0.52). Pairs come together later through the 13-week retries in 7% of weeks (makers on) to 13% (makers off), against 29% to 55%. Making happens only inside a household, so every crediting comparison is between nearly identical lives.
+
+| | M0 | Z | BP | H | P | G | A |
+|---|---|---|---|---|---|---|---|
+| pleasure, v2 + bills | 0.973 | 0.976 | 0.976 | 0.976 | 0.976 | 0.976 | 0.976 |
+| pleasure, H39b | 0.933 | 0.911 | 0.908 | 0.908 | 0.910 | 0.911 | 0.908 |
+| weeks together, v2 + bills | 0.13 | 0.08 | 0.07 | 0.07 | 0.07 | 0.08 | 0.07 |
+| weeks together, H39b | 0.55 | 0.32 | 0.29 | 0.29 | 0.31 | 0.31 | 0.29 |
+| blocks per partner-week together | – | 2.03 | 2.23 | 2.30 | 2.16 | 2.03 | 2.25 |
+| person-weeks in a full wanting trap | – | 0.025 | 0.026 | 0.025 | 0.025 | 0.026 | 0.024 |
+
+Pleasure is higher everywhere (0.97 against 0.91 to 0.93): agents that value their own week accurately, living apart, do better on their own clipped pleasure than the v1 agents did together. Nothing here says living apart is better for people; it says these agents, with these bills, run a better week alone.
+
+The planner's time cost did move as item 5 intended: 0.0048 a block in Z (H39b 0.0019), and the share of blocks made in units the plan would have left idle fell from 78% to 40%. Blocks per partner-week together did not fall (2.03 against 1.87): the households that do form are the ones where making pays.
+
+**Which H39b findings survive** (rule fixed in Amendment 2):
+
+| H39b finding | H39b | v2 + bills | Verdict |
+|---|---|---|---|
+| BP − Z, pleasure (null) | −0.0027 [−0.0055, +0.0002] | +0.0001 [−0.0006, +0.0008] | survives (null) |
+| H, P, G, A − Z, pleasure (nulls) | −0.0025 to −0.0003 | −0.0002 to +0.0002, all include 0 | survive (null) |
+| BP − Z, unclipped | −0.0070 [−0.0119, −0.0022] | −0.0020 [−0.0038, −0.0004] | **survives**, smaller |
+| The tally's pull, BP − G, unclipped | −0.0061 [−0.0107, −0.0015] | −0.0023 [−0.0040, −0.0008] | **survives**, smaller |
+| Makers lower pleasure, Z − M0 | −0.022 [−0.028, −0.017] | **+0.003 [+0.001, +0.005]** | **reverses** |
+| Z − M0, net | −0.041 | +0.020 [+0.011, +0.030] | reverses |
+| Z − M0, no extractive maker | −0.013 [−0.020, −0.007] | +0.003 [−0.000, +0.006] | does not survive |
+| Z − M0, formation at week 0 | −0.19 | −0.002 | does not survive (nobody forms) |
+| Z − M0, weeks together | −0.23 | −0.049 [−0.066, −0.033] | survives, much smaller |
+| Tally raises making (P2: H, P, BP − Z) | +0.13, +0.07, +0.12 | +0.27, +0.15, +0.21 | survives, larger; P2 now holds for P too |
+| BP − Z, weeks together | −0.032 | −0.010 [−0.019, −0.001] | survives, smaller |
+| P3: hours draw in partners who dislike making | +0.012 [+0.002, +0.022] | −0.011 [−0.027, +0.005] | does not survive |
+| Protection starts more projects (BP-PN − BP) | +0.155 [+0.056, +0.25] | +0.091 [+0.048, +0.143] | survives, smaller (below the +0.20 bar) |
+| P7: the suffering-weight rule forms fewer households | −0.44 | −0.008 | does not survive (nobody forms under either rule) |
+| Tally lowers the trap share (BP − Z) | −0.008 [−0.016, −0.001] | +0.001 [−0.003, +0.004] | does not survive |
+| P4: imbalances even out more under a tally | +0.097 | no long-together pair-seeds | cannot be computed |
+
+Verdicts: H39 **not supported** (as before); H20a **not supported** (as before; P6c now holds, P6a and P6b miss); extractive question **weak** (as before).
+
+**What survives is what does not need households.** The crediting nulls survive because nothing moves. The tally still raises making and still lowers unclipped pleasure a little, inside the few households there are. H39b's headline, "makers lower pleasure", reverses: with almost nobody living together, makers on and off differ by a small amount, and now the other way. None of this says making helps; it says the H39b result needs agents that form households, and these do not.
+
+## Rerun 2: the H38 formation check under the new agents
+
+Running at the time of this commit (G arms and H38's L0, L4, W4 as O arms). Results follow in this file.
