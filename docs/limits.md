@@ -52,9 +52,9 @@ Fix: a calibrated economy and housing regimes in the many-agent world (H40; [not
 Results cannot be about amatonormativity or monogamy.
 Fix: H38b in the many-agent world. See [results/h38-pairing-norms.md](results/h38-pairing-norms.md).
 
-**13. Agents choose on one yardstick and are scored on another.** The agents' action utilities agree with the hedonic model's own answer only loosely (rank correlation 0.43 over a week, 0.19 over a year), through bugs (needs read before the week's drift, half-scale terms, missing together pleasure, sanctions priced at a fifteenth) and one open modeling choice (bills the pot pays silently).
-Results cannot be about how agents spend their weeks, or about effects that run through that (makers, pot dynamics, formation rollouts), without this caveat.
-Fix: recalibrate the utilities to the one-week known answers, decide bills, then rerun H39b and the formation check. See [results/value-consistency.md](results/value-consistency.md).
+**13. Agents choose on one yardstick and are scored on another (partly resolved 2026-11-11).** The default agents (`agent_values="v1"`) agree with the hedonic model's own answer only loosely (rank correlation 0.43 over a week, 0.19 over a year). The recalibrated agents (`agent_values="v2"`, with `bills_hurt`) agree over one week almost exactly (0.99; best action right in 97% of decisions) and better over a year (0.68). What is left is the horizon: v2 forecasts one week, so a monthly bill is paid late, the pot drains, and with bills that hurt few households form (16% of decisions inside a household, against 61%).
+Results run on v1 agents cannot be about how agents spend their weeks without this caveat. Results run on v2 cannot be about anything a forward-looking agent would do differently over months (bills, saving, forming a household).
+Fix: a horizon choice for the author (a bill horizon, or a persona's own discounting, option b2). See [results/agent-recalibration.md](results/agent-recalibration.md) and [results/value-consistency.md](results/value-consistency.md).
 
 ## What results here CAN be about
 
