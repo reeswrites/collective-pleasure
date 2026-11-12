@@ -137,4 +137,14 @@ One world for the pass test. One bill horizon: to the month's settlement, not th
 
 ## Amendments
 
-None yet.
+**Amendment 1 (2026-11-12, after the pass test, before the formation rerun): the pass test fails; no iteration.** The pass test ran as written (runs/value-consistency-v2b/, 5,760 decisions, 1,844 s). **FAIL on U6 and U6b only**: paying a shared bill is perceived at −0.022 and is worth −0.051 over 4 weeks (gap 0.029, bar 0.015); before the settlement week −0.017 against −0.054 (gap 0.037). U1 to U5 and O1 to O6 hold. The rows say why, by week of the month (unfunded bill, payments before the settlement week):
+
+| | v2 world: perceived | v2 world: 1 week | v2 world: 4 weeks | v2b world: perceived | v2b world: 1 week | v2b world: 4 weeks |
+|---|---|---|---|---|---|---|
+| week 0 of the month | −0.015 | −0.015 | +0.011 | +0.014 | −0.047 | −0.049 |
+| week 1 | −0.014 | −0.014 | +0.024 | −0.024 | −0.053 | −0.058 |
+| week 2 | −0.014 | −0.014 | +0.030 | −0.040 | −0.059 | −0.057 |
+
+In v2's world nobody pays early, so a payment made now is a payment the settlement would otherwise miss: the 4-week actual is above the 1-week one by +0.03, the credit v2b adds. In v2b's world the agents pay early, so a payment not made at this call is made at a later call before the settlement, and the 4-week actual of paying now is its 1-week cost (money, and the denial condition for poorer agents), nothing more. The credit is right about the settlement and wrong about the counterfactual, the case "Where it can mislead" named. In the settlement week the credit is 0 and the agents agree with the check (perceived −0.037, 4 weeks −0.045).
+
+Why no iteration: the iteration rule allows a change only where the design disagrees with the check's 4-week actual. Here the actual depends on what the same agents do at their later calls. A credit that assumes nobody pays later (v2b) over-values by 0.037; a credit of 0 before the settlement (v2) under-values by 0.036 in the world it makes. Any rule in between is a number chosen so the world it makes lands on the bar, which is fitting a parameter to the check's outcome through the agents' own behaviour. The rule this design does not have, and would need, is a plan: the household deciding the month's payments once, so "not paying now" has a defined later. That is a new design, not an iteration. The formation rerun runs on v2b as tested, labelled with this FAIL. No formation number had been seen when this was written.
