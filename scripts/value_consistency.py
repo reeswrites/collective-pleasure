@@ -60,6 +60,9 @@ def sample_weeks(a, b, seed, n):
 
 
 V2 = {"agent_values": "v2", "bills_hurt": True}              # the recalibrated agents and bills that hurt (off by default)
+# Bill horizon (docs/results/agent-bill-horizon-prereg.md): the 4-week horizon added, so a payment is measured through the settlement it feeds
+HORIZONS4 = (1, 4, 13, 52)
+V2B = {"agent_values": "v2b", "bills_hurt": True}
 
 
 def _ctx(extra=None):
@@ -77,7 +80,7 @@ def _lived_snapshot(lived):
         world.run, world.hook = run, hook
 
 
-def run_pair(a, b, seed, n_weeks, k, harness, extra=None):
+def run_pair(a, b, seed, n_weeks, k, harness, extra=None, horizons=VC.HORIZONS):
     """Play one makers-off life as H39b's M0 arm does and measure the sampled decisions. -> list of decision records."""
     ps = RT.personas()
     for c in (NG._RC, NG._PC, NG._BC):
@@ -100,7 +103,7 @@ def run_pair(a, b, seed, n_weeks, k, harness, extra=None):
                 snap = VC.snapshot(world)
                 sl = _lived_snapshot(lived) if harness else None
                 for r in "AB":
-                    rec = VC.measure_decision(snap, dict(last), w, r, k, lived=sl)
+                    rec = VC.measure_decision(snap, dict(last), w, r, k, horizons=horizons, lived=sl)
                     if rec is not None:
                         rec.update(a=a, b=b, seed=seed, persona=a if r == "A" else b,
                                    both_in=all(world.p[x]["in"] for x in "AB"))
@@ -110,20 +113,22 @@ def run_pair(a, b, seed, n_weeks, k, harness, extra=None):
 
 
 def task(args):
-    a, b, seed, n_weeks, k, harness, extra = args
+    a, b, seed, n_weeks, k, harness, extra = args[:7]
+    hz = args[7] if len(args) > 7 else VC.HORIZONS
     t0 = time.time()
-    recs = run_pair(a, b, seed, n_weeks, k, harness, extra)
+    recs = run_pair(a, b, seed, n_weeks, k, harness, extra, hz)
     return recs, time.time() - t0
 
 
-def collect(cfg, f, workers=WORKERS, extra=None):
+def collect(cfg, f, workers=WORKERS, extra=None, horizons=None):
     workers = min(workers, 3)
     OUT.mkdir(parents=True, exist_ok=True)
     pairs = H38.pairings(H38.CONFIRM)[::cfg["pairs_every"]]
     done = set()
     if f.exists():
         done = {(r["a"], r["b"], r["seed"]) for r in load(f)}
-    tasks = [(a, b, s, cfg["weeks"], cfg["k"], cfg["harness"], extra) for (a, b) in pairs for s in cfg["seeds"] if (a, b, s) not in done]
+    tasks = [(a, b, s, cfg["weeks"], cfg["k"], cfg["harness"], extra, *([horizons] if horizons else []))
+             for (a, b) in pairs for s in cfg["seeds"] if (a, b, s) not in done]
     print(f"{len(tasks)} tasks, {workers} workers -> {f}", flush=True)
     t0 = time.time()
     with Pool(workers) as pool, f.open("a") as fh:
@@ -392,6 +397,9 @@ def main():
     ap.add_argument("--workers", type=int, default=WORKERS)
     ap.add_argument("--v2", action="store_true", help="agent values v2 and bills that hurt; rows in runs/value-consistency-v2/")
     ap.add_argument("--v2nobills", action="store_true", help="descriptive: v2 with bills off, a smaller sample (Amendment 2)")
+    ap.add_argument("--v2h4", action="store_true", help="bill horizon prereg: v2 and bills, horizons 1/4/13/52; runs/value-consistency-v2-h4/")
+    ap.add_argument("--v2b", action="store_true", help="bill horizon: agent_values v2b and bills, horizons 1/4/13/52; runs/value-consistency-v2b/")
+    ap.add_argument("--gaps", action="store_true", help="carry-over terms: per action, per group, the k-week effect minus the 1-week effect")
     ap.add_argument("--passtest", action="store_true")
     ap.add_argument("--reach", action="store_true")
     a = ap.parse_args()
@@ -399,6 +407,11 @@ def main():
     extra = None
     if a.v2:
         OUT, extra = ROOT / "runs" / "value-consistency-v2", V2
+    hz = None
+    if a.v2h4:
+        OUT, extra, hz = ROOT / "runs" / "value-consistency-v2-h4", V2, HORIZONS4
+    if a.v2b:
+        OUT, extra, hz = ROOT / "runs" / "value-consistency-v2b", V2B, HORIZONS4
     if a.v2nobills:
         OUT, extra = ROOT / "runs" / "value-consistency-v2-nobills", {"agent_values": "v2"}
         if a.run:
@@ -409,7 +422,7 @@ def main():
         print(json.dumps(res, indent=1, default=str))
         (ROOT / "runs" / "value-consistency" / "reach.json").write_text(json.dumps(res, indent=1, default=str))
     if a.run:
-        collect(MAIN, OUT / "rows.jsonl", a.workers, extra)
+        collect(MAIN, OUT / "rows.jsonl", a.workers, extra, hz)
     if a.harness:
         collect(HARNESS, OUT / "harness.jsonl", a.workers, extra)
     if a.first:

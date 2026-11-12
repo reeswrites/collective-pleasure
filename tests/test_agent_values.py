@@ -14,6 +14,15 @@ def test_defaults_reproduce_pinned_fingerprints():
     assert AF.fingerprints() == pinned
 
 
+def test_v2_reproduces_pinned_fingerprints():
+    """Pinned at commit dff1c4d, before the bill horizon existed (docs/results/agent-bill-horizon-prereg.md): agent_values v2, with and
+    without bills that hurt, must not move when v2b is added."""
+    import agent_values_fingerprint as AF
+    pinned = json.loads((ROOT / "tests" / "data" / "agent_values_v2_fingerprints.json").read_text())
+    assert AF.fingerprints({"agent_values": "v2", "bills_hurt": True}) == pinned["v2+bills"]
+    assert AF.fingerprints({"agent_values": "v2"}) == pinned["v2"]
+
+
 # ---- bills that hurt: known-answer cases (prereg KA1 to KA4) -------------------------------------------------------------------
 
 def _world(bills=True, values="v1"):
