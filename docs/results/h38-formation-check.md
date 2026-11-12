@@ -2,6 +2,8 @@
 
 Wording rule: agents feel nothing; "pleasure" is a gloss for a modeled hedonic state.
 
+> **Note, 2026-11-11 (later): rerun under the recalibrated agents and bills that hurt** ([agent-recalibration.md](agent-recalibration.md); Amendment 1 of the prereg). C1 is again within the margin, but as clear harm: G-L4 − G-L0 −0.038 [−0.043, −0.033]. C2 fails (withdrawal −0.001) and C3 fails (the corrected rule now forms fewer households, −0.10 at week 0). H38's own gain under the old rule reverses (old L4 − L0 −0.046, was +0.021). Under these agents households form less and end almost always. Cite the numbers below only as results of the v1 agents.
+
 Status: run once on 2026-11-11, after the preregistration ([h38-formation-check-prereg.md](h38-formation-check-prereg.md), commit 2c5259f; code 3c8a578). Follows [H38](h38-pairing-norms.md).
 
 Setup: the H38 world, pairings and seeds (120 pairings × 4 seeds, F4, items in cell V2). Four new arms under the corrected rule, 1,920 runs (2,376 s on 3 workers). Old arms reused from H38's rows; a test shows the code reproduces them exactly with the flag off. Scripted agents, no model calls, every number ASSUMED. Run with `uv run python scripts/h38_formation_check.py --diagnose`, `--run`, `--analyze`, `--reach`.

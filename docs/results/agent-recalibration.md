@@ -118,4 +118,44 @@ Verdicts: H39 **not supported** (as before); H20a **not supported** (as before; 
 
 ## Rerun 2: the H38 formation check under the new agents
 
-Running at the time of this commit (G arms and H38's L0, L4, W4 as O arms). Results follow in this file.
+As preregistered ([formation check Amendment 1](h38-formation-check-prereg.md)): G-L0, G-L1, G-L4, G-W4 under the corrected rule, and H38's own L0, L4, W4 under the old rule, all with both switches on; 120 pairings × seeds 0 to 3, 3,360 runs. Rows in runs/h38-formation-v2/.
+
+**Households form less and end almost always; pressure now pushes people into households that hurt.**
+
+| | old L0 | old L4 | old W4 | G-L0 | G-L1 | G-L4 | G-W4 |
+|---|---|---|---|---|---|---|---|
+| pleasure, v2 + bills | 0.974 | 0.928 | 0.973 | 0.978 | 0.969 | 0.941 | 0.977 |
+| pleasure, before | 0.928 | 0.949 | 0.917 | 0.956 | 0.957 | 0.959 | 0.940 |
+| formed at week 0, v2 + bills | 0.16 | 0.49 | 0.15 | 0.06 | 0.08 | 0.53 | 0.12 |
+| formed at week 0, before | 0.51 | 0.88 | 0.49 | 0.84 | 0.89 | 0.98 | 0.71 |
+| weeks together, v2 + bills | 0.16 | 0.31 | 0.13 | 0.19 | 0.22 | 0.43 | 0.18 |
+| households that end (of formed), v2 + bills | 0.96 | 0.88 | 0.98 | 0.81 | 0.85 | 0.84 | 0.80 |
+| stay readings held by pressure, v2 + bills | 0 | 0.49 | 0.05 | 0 | 0.27 | 0.46 | 0.09 |
+
+Differences, paired by pairing, 95% bootstrap:
+
+| Comparison | Before | v2 + bills | Verdict (rule fixed in Amendment 1) |
+|---|---|---|---|
+| **C1** G-L4 − G-L0, pleasure | +0.003 [−0.004, +0.009], within margin | **−0.038 [−0.043, −0.033]**, within margin (Holm p 1.0) | C1 "within margin" **survives**, but now as clear harm |
+| C1 without the direct terms | −0.010 [−0.015, −0.005] | −0.009 [−0.012, −0.005] | survives |
+| C1 weeks together | +0.10 | +0.24 [+0.20, +0.27] | survives, larger |
+| C1 net | −0.002 [−0.020, +0.014] | −0.103 [−0.121, −0.086] | now an effect (harm) |
+| **C2** G-W4 − G-L0, pleasure | −0.017 [−0.022, −0.011], holds | −0.001 [−0.003, +0.001], **fails** | does not survive |
+| **C3** G-L0 − old L0, pleasure | +0.028 [+0.023, +0.033] | +0.005 [+0.002, +0.008] | survives, much smaller |
+| C3 formation at week 0 | +0.33 | **−0.10 [−0.16, −0.04]** | reverses, so **C3 fails** |
+| H38's gain, old L4 − old L0 | +0.021 [+0.013, +0.028] | **−0.046 [−0.053, −0.040]** | **reverses** |
+| H38's withdrawal, old W4 − old L0 | −0.011 [−0.016, −0.007] | −0.001 [−0.003, +0.002] | does not survive |
+| G-L1 − G-L0 | +0.001 (null) | −0.009 [−0.011, −0.007] | now an effect (harm) |
+
+Verdicts: C1 within margin (as before), C2 fails (was holds), C3 fails (was holds).
+
+What this says, plainly:
+
+- **H38's headline reverses.** With agents that value their weeks accurately and bills that hurt, pairing pressure lowers pleasure under either formation rule (−0.046 under the old rule, −0.038 under the corrected one). It still adds weeks together, and about half the stay readings under pressure are held by it. Taking away the direct terms leaves −0.009, about what the formation check already found; the rest is stigma paid by the many who stay apart.
+- **Withdrawal stops mattering**, because few people live together long enough for it to bite.
+- **The corrected rule no longer forms more households.** Under v2 agents both rules see household weeks that cost bills and stress, and the pleasure rule is the more cautious one here (0.06 against 0.16 at week 0). It still yields slightly more pleasure.
+- **Households that form mostly end** (80% to 98%), against 20% to 67% before.
+
+## Descriptive: what the recalibration does without the bills
+
+Running at the time of this commit (Amendment 2: the check under v2 with bills off; H39b M0, Z, BP and the formation check's G-L0, G-L4, O-L0, O-L4 under v2 with bills off). Results follow in this file.
