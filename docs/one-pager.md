@@ -47,6 +47,7 @@ Each result carries its label from the statistics rule ([ADR 0015](decisions/REA
 - **Multiverse sweep (done).** See the robustness line under "What held".
 - **Household fixes, then the v2.3 retest.** The author approved fixing the world first (2026-11-11). Seed v2.3 is partly confirmed: the author answered four points (trust, role fines, exit last, the decency floor); rule 14 (roles), the slid-into flag, the renegotiate step and the severe-distress skip were never read back ([read-back](results/seed-v2.3-readback.md)).
 - **Retest verdict rule (author, 2026-11-11):** the v2.2 and v2.3 condition is judged on pleasure alone ("show both, judge on pleasure"), with net wellbeing and non-offsettable suffering shown beside it. Everyone counts, people who choose to live apart included ("everyone counts"). See [the retest prereg draft](results/v2-retest-prereg-DRAFT.md).
+- **Evaluator rule from 2026-11-12 (author, read back and confirmed):** freedom and pleasure together, not one at the other's expense. A win raises pleasure without raising domination, or freedom without costing pleasure; anything else is a trade-off. This supersedes "judge on pleasure" for new experiments; earlier results keep their preregistered rule.
 - **IT1 rerun.** New rule sets where an inventive seam is reachable and pays. Free harness work is approved. The paid run awaits approval, with a hard cap of $8.00 ([plan](plans/inventive-seam-next.md)).
 
 ## The open bet on the AI agents track

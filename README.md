@@ -10,6 +10,8 @@ Pleasure also has to be made. Someone has to create the art, games and food that
 
 Freedom is the second commitment. Freedom is equal liberty minus domination. Your options count if everyone can have the same ones, minus any option another person can block at will. Leaving or refusing is not domination.
 
+The two go together. A good world raises pleasure without raising domination: freedom and pleasure together, not one bought with the other where that can be avoided. A setup that raises pleasure while raising domination, such as households held together by money or pressure, is reported as a trade-off, not a win. Whether being held brings suffering is checked in the data, not assumed.
+
 ## Households are what emerges, and the testbed
 
 Households and couples are not the subject. Living together is something that emerges. People pair up, share money and time, and sometimes leave. That pattern comes out of the more basic thing: norms and agreements about pleasure.

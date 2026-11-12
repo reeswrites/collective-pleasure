@@ -72,6 +72,7 @@ Why this is required: ADR 0015, amendment 2026-11-11 (two cases where a verdict 
 - **Story spot-check.** After the run, read 3 to 5 runs as week-by-week stories (pattern atlas, docs/results/pattern-atlas.md) from different arms, and say whether they look like what the measure claims. Report a mismatch as a finding.
 
 ## Verdict rule
+[Since 2026-11-12: state the verdict on pleasure AND freedom (domination). A "win" raises pleasure without raising domination, or freedom without costing pleasure. If an arm raises one and lowers the other, the verdict is "trade-off", never "supported". Name the domination measure (e.g. held share, holdout leverage, liberty with powers) and, where relevant, check whether being held goes with more suffering.]
 
 [How the predictions combine, for example "rediscovered iff P1, P2 and P3 hold". State the statistical label that counts as a hold. Default: the point estimate meets the threshold AND the 95% interval lies inside it ("holds robustly"); "holds but CI crosses threshold" is reported as weak support and is not counted as a confirmed hold for any claim that would be cited.]
 
