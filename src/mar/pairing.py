@@ -17,7 +17,6 @@ Intrinsic: +intrinsic x v while living together, v = the persona's values-pairin
 """
 from __future__ import annotations
 
-import copy
 import dataclasses
 import hashlib
 from dataclasses import dataclass
@@ -108,16 +107,8 @@ def exit_anticipation(world, out_weeks=None):
 def _forward(world, w, last, fx, weeks=None):
     from . import negotiation as NG
     weeks = weeks or NG.decide_weeks(NG.FORWARD_WEEKS)
-    hook, world.hook = world.hook, None
-    try:
-        c = copy.deepcopy(world)
-    finally:
-        world.hook = hook
-    c.fx = fx
-    n0, lt = len(c.run.outcomes), last
-    for x in range(w, w + weeks):
-        lt = {"busy": c.step_week(x, lt)}
-    return {r: NG.wellbeing(c.run.outcomes[n0:], r, world.personas[r]) for r in "AB"}
+    c = NG.played_copy(world, w, last, weeks, fx)
+    return {r: NG.wellbeing(c.run.outcomes, r, world.personas[r]) for r in "AB"}
 
 
 def stay_reading(world, w, last):

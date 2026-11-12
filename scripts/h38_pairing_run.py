@@ -87,9 +87,10 @@ def play(pc, a, b, seed, stay=True, weeks=H.WEEKS, liberty=None, rule=None, decl
                 if lived.apart and lived.decline:
                     lived.retry(w, last)
                 elif all(world.p[r]["in"] for r in "AB"):
-                    if stay:
-                        readings.append((w, PR.stay_reading(world, w, last)))
-                    lived.reading(w, last)
+                    with NG.forward_memo():               # the reading replays the stay lens's status-quo rollout: played once
+                        if stay:
+                            readings.append((w, PR.stay_reading(world, w, last)))
+                        lived.reading(w, last)
             if world.early_review:
                 world.ladder_reviewed(w)
             last = {"busy": world.step_week(w, last)}

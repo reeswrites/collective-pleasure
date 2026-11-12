@@ -7,6 +7,7 @@ ADICO cards, and the proof checks run BEFORE anyone lives under them. No LLM, no
 Everything numeric here is the prereg's, fixed before any run. The evaluation of living under a bundle is a closed-form PROXY of
 the persona's weights (ASSUMED, not validated against rollouts). Wording rule: agents feel nothing; "value" is a modeled gloss.
 """
+import contextlib
 import copy
 import random
 import re
@@ -707,18 +708,54 @@ def forward_values(world, w, last, weeks=FORWARD_WEEKS, parts=None):
     """Persona evaluation of the next 26 weeks of the live household under its current terms (a copy of the world plays them).
     parts (observer layer): a dict that receives each member's rollout parts, when the world's Hedonic records them."""
     weeks = decide_weeks(weeks)
-    hook, world.hook = world.hook, None
-    c = copy.deepcopy(world)
-    world.hook = hook
-    n0, lt = len(c.run.outcomes), last
-    for x in range(w, w + weeks):
-        lt = {"busy": c.step_week(x, lt)}
-    STATS["rollouts"] += 1
+    c = played_copy(world, w, last, weeks)
+    STATS["rollouts"] += 1                      # counted as asked for, also when forward_memo serves the copy (counters stay as they were)
     STATS["rollout_weeks"] += weeks
     if parts is not None:
         for r in "AB":
             parts[r] = _OBS.rollout_parts(c.hed[r], 0)
-    return {r: wellbeing(c.run.outcomes[n0:], r, world.personas[r]) for r in "AB"}
+    return {r: wellbeing(c.run.outcomes, r, world.personas[r]) for r in "AB"}
+
+
+_FWD = None          # forward_memo's store while one is open: [(world, w, weeks, fx, last, played copy)]; None = off
+
+
+@contextlib.contextmanager
+def forward_memo():
+    """Within the block, a rollout of the same world from the same week, for as many weeks, under an equal FixConfig and an equal `last`
+    is played once and its copy reused (docs/notes/performance.md). Open it only around calls that do not change the world between them:
+    the stay lens and the reading that follows it (scripts/h38_pairing_run.py play). A rollout is deterministic given those inputs (the
+    copy carries every random stream), so the reused copy is the one a second rollout would play."""
+    global _FWD
+    prev, _FWD = _FWD, []
+    try:
+        yield
+    finally:
+        _FWD = prev
+
+
+def played_copy(world, w, last, weeks, fx=None):
+    """A copy of the world (no hook, a fresh run log: the rollout reads only the weeks it plays) that has played weeks w .. w+weeks-1
+    from `last`. fx: the FixConfig the copy plays under (None = the world's own)."""
+    use = world.fx if fx is None else fx
+    if _FWD is not None:
+        for wd, w0, n, f, lt0, c in _FWD:
+            if wd is world and w0 == w and n == weeks and f == use and lt0 == last:
+                return c
+    hook, run = world.hook, world.run
+    world.hook, world.run = None, H.Run()
+    try:
+        c = copy.deepcopy(world)
+    finally:
+        world.hook, world.run = hook, run
+    if fx is not None:
+        c.fx = fx
+    lt = last
+    for x in range(w, w + weeks):
+        lt = {"busy": c.step_week(x, lt)}
+    if _FWD is not None:
+        _FWD.append((world, w, weeks, use, copy.deepcopy(last), c))
+    return c
 
 
 # ---- the v2 protocol -------------------------------------------------------------------------------------------------------
