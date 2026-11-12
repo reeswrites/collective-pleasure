@@ -787,11 +787,20 @@ class PyGate:
         self.cards = list(cards) if _EXIT.ACTIVE is None else _EXIT.apply(cards)   # no-deal exit fallback switch (off by default)
         self._by = {}
 
+    _CODE = {}     # expr string -> compiled code object (compiling once instead of at every check; same evaluation, docs/notes/performance.md)
+
     def _viol(self, c, env):
         if c.deontic == "may":
             return False
-        holds = all(self._OPS[p["op"]](eval(p["expr"], {"__builtins__": {}}, env), p["value"]) for p in c.conditions)
+        code = self._CODE
+        holds = all(self._OPS[p["op"]](eval(code[p["expr"]] if p["expr"] in code else self._code_for(p["expr"]), {"__builtins__": {}},
+                                            env), p["value"]) for p in c.conditions)
         return holds if c.deontic == "must_not" else not holds
+
+    @classmethod
+    def _code_for(cls, expr):
+        cls._CODE[expr] = code = compile(expr.lstrip(" \t"), "<card>", "eval")    # eval() strips leading blanks too
+        return code
 
     def check(self, kind, action, state, take=0):
         key = (kind, action)
