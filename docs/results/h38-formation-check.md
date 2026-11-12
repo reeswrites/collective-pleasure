@@ -2,6 +2,8 @@
 
 Wording rule: agents feel nothing; "pleasure" is a gloss for a modeled hedonic state.
 
+> **Note, 2026-11-12: rerun under the bill horizon** ([agent-bill-horizon.md](agent-bill-horizon.md); Amendment 2 of the prereg). Agents `agent_values="v2b"` (v2 plus a bill payment credited by the settlement it feeds; they fail their own 4-week pass test by over-valuing payments by 0.03) with bills that hurt. Households come back about halfway (G-L0 formed at week 0: 0.42; v2 0.06, here 0.84) and last longer (72% of formed end; v2 81%, here 29%). Verdicts as under v2: C1 within margin (now about neutral, −0.004 [−0.008, +0.000]), C2 fails (+0.001), C3 fails (formation −0.05 [−0.11, +0.01]; pleasure still +0.010). H38's own gain under the old rule is neither restored nor reversed: −0.003 [−0.009, +0.002] (here +0.021, v2 −0.046). C1 "within margin" is the one verdict that held under all three agent sets.
+
 > **Note, 2026-11-11 (later): rerun under the recalibrated agents and bills that hurt** ([agent-recalibration.md](agent-recalibration.md); Amendment 1 of the prereg). C1 is again within the margin, but as clear harm: G-L4 − G-L0 −0.038 [−0.043, −0.033]. C2 fails (withdrawal −0.001) and C3 fails (the corrected rule now forms fewer households, −0.10 at week 0). H38's own gain under the old rule reverses (old L4 − L0 −0.046, was +0.021). Under these agents households form less and end almost always. Cite the numbers below only as results of the v1 agents.
 
 Status: run once on 2026-11-11, after the preregistration ([h38-formation-check-prereg.md](h38-formation-check-prereg.md), commit 2c5259f; code 3c8a578). Follows [H38](h38-pairing-norms.md).
