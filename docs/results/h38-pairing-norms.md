@@ -2,6 +2,8 @@
 
 Wording rule: agents feel nothing; "pleasure" is a gloss for a modeled hedonic state.
 
+> **Note, 2026-11-13: step 3 ([formation-check-3.md](formation-check-3.md)).** On the saturating scale with bills that hurt, the corrected rule and four agent sets side by side, pressure at L4 holds people in under every set (held 0.05 to 0.36 of readings). Its effect on pleasure is agent-dependent: within margin under v1, lower under v2, higher under v2b and the hybrid. Under the hybrid the gain is the reward paid, with lived pleasure slightly lower and liberty narrower. Under the evaluator's rule (pleasure AND freedom), H38 pressure is never a win: at best a trade-off.
+>
 > **Note, 2026-11-11 (formation check): the headline below does not survive agents who decide on pleasure.** Rerun with agents deciding to form and stay on their own pleasure over 52 weeks, L4 minus L0 is +0.003 [−0.004, +0.009], inside the preregistered margin (0.007). The +0.021 below was mostly pressure correcting a cautious formation rule (26 weeks of net wellbeing), which forms only 51% of pairs at week 0 against 84% under the corrected rule. The corrected rule alone (+0.028) does more than pressure did. Withdrawal still harms (−0.017). See [h38-formation-check.md](h38-formation-check.md).
 >
 > **Why the result may be counterintuitive: we may have measured the wrong thing.**
