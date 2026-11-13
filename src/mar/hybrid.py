@@ -65,11 +65,30 @@ def future_seed(seed, w, k, salt="fut"):
 
 # ---- the yardstick ---------------------------------------------------------------------------------------------------------------
 
-def score(outcomes, role, persona=None):
-    """The declared yardstick: the member's mean weekly pleasure (the row's pleasure, on the scale in force), over the persona's own
-    horizon if it sets one, discounted per week if it sets a discount."""
+def weight(persona, fx=None):
+    """The member's suffering weight under FixConfig.hybrid_w (Amendment 3), or None (the yardstick is pleasure only). "persona": H39's
+    draw (makers.suffering_weight: w = exp(z), z ~ N(0, 0.6), clipped to [0, 4]); a number: every persona that weight. A taste, not a
+    misforecast: the held-out audit keeps it."""
+    fx = fx if fx is not None else HD.active_fixes()
+    mode = getattr(fx, "hybrid_w", None) if fx is not None else None
+    if mode is None:
+        return None
+    if mode == "persona":
+        from . import makers as _MK
+        return 1.0 if persona is None else _MK.suffering_weight(persona)
+    return float(mode)
+
+
+def score(outcomes, role, persona=None, fx=None):
+    """The declared yardstick: the member's mean weekly pleasure (the row's pleasure, on the scale in force), minus w x suffering (both
+    kinds) when FixConfig.hybrid_w sets a weight (Amendment 3), over the persona's own horizon if it sets one, discounted per week if it
+    sets a discount."""
     t = traits(persona) if (persona is not None and not _NEUTRAL[0]) else {"horizon": None, "discount": 1.0}
-    xs = [o["hedonic"][role]["pleasure"] for o in outcomes]
+    wt = weight(persona, fx)
+    if wt is None:
+        xs = [o["hedonic"][role]["pleasure"] for o in outcomes]
+    else:
+        xs = [o["hedonic"][role]["pleasure"] - wt * (o["hedonic"][role]["s_off"] + o["hedonic"][role]["s_non"]) for o in outcomes]
     if t["horizon"]:
         xs = xs[:max(1, int(t["horizon"]))]
     d = t["discount"]
@@ -91,6 +110,7 @@ def copy_world(world):
     finally:
         world.hook, world.run, world._wk_snap = hook, run, snap
     c.fork_ok = False
+    c._hyb_fut = True             # a forecast, not a lived world: no readings run inside it (Amendment 3)
     return c
 
 
@@ -118,6 +138,7 @@ def play_future(world, w, last, weeks, fs, fx=None, edit=None):
     lt = last
     for x in range(w, w + weeks):
         lt = {"busy": c.step_week(x, lt)}
+    STATS["future_exits"] = STATS.get("future_exits", 0) + len(c.exit_log)
     STATS["futures"] += 1
     STATS["future_weeks"] += weeks
     return c
@@ -140,7 +161,7 @@ def _forecast(world, w, last, weeks, fx=None, edit=None, salt="fut", n=None):
     for k in range(n):
         c = play_future(world, w, last, weeks, future_seed(world.seed, w, k, salt), fx, edit)
         for r in "AB":
-            acc[r] += score(c.run.outcomes, r, world.personas[r])
+            acc[r] += score(c.run.outcomes, r, world.personas[r], c.fx)
     return {r: v / n for r, v in acc.items()}
 
 
@@ -199,14 +220,16 @@ def _fresh_value(make_world, seed, weeks, salt="fut", n=None):
     for k in range(n):
         c = make_world()
         c.fork_ok = False
+        c._hyb_fut = True
         resample(c, 0, future_seed(seed, 0, k, salt), weeks)
         lt = {"busy": {"A": False, "B": False}}
         for x in range(weeks):
             lt = {"busy": c.step_week(x, lt)}
+        STATS["future_exits"] = STATS.get("future_exits", 0) + len(c.exit_log)
         STATS["futures"] += 1
         STATS["future_weeks"] += weeks
         for r in "AB":
-            acc[r] += score(c.run.outcomes, r, c.personas[r])
+            acc[r] += score(c.run.outcomes, r, c.personas[r], c.fx)
     return {r: v / n for r, v in acc.items()}
 
 
@@ -256,95 +279,202 @@ def pay_agreed(world, w):
 
 
 def choose_term(values, outside):
-    """values: {term: {role: v}}; outside: {role: v}. The household's term: the one whose worse-off member gains most over the outside
-    option (ties: income first). -> (term, formed)."""
-    best = max(TERMS, key=lambda t: (min(values[t][r] - outside[r] for r in "AB"), t == "income"))
+    """values: {option: {role: v}} (the bill terms, and under H41 "lat" or prenup combinations); outside: {role: v}. The household's
+    option: the one whose worse-off member gains most over the outside option (ties: income first, then the order given). -> (option,
+    formed)."""
+    best = max(values, key=lambda t: (min(values[t][r] - outside[r] for r in "AB"), t == "income"))
     return best, all(values[best][r] > outside[r] for r in "AB")
 
 
 def set_agreement(world, term):
-    world.agree = {"term": term, "share": shares(term)}
+    """term: a bill term ("income", "equal"), or "income|forfeit"-style with an H41 prenup exit term after the bar."""
+    bill, _, exit_term = term.partition("|")
+    world.agree = {"term": bill, "share": shares(bill)}
+    if exit_term:
+        world.prenup_exit = exit_term
+
+
+# ---- H41 choice aids (docs/results/h41-choice-aids-prereg.md) ----------------------------------------------------------------------
+
+PRENUP_TERMS = ("equal_split", "proportional", "forfeit")      # exit fallback F5's terms; equal split first (F5's own default)
+
+
+def prenup_on():
+    from . import exit_fallback as EF
+    return EF.ACTIVE == "F5"
+
+
+def window(fx=None, default=None):
+    """The window a formation is scored over: the trial's length under FixConfig.h41_trial, else the decision window."""
+    from . import negotiation as NG
+    fx = fx if fx is not None else HD.active_fixes()
+    t = getattr(fx, "h41_trial", 0) if fx is not None else 0
+    return t if t else NG.decide_weeks(NG.FORWARD_WEEKS if default is None else default)
+
+
+def _lat_on(fx=None):
+    fx = fx if fx is not None else HD.active_fixes()
+    return bool(getattr(fx, "h41_lat", False)) if fx is not None else False
+
+
+def make_lat(world, modes):
+    """An apart world becomes living apart together: both out, no pot, each in its own apart mode, time together allowed."""
+    for r in "AB":
+        world.p[r]["in"] = False
+    world.solo = dict(modes)
+    world.lat = True
+
+
+def score_options(value_of, terms):
+    """value_of(term) -> {role: v}. Under a prenup (exit fallback F5) the exit term is chosen with the bill term: every bill term is
+    scored with every F5 exit term. The term reaches a forecast even when nobody leaves in it, through the weekly freedom probe (what a
+    member could carry out sets its exit_retained, which feeds autonomy). -> {option: values}."""
+    if not prenup_on():
+        return {t: value_of(t) for t in terms}
+    out = {}
+    for t in terms:
+        if t == "lat":
+            out[t] = value_of(t)
+            continue
+        for e in PRENUP_TERMS:
+            out[f"{t}|{e}"] = value_of(f"{t}|{e}")
+    return out
+
+
+def trial_reading(lived, w, last):
+    """The end of a trial household (FixConfig.h41_trial): each member stays only if staying (the status quo over K futures, the
+    decision window, minus the trust penalty) beats its outside option at the carry, at this one reading, with no margin. A member who
+    does not leaves now, by the world's own leave (its pot and items settle as the exit rule says)."""
+    from . import negotiation as NG
+    world = lived.world
+    STATS["choices"] += 1
+    world.trial_end = None
+    weeks = NG.decide_weeks(NG.FORWARD_WEEKS)
+    sq = forecast(world, w, last, weeks)
+    out = []
+    for r in "AB":
+        carry = world.p[r]["money"] + world.carry_out(r, 50)
+        O, d = outside_value(world.personas[r], r, carry, world.seed, world.hed[r], cx=NG._cx(world, r), weeks=NG.decide_weeks(0) or None)
+        O -= NG._PAIR.exit_anticipation(world)
+        if O > sq[r] - NG.trust_penalty(world.trust[r]):
+            out.append((r, NG.apart_mode(d)))
+    lived.trials.append({"week": w, "left": [r for r, _ in out]})
+    for r, mode in out:
+        if world.p[r]["in"]:
+            world.apply(r, {"a": "leave", "take": 50, "why": "trial"}, w, [])
+            solo = dict(world.solo) if isinstance(world.solo, dict) else {x: world.solo for x in "AB"}
+            solo[r] = mode
+            world.solo = solo
 
 
 # ---- formation, retries, readings, returns --------------------------------------------------------------------------------------
 
-def _o_both(personas, holdings, seed, heds=None, cxs=None, salt="fut", n=None):
+def _o_both(personas, holdings, seed, heds=None, cxs=None, salt="fut", n=None, weeks=None):
     from . import negotiation as NG
     O, det = {}, {}
     for r in "AB":
         O[r], det[r] = outside_value(personas[r], r, holdings[r], seed, (heds or {}).get(r), (cxs or {}).get(r),
-                                     weeks=NG.decide_weeks(0) or None, salt=salt, n=n)
+                                     weeks=weeks or NG.decide_weeks(0) or None, salt=salt, n=n)
     return O, det
 
 
 def formation0(lived):
-    """Week 0 under the hybrid: score the household under each bill term and each member's outside option on K fresh futures; form
-    under the chosen term iff both gain (decline=True), or always (decline=False). -> (formed, term, O, det)."""
+    """Week 0 under the hybrid: score the household under each bill term (and, under H41, living apart together and the prenup's exit
+    terms) and each member's outside option on K fresh futures; form under the chosen option iff both gain (decline=True), or always
+    (decline=False). -> (formed, term, O, det, V)."""
     from . import negotiation as NG
     from .worlds import household as H
     STATS["choices"] += 1
-    weeks = NG.decide_weeks(NG.OUT_WEEKS)
+    fx = HD.active_fixes()
+    weeks = window(fx, NG.OUT_WEEKS)
+    trial = bool(getattr(fx, "h41_trial", 0))
     ps = {"A": lived.pa, "B": lived.pb}
     hold = NG.START_HOLDINGS[0] + NG.START_HOLDINGS[1]
+    O, det = _o_both(ps, {"A": hold, "B": hold}, lived.seed, weeks=weeks if trial else None)
+    modes = {r: NG.apart_mode(det[r]) for r in "AB"}
 
     def mk(term):
         def make():
+            if term == "lat":
+                wd = H.WeeklyWorld(list(lived.cards), (lived.pa, lived.pb), lived.seed, max(weeks, 1), deal={"pot": False, "commits": []})
+                make_lat(wd, modes)
+                return wd
             wd = H.WeeklyWorld(list(lived.cards), (lived.pa, lived.pb), lived.seed, max(weeks, 1))
             set_agreement(wd, term)
             return wd
         return make
 
+    terms = tuple(TERMS) + (("lat",) if _lat_on(fx) else ())
+
     def vals(salt, n=None):
-        return {t: fresh_value(mk(t), lived.seed, weeks, salt, n) for t in TERMS}
+        return score_options(lambda t: fresh_value(mk(t), lived.seed, weeks, salt, n), terms)
 
     V = vals("fut")
-    O, det = _o_both(ps, {"A": hold, "B": hold}, lived.seed)
     term, formed = choose_term(V, O)
     if AUDIT is not None:
-        Vh = vals("held", AUDIT_M)
-        Oh, _ = _o_both(ps, {"A": hold, "B": hold}, lived.seed, salt="held", n=AUDIT_M)
-        opts = {t: {"F": V[t], "R": Vh[t]} for t in TERMS}
+        Vh = {t: fresh_value(mk(t), lived.seed, weeks, "held", AUDIT_M) for t in V}
+        Oh, _ = _o_both(ps, {"A": hold, "B": hold}, lived.seed, salt="held", n=AUDIT_M, weeks=weeks if trial else None)
+        opts = {t: {"F": V[t], "R": Vh[t]} for t in V}
         opts["outside"] = {"F": O, "R": Oh}
         audit_choice("formation0", 0, (lived.pa.id, lived.pb.id), opts, (term if formed else "outside"))
     if not lived.decline:
         formed = True
+        if term == "lat":                      # forced formation means a household: the best household option
+            term = max((t for t in V if t != "lat"), key=lambda t: min(V[t][r] - O[r] for r in "AB"))
     return formed, term, O, det, V
 
 
 def retry(lived, w, last):
-    """A 13-week retry of a pair living apart: the household under each term (a copy formed now) against each member's outside option."""
+    """A 13-week retry of a pair living apart: the household under each term (a copy formed now), and under H41 living apart together,
+    against each member's outside option."""
     from . import negotiation as NG
     world = lived.world
     STATS["choices"] += 1
-    weeks = NG.decide_weeks(NG.FORWARD_WEEKS)
+    fx = world.fx
+    weeks = window(fx)
+    trial = bool(getattr(fx, "h41_trial", 0))
     O, modes, det = {}, {}, {}
     for r, p in zip("AB", (lived.pa, lived.pb)):
-        O[r], d = outside_value(p, r, world.p[r]["money"], lived.seed, world.hed[r], cx=NG._cx(world, r), weeks=NG.decide_weeks(0) or None)
+        O[r], d = outside_value(p, r, world.p[r]["money"], lived.seed, world.hed[r], cx=NG._cx(world, r),
+                                weeks=(weeks if trial else NG.decide_weeks(0)) or None)
         modes[r], det[r] = NG.apart_mode(d), d
     hyp = copy_world(world)
+    hyp.lat = False
     NG._form_baseline(hyp, w)
 
-    def edit(term):
-        return lambda c: set_agreement(c, term)
+    def value_of(t, salt="fut", n=None):
+        if t == "lat":
+            lat = copy_world(world)
+            make_lat(lat, modes)
+            return forecast(lat, w, last, weeks, salt=salt, n=n)
+        return forecast(hyp, w, last, weeks, edit=lambda c, t=t: set_agreement(c, t), salt=salt, n=n)
 
-    V = {t: forecast(hyp, w, last, weeks, edit=edit(t)) for t in TERMS}
+    terms = tuple(TERMS) + (("lat",) if _lat_on(fx) else ())
+    V = score_options(value_of, terms)
     term, formed = choose_term(V, O)
     if AUDIT is not None:
-        Vh = {t: forecast(hyp, w, last, weeks, edit=edit(t), salt="held", n=AUDIT_M) for t in TERMS}
+        Vh = {t: value_of(t, "held", AUDIT_M) for t in V}
         Oh = {r: outside_value(p, r, world.p[r]["money"], lived.seed, world.hed[r], cx=NG._cx(world, r),
-                               weeks=NG.decide_weeks(0) or None, salt="held", n=AUDIT_M)[0] for r, p in zip("AB", (lived.pa, lived.pb))}
-        opts = {t: {"F": V[t], "R": Vh[t]} for t in TERMS}
+                               weeks=(weeks if trial else NG.decide_weeks(0)) or None, salt="held", n=AUDIT_M)[0]
+              for r, p in zip("AB", (lived.pa, lived.pb))}
+        opts = {t: {"F": V[t], "R": Vh[t]} for t in V}
         opts["outside"] = {"F": O, "R": Oh}
         audit_choice("retry", w, (lived.pa.id, lived.pb.id), opts, term if formed else "outside")
     lived.retries.append({"week": w, "formed": formed, "outside": dict(O), "baseline": dict(V[term]), "term": term})
-    if formed:
+    if formed and term == "lat":
+        make_lat(world, modes)
+    elif formed:
+        world.lat = False
         NG._form_baseline(world, w)
         set_agreement(world, term)
         lived.apart = False
+        if trial:
+            world.trial_end = w + fx.h41_trial
         if world.fx:
             for r in "AB":
                 world.events.append((w, r, "formed"))
     else:
+        world.lat = False
         world.solo = modes
 
 
@@ -437,8 +567,32 @@ def negotiate(world):
 
 # ---- fixed scores derived from simulation ---------------------------------------------------------------------------------------
 
+def lived(world):
+    """A lived world: not a forecast copy, a fresh formation world or a one-week fork."""
+    return not getattr(world, "_hyb_fut", False)
+
+
+def world_readings(world, w, last):
+    """Amendment 3 (FixConfig.hybrid_readings="world"): any hybrid reading no harness ran this week. An early reading on distress
+    (hybrid.due); and, in a world no harness drives (world.harness unset), the 13-week reading while both are in and the return reading
+    while one is out. The arithmetic is the harness's own (negotiation.BaselineLived.reading, return_reading)."""
+    import types
+    from . import negotiation as NG
+    n_in = sum(1 for x in "AB" if world.p[x]["in"])
+    mark = bool(w) and w % NG.REVIEW_EVERY == 0 and not getattr(world, "harness", False)
+    shim = types.SimpleNamespace(world=world, pa=world.personas["A"], pb=world.personas["B"], seed=world.seed, log=[])
+    if n_in == 2 and (mark or due(world, w)):
+        STATS["world_readings"] = STATS.get("world_readings", 0) + 1
+        world.cur_reading = w
+        NG.BaselineLived.reading(shim, w, last)
+    elif n_in == 1 and mark:
+        return_reading(shim, w, last)
+
+
 def week_start(world, w, last):
     """Called at the start of each week of a hybrid world: reset the call counter and, in a lived world, keep a snapshot for forks."""
+    if world.fx.hybrid_readings == "world" and lived(world):
+        world_readings(world, w, last)
     world._ncall = {"A": 0, "B": 0}
     world._wk_snap = None
     if getattr(world, "fork_ok", False):
@@ -446,6 +600,7 @@ def week_start(world, w, last):
         from . import valuecheck as VC
         snap = VC.snapshot(world)
         snap.fork_ok = False
+        snap._hyb_fut = True
         world._wk_snap, world._wk_last = snap, dict(last)
 
 

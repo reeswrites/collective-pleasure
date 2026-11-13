@@ -976,7 +976,7 @@ class PersonaAgent:
             elif o["other_in"] and self.persona.weights["togetherness"] >= 0.6 and o["weeks_out"] >= 8 and h.B < 0:
                 out.append((0.3, _a("return")))
             u = self.utilities({**o, "gap": 0})
-            out += [(v, _a(a)) for a, v in u.items() if v > 0.003 and a != "together"]
+            out += [(v, _a(a)) for a, v in u.items() if v > 0.003 and (a != "together" or o.get("lat"))]
             return sorted(out, key=lambda t: -t[0])
         distress = o["low_weeks"] >= 4 or h.N >= 0.2 or o.get("trust", 1.0) < TRUST["leave_below"]
         if o.get("hyb"):                     # hybrid: leave only on a simulated reading, valued at its gain times the horizon
@@ -1135,8 +1135,8 @@ class WeeklyWorld:
             else:
                 self.commits = [dict(c) for c in deal["commits"]]
         self.lv = levers if levers is not None else HD.ACTIVE_LEVERS
-        if _EXIT.ACTIVE == "F5" and self.pot and _EXIT.world_arm(self) == "F5":
-            _EXIT.prenup(self)           # exit fallback F5: the pair bargains its exit term at formation (or declines to form)
+        if _EXIT.ACTIVE == "F5" and self.pot and _EXIT.world_arm(self) == "F5" and not _HY.on(self.fx):
+            _EXIT.prenup(self)           # (under the hybrid the exit term is chosen with the formation: mar.hybrid, H41)           # exit fallback F5: the pair bargains its exit term at formation (or declines to form)
         self.items = None
         if _ITEMS.ACTIVE is not None:
             _ITEMS.init_world(self)      # exit fallbacks slice 2: indivisible items held jointly (off by default)
@@ -1222,7 +1222,7 @@ class WeeklyWorld:
 
     def _can_together(self):
         a, b = self.p["A"], self.p["B"]
-        return (a["in"] and b["in"] and not a["ill"] and not b["ill"] and not self.moved
+        return (self.can_meet() and not a["ill"] and not b["ill"] and not self.moved
                 and all(self.units[r] >= V2_COST["together"] for r in "AB"))
 
     def _lever_start(self, w):
@@ -1396,6 +1396,18 @@ class WeeklyWorld:
                 keep.append((ww, sp, rc, g))
         self.words = keep
 
+    def solo_cost(self):
+        """The extra weekly cost of living alone (FixConfig.solo_cost; 1.5 when the fixes are off or the flag is at its default)."""
+        return self.fx.solo_cost if self.fx is not None else 1.5
+
+    def lat_on(self):
+        """Living apart together (H41, FixConfig.h41_lat): both out, and the pair chose to keep time together without a shared home."""
+        return bool(getattr(self, "lat", False)) and not self.p["A"]["in"] and not self.p["B"]["in"]
+
+    def can_meet(self):
+        """Partners can spend time together: both in the household, or living apart together."""
+        return (self.p["A"]["in"] and self.p["B"]["in"]) or self.lat_on()
+
     def distressed(self, r):
         me, h = self.p[r], self.hed[r]
         return me["low"] >= 4 or h.N >= 0.2 or self.trust[r] < TRUST["leave_below"]
@@ -1546,7 +1558,7 @@ class WeeklyWorld:
         o = self.p[self.other(r)]
         n_f = wk["friends"] + wk["friend_initiated"] + (1 if self.with_friend(r) else 0)
         cohab = me["in"] and o["in"]
-        n_p = wk["together"] if cohab else 0
+        n_p = wk["together"] if (cohab or self.lat_on()) else 0
         unit = fx.session_base * fx.a_max * fx.sociability
         amp = unit * (n_f * cx["cf"] * fx.overlap_C + n_p * cx["cp"] * self.overlap_ab)
         if self.hed[r].parts_on:                         # observer layer: the friend and partner shares of amp
@@ -1891,7 +1903,7 @@ class WeeklyWorld:
         if a == "spend_self":
             return me["money"] >= SELF_STEP
         if a == "together":
-            return me["in"] and o["in"] and self.units[self.other(r)] >= V2_COST["together"]
+            return self.can_meet() and self.units[self.other(r)] >= V2_COST["together"]
         if a == "request":
             return me["in"] and o["in"] and kind in REQUEST_KINDS_V3
         if a == "veto":
@@ -1925,14 +1937,16 @@ class WeeklyWorld:
         if self.lv and self.lv.adapt:
             ob["lever"] = self._lever_obs(r)
         ob["partner_accepts"] = False
-        if me["in"] and o["in"]:
+        if self.lat_on():
+            ob["lat"] = True                     # H41 living apart together: time together without a shared home
+        if self.can_meet():
             oo = {"hed": self.hed[oth]}
             ob["partner_accepts"] = self.agents[oth].together_utility(oo) >= 0.02 and self.units[oth] >= V2_COST["together"]
         if self.fx:
             self._fix_obs(r, w, ob)
             if self.fx.agent_values in ("v2", "v2b", "hybrid"):
                 ob["v2"] = _AV.snapshot(self, r, w)
-                if me["in"] and o["in"]:
+                if self.can_meet():
                     ob["v2_partner"] = _AV.snapshot(self, oth, w)
             if self.fx.agent_values == "hybrid":    # the hybrid agent: leave and return carry simulated values; distress asks for a reading
                 ob["hyb"] = True
@@ -2185,7 +2199,7 @@ class WeeklyWorld:
         hrow = {}
         for r in "AB":
             me, wk = self.p[r], self.wk[r]
-            cost = HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if (me["in"] or self.with_friend(r)) else 1.5)
+            cost = HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if (me["in"] or self.with_friend(r)) else self.solo_cost())
             if ob is not None:
                 m0, p0 = me["money"], self.pool
             me["money"] -= cost

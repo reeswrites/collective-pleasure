@@ -1068,15 +1068,21 @@ class BaselineLived:
         from . import hybrid as _HY
         formed, term, O, det, V = _HY.formation0(self)
         self.week0 = {"W": V[term], "O": O, "term": term, "formed": formed}
-        if not formed:
+        self.trials = []
+        if not formed or term == "lat":
             self.apart = True
             self.world = H.WeeklyWorld(self.cards, (self.pa, self.pb), self.seed, weeks, deal={"pot": False, "commits": []})
             self.world.solo = {r: apart_mode(det[r]) for r in "AB"}
             for r in "AB":
                 self.world.p[r]["in"] = False
+            if formed:                     # H41: living apart together chosen at week 0
+                _HY.make_lat(self.world, self.world.solo)
         else:
             _HY.set_agreement(self.world, term)
+            if self.world.fx.h41_trial:    # H41: a trial household, decided again at its end (hybrid.trial_reading)
+                self.world.trial_end = self.world.fx.h41_trial
         self.world.fork_ok = True
+        self.world.harness = True          # this harness runs the 13-week readings (hybrid.world_readings reads it; Amendment 3)
 
     def hybrid_week(self, w, last):
         """The hybrid's extra harness steps at the start of week w (not a 13-week mark): an early reading on distress."""

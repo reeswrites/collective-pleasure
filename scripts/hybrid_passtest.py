@@ -39,7 +39,7 @@ def play(arm, a, b, seed, bias=None, weeks=None, extra=None):
     """One audited lived run. bias: an outside-option bias planted on every persona (the --reach check only). extra: FixConfig
     overrides on top of RULE (Amendment 2: satiety_expect)."""
     HY.AUDIT = []
-    HY.STATS.update(futures=0, future_weeks=0, forks=0, choices=0)
+    HY.STATS.update(futures=0, future_weeks=0, forks=0, choices=0, world_readings=0)
     saved = None
     if bias is not None:
         ps = RT.personas()
@@ -67,6 +67,7 @@ def task(args):
 
 A1 = {"pairs_every": 6, "seeds": (0,), "arms": ("G-L0",)}      # Amendment 1: a smaller PT-H rerun after the bill-mirror fix
 WORLD = {"satiety_expect": "world"}                              # Amendment 2: time together at the world's satiety (A1's sample)
+A3 = {**WORLD, "hybrid_w": "persona", "hybrid_readings": "world"}  # Amendment 3: suffering weight w and readings run by the world
 
 
 def audit_run(workers=3, out=None, sample=None, extra=None):
@@ -231,7 +232,15 @@ if __name__ == "__main__":
     ap.add_argument("--a1", action="store_true", help="Amendment 1: the smaller PT-H rerun; runs/hybrid-passtest-a1/")
     ap.add_argument("--a2", action="store_true", help="Amendment 2: A1's sample with satiety_expect='world'; runs/hybrid-passtest-a2/")
     ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--a3", action="store_true", help="Amendment 3: A1's sample with w and world readings; runs/hybrid-passtest-a3/")
     a = ap.parse_args()
+    if a.a3:
+        OUT_A3 = ROOT / "runs" / "hybrid-passtest-a3"
+        if a.audit:
+            audit_run(a.workers, OUT_A3, A1, A3)
+        if a.analyze:
+            analyze(OUT_A3, ("value-consistency-hybrid-world-a3", "value-consistency-v2-sat-world"))
+        sys.exit(0)
     if a.a2:
         OUT_A2 = ROOT / "runs" / "hybrid-passtest-a2"
         if a.audit:

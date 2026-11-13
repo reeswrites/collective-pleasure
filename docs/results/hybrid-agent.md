@@ -4,6 +4,8 @@ Wording rule: agents feel nothing; "pleasure", "value" and "forecast" are glosse
 
 Status: run on 2026-11-12 after the preregistration ([hybrid-agent-prereg.md](hybrid-agent-prereg.md), commit b529d24; code 929caa8; Amendment 1 committed with this file). Scripted agents, no model calls. Instrument checks, not hypothesis tests: they say whether the hybrid does what it says, not whether its choices are good.
 
+**Note 2026-11-13.** Amendment 3 (the suffering weight in big choices, and readings run by the world) is reported in its own section below. PT-H, PT-R and the weight's known answer pass; the trap's known answer (K1) fails as preregistered. The sections above stand as run.
+
 ## In one paragraph
 
 **Both pass tests pass, the routine one narrowly and only after one bug fix.** Big-choice forecasts on four sampled futures match sixteen held-out futures almost exactly: over 2,298 choice-units (formation, retries, readings, returns) the chosen option's forecast is off by −0.0002 a week [−0.0007, +0.0002], the rank correlation of forecast with held-out value is 0.98, and the forecast picks the held-out best option in 98% of choices that are not close. The routine first **failed** PT-R (rank correlations 0.02 to 0.04 below v2's), because the partner's projection of the bill agreement double-counted a payment. With that fixed (Amendment 1), PT-R passes: T1 0.958 against v2's 0.973 on the same sample, every clause within its 0.02. What still costs the routine accuracy is time together, the same satiety misforecast v2 has on the new scale, which matters more here because the hybrid's households form and last. Under the hybrid, households form like v1's did (G-L0 0.85 at week 0, G-L4 1.00) on a scale where v2's formed 0.88 and with bills where v2's formed 0.07 to 0.09.
@@ -76,6 +78,33 @@ Every other action's gap is within 0.004 as before. The pass is narrow on time t
 The hybrid's own T1 to T6 also pass at the recalibration's absolute bars. Its time together: 85 rows (58 before), valued +0.021 against +0.008 (gap +0.013, was +0.023), rank correlation 0.15 (was 0.03). Below 100 rows the clause carries no bar. Read against the old v2 rows instead, the hybrid's T1 to T3 sit more than 0.02 below. The v2 rows of the same 40 lives fell by as much with the flag on (T1 0.973 to 0.956). The routine's arithmetic changed only for time together, so the fall in the rank clauses comes from different lives giving different decisions, chiefly more bill payments with negative values. Without time together the hybrid's T1 is 0.966 (0.974 before).
 
 **(c) PT-H, small rerun** (Amendment 1's sample: G-L0, every sixth pairing, seed 0; flag on; `hybrid_passtest.py --a2`; 20 runs, 470 s on 3 workers; runs/hybrid-passtest-a2/): **PASS**. H1 −0.00002 [−0.00045, +0.00043], H2 0.986 (1,018 option-units), H3 99.5% (414 units), over 478 choice-units (Amendment 1's rerun: +0.0005, 0.979, 99.1%). The fix leaves the big-choice forecasts as faithful as before.
+
+## Amendment 3: the suffering weight, and readings run by the world
+
+Model: `hybrid · sat · bills · satiety=world · hybrid_w=persona · hybrid_readings=world` (ADR 0020). Run on 2026-11-13, after the prereg amendment (commit 2931944) and before any H41 run. Two flags, both off by default. `hybrid_w="persona"`: big choices score pleasure − w × suffering (both kinds), w the persona's own weight from H39's draw (w = exp(z), z ~ N(0, 0.6), clipped to [0, 4]; `makers.suffering_weight`, reused). `hybrid_readings="world"`: the world runs any hybrid reading no harness ran (an early one on distress; without a harness, the 13-week and return readings too). Fingerprints pinned before the change (tests/data/h41_off_fingerprints.json: all four agent sets in the step-3 world, and the trap fixtures) reproduce with both flags off, and so do the earlier pins (`tests/test_hybrid_fix.py`, `tests/test_satiety_expect.py`).
+
+**One correction to the premise.** The hybrid did consider leaving between readings already, under the harness: `BaselineLived.hybrid_week` ran an early reading on distress. What the trap showed is narrower. The trap fixture has no harness, so the hybrid there ran no reading at all. Under the harness, `hybrid_readings="world"` changes nothing (a test checks the formation check's pinned lives).
+
+| Pass test | Before (flags off) | **After (both on)** | Bar | |
+|---|---|---|---|---|
+| K1 trap: held share, trap / baseline fixture | 0.000 / 0.000 | **0.077 / 0.000** | ≥ 0.10 / ≤ 0.02 | **FAILS** |
+| PT-H: H1 mean F − R, chosen option | −0.00002 (Amendment 2) | **+0.0058** [+0.0021, +0.0098] | ±0.010, interval inside ±0.015 | holds |
+| PT-H: H2 rank correlation | 0.986 | **0.932** (1,028 option-units) | ≥ 0.80 | holds |
+| PT-H: H3 choice agreement | 99.5% | **91.9%** (417 units) | ≥ 80% | holds |
+| PT-R: T1 / T2 / T3 / T4 / T5 | 0.950 / 0.967 / 94.0% / 96.4% / 1.06 | **0.952 / 0.972 / 95.2% / 97.8% / 1.06** | no more than 0.02 below v2 (0.955 / 0.973 / 94.7% / 95.9%); T5 in 0.8 to 1.25 | holds |
+| KW: a household 0.02 better on pleasure and 0.10 worse on suffering | forms | **w = 2 declines, w = 0 forms**; a high-w persona declines under `"persona"` | | holds |
+
+So PT-H, PT-R and KW pass, and **K1 fails as preregistered.**
+
+**Why K1 fails.** The trap no longer holds this agent, because it pays to get out. With both flags on, all 12 trap households and all 12 baseline households end, mostly by week 9 in the trap and by week 26 in the baseline. The trap's card forbids carrying anything out of the pot, and at week 9 the pot is small, so leaving with nothing costs little. Members are held in the trap for a few weeks before they leave (0.077 of staying weeks), never in the baseline. So the measure separates in sign, but below the bar. Each part alone: readings alone 0.026 against 0 (7 of 12 trap households end); the weight alone 0 against 0 (no reading ever runs without a harness). It takes both. Nothing was changed after this result: the prereg allows a change only where the test disagrees with the design, and here the design does what it says. The known answer's premise, members who want out and cannot pay, does not fit an agent that can pay. H41 reads the hybrid's held share with "known answer only partly met", as step 3 did.
+
+**PT-H on the new yardstick.** Still passes, with less room. The forecasts now lean high by +0.006 a week on the chosen option (formation +0.007, readings +0.007, retries −0.008). Suffering varies more across futures than pleasure, so four futures estimate a weighted score less well, and the selection bias the prereg expected becomes visible. Agreement falls from 99.5% to 91.9%.
+
+**PT-R.** No line of the routine changed. The numbers move a little because the lives do, and they still pass.
+
+**What the weight did to the lives, which was not expected.** The research note expected a median weight of 1 to form far fewer pairs. On PT-H's 20 lives it did not: 90% formed at week 0 (95% before), 93% of weeks together, 5% ended. In this world the hybrid's households carry little more suffering than living apart, so the weight rarely flips a formation. It bites where suffering is high: in the imposed trap and baseline fixtures every household ended.
+
+Cost: audited PT-H runs averaged 73 s (276 futures); K1 runs 7 to 8 s for a 9 to 26-week household, 31 s for a 156-week one with readings alone.
 
 ## What the hybrid's lives look like (descriptive, from the PT-H runs)
 

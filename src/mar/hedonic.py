@@ -260,6 +260,21 @@ class FixConfig:
     # (tests/data/satiety_off_fingerprints.json): only an 'adaptive' persona expects satiety (ADR 0016, a persona trait). "world": every
     # v2, v2b and hybrid agent values one more session at the scale the world would give it (World._together_next). v1 does not read it.
     satiety_expect: str = "persona"
+    # The hybrid's suffering weight and its own readings (docs/results/hybrid-agent-prereg.md, Amendment 3). Defaults are the old rule,
+    # bit for bit (tests/data/h41_off_fingerprints.json). hybrid_w: None (the yardstick is mean pleasure), "persona" (pleasure - w x
+    # suffering, w the persona's own weight, makers.suffering_weight) or a number (every persona that w). hybrid_readings: "harness"
+    # (readings only where a harness runs them) or "world" (the world runs any hybrid reading no harness ran: an early one on distress,
+    # and, where no harness drives it, the 13-week and return readings).
+    hybrid_w: object = None
+    hybrid_readings: str = "harness"
+    # H41 choice aids (docs/results/h41-choice-aids-prereg.md). Defaults are the old world, bit for bit (tests/data/h41_off_fingerprints.json).
+    # solo_cost: the extra weekly living cost of living alone (1.5 before; the housing note's cheap solo unit is 0.75 of it).
+    # h41_trial: weeks of a trial household (0 off; hybrid only): every formation is scored over the trial window, and at its end each
+    # member stays only if staying beats its outside option at one reading, with no margin and no run of readings.
+    # h41_lat: living apart together is an option at every formation (hybrid only): both out, no pot and no bills, time together allowed.
+    solo_cost: float = 1.5
+    h41_trial: int = 0
+    h41_lat: bool = False
 
 
 ACTIVE_FIXES = None      # module default, set by `use_fixes`; WeeklyWorld(fixes=None) reads it

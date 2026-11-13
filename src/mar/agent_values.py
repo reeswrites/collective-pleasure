@@ -45,7 +45,7 @@ def snapshot(world, r, w):
          "fi": wk["friend_initiated"] + (1 if with_f else 0), "income": wk["income"], "spent": wk["spent_self"],
          "eff_tog": sum(lw["tog"]) if adapt else wk["together"], "eff_fr": sum(lw["fr"][r]) if adapt else wk["friends"],
          "money": float(me["money"]), "ill": bool(me["ill"]), "sec_hit": wk["sec_hit"], "conn_pen": cpen,
-         "out_cost": HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if (me["in"] or with_f) else 1.5),
+         "out_cost": HD.DEFAULT.living_cost + (1 if me["ill"] else 0) + (0 if (me["in"] or with_f) else world.solo_cost()),
          "pool": float(world.pool), "n_in": sum(1 for x in "AB" if world.p[x]["in"]),
          "settle": w % H.MONTH_WEEKS == H.MONTH_WEEKS - 1, "need": world.need_month(), "funded": world.funded,
          "bills_hurt": bool(fx.bills_hurt), "fx": fx, "lv": lv,
@@ -90,7 +90,7 @@ def snapshot(world, r, w):
     if fx.contact:
         s["cx"] = dict(world.cx[r])
         s["overlap_ab"] = world.overlap_ab
-        s["partner_tog"] = wk["together"] if (me["in"] and o["in"]) else 0
+        s["partner_tog"] = wk["together"] if ((me["in"] and o["in"]) or world.lat_on()) else 0
     return s
 
 
@@ -340,7 +340,7 @@ def utilities(agent, o, parts=None):
     u["rest"] = own(rests=1)
     if o["can_see_friend"]:
         u["see_friend"] = own(friends=1)
-    if o["in_hh"] and o["other_in"] and o["partner_accepts"]:
+    if ((o["in_hh"] and o["other_in"]) or o.get("lat")) and o["partner_accepts"]:      # o["lat"]: H41 living apart together
         mine = own(together=1)
         theirs = (week_net(advance(ps, together=1, scale=(1.0, ts))) - week_net(ps)) if ps is not None else 0.0
         u["together"] = mine + agent.prosocial * theirs

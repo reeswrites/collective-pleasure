@@ -509,6 +509,8 @@ def main():
     ap.add_argument("--hybrid", action="store_true", help="the hybrid agent's routine pass test (PT-R); runs/value-consistency-hybrid/")
     ap.add_argument("--world", action="store_true", help="hybrid prereg Amendment 2: with --v2sat or --hybrid, satiety_expect='world'; "
                     "rows in the same directory name with -world")
+    ap.add_argument("--a3", action="store_true", help="hybrid prereg Amendment 3: with --hybrid --world, hybrid_w='persona' and "
+                    "hybrid_readings='world'; rows in runs/value-consistency-hybrid-world-a3/")
     ap.add_argument("--gaps", action="store_true", help="carry-over terms: per action, per group, the k-week effect minus the 1-week effect")
     ap.add_argument("--passtest", action="store_true")
     ap.add_argument("--reach", action="store_true")
@@ -528,6 +530,8 @@ def main():
         OUT, extra = ROOT / "runs" / "value-consistency-hybrid", HYBRID
     if a.world and (a.v2sat or a.hybrid):          # Amendment 2: time together at the world's satiety
         OUT, extra = OUT.parent / (OUT.name + "-world"), {**extra, "satiety_expect": "world"}
+    if a.a3 and a.hybrid and a.world:              # Amendment 3: the suffering weight and readings run by the world
+        OUT, extra = OUT.parent / (OUT.name + "-a3"), {**extra, "hybrid_w": "persona", "hybrid_readings": "world"}
     if a.hybrid:
         if a.run:
             collect(HSAMPLE, OUT / "rows.jsonl", a.workers, extra)
