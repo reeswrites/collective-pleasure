@@ -209,3 +209,14 @@ Three paid framings (capability v2, propensity, win; about $10 in all) reported 
 - `Withdrawal alone disagrees with the exact model: it lowers pleasure only under v1 (-0.014). It is 0 under v2 and the hybrid, and positive under v2b (+0.006): it keeps in a member who would otherwise leave at the partner's cost. The exact model cannot produce this.`
 - `v2b's lived pleasure rises under pressure (+0.003), against the exact model's corrected chooser (lower everywhere). This is consistent with its one exception, an under-forming chooser (v2b forms 0.66; 71% of its households end without pressure).`
 - `Under the hybrid, held members suffer about three times as much in the following 13 weeks as members who stay because it is worth it (0.24 against 0.09). Its pleasure-only yardstick keeps one member in through about 100 weeks of non-offsettable suffering of 0.5.`
+
+## 2026-11-13: The hybrid's suffering weight, and H41 choice aids (docs/results/hybrid-agent.md, docs/results/h41-choice-aids.md)
+
+- `Hybrid Amendment 3, K1 failed as preregistered: with the suffering weight and readings run by the world, the stay test's trap holds 0.077 of staying weeks against 0.000 in the baseline fixture (bar 0.10). The trap no longer holds this agent: every trap and baseline household ends (the trap forfeits a pot that is small at week 9). Not patched.`
+- `The suffering weight was expected to cut the hybrid's formation toward the old net rule (51%). On PT-H's 20 lives it barely moved (90% at week 0, from 95%); on H41's 120 pairings the hybrid formed 75% at week 0 (step 3, without the weight: 91%).`
+- `PT-H on the new yardstick passes with less room: forecasts lean high by +0.006 a week on the chosen option (was -0.00002), agreement 92% (was 99.5%).`
+- `H41 not supported: no choice aid raised weeks together (trial +0.003, prenup 0.000, better information +0.002, cheaper solo housing identical in every run). Living apart together and all aids lowered it (-0.135, -0.236).`
+- `E3 missed: the trial was expected to raise weeks together (pilot +0.05 on 10 pairings); on 120 pairings +0.003 [-0.023, +0.029]. A quarter of trials end with a member leaving, who mostly returns at the next reading.`
+- `Cheaper solo housing could not act: in this world members who live apart live with Friend C, so the cost of living alone never applied (all 120 runs identical to no pressure). The exact model's prediction (-0.047 weeks together) had nothing to act on.`
+- `The claim's mechanism was not testable on this agent: the hybrid's forecasts assume no leaving, so it cannot value a cheap or safe exit. The exact side model shows removing an exit cost raises time together for the planner (+0.033) but not for a rollout chooser (-0.006).`
+- `Story spot-check found a gap in the hybrid: a member left alone in the household has no reading, so it never considers leaving (one ran 50 weeks at non-offsettable suffering 0.5 after a trial partner left).`
