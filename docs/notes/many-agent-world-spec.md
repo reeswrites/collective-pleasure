@@ -243,7 +243,7 @@ All three on, with N = 2, is the pair world's "pairing". Each dial is a **rule**
 
 Joint debt splits at exit by the contract's exit terms. Every arm reports the debt a leaver carries out.
 
-Order, as the note suggests: D0, D1 and D5 first; D2 to D4 as variations on D1.
+Order (corrected 2026-11-13 to follow the author's earlier answer, debt between people who know each other first): D0, D5, then D1; D2 to D4 as variations on D1.
 
 ### Housing (housing-research.md, section 3)
 
@@ -566,4 +566,4 @@ A test for each: a rollout built from a world whose lived schedule has been repl
 2. **Romance norms: rules or pressure?** Should nesting, romantic priority and exclusivity be **rules** (the gate blocks a second partner) or **social pressure** (a cost, like H38's dial, that a person can pay and break)? They test different things: rules test the norm's content, pressure tests holding. The spec makes them rules, with H38's pressure as a separate dial on top.
 3. **What agents know about a new partner.** The pair world gives full information. The proposal makes it a signal that sharpens with time spent together, so H41's "better information" aid becomes a dial. Is that the default you want?
 4. **H36.** Accept the narrowed version (rule adoption and durability among agents that learn about each other's compliance; stages only as a descriptive), and move the storming claim to an LLM arm later? Or keep it as written and wait?
-5. **Debt first.** The debt note asks which debt comes first. This spec follows its suggested order: no credit, market credit, and no accounts among friends (D0, D1, D5). Is debt between people who know each other (Graeber's tally, linked to H39) the one you most want, or debt to an outside lender?
+5. **Debt first.** The debt note asks which debt comes first. This spec first followed the note's order (D0, D1, D5). **Answered 2026-11-13:** corrected to D0, D5, D1, debt between people who know each other before outside lenders. Is debt between people who know each other (Graeber's tally, linked to H39) the one you most want, or debt to an outside lender?

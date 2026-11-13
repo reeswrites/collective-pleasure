@@ -53,7 +53,7 @@ Ten dimensions. Each says where it comes from and how sure the attribution is. A
 
 **From the author.** Identity is pleasure: "so we are organizing around what we like: what gives us pleasure." (Pleasure Identities, author-written). People differ: "what works for them will not necessarily work for you" (Hedonism For Dummies, short form, author-written). Preferences are like taste in food: "these are just preferences just as we like certain kinds of foods or music" (Orientation, author-written).
 
-**The categories.** The Pleasure Menu database groups items by ten pleasures (beauty and awe, laugh, make people laugh, think deeply, story, calm and everyday, taste, make someone happy, make something, body and rhythm) and by three pathways (sensory, conceptual, relational). The tags are labelled **unclear**: the schema reads as polished, and the Pleasure Plan, which uses the same three pathways, is **likely AI-assisted**. The author-written list on the menu page is concrete and overlaps the tags: "making someone else happy", "riffing with someone else to create a series of jokes", eating something "fatty sweet or mildly spicy and a bit acidic".
+**The categories.** The Pleasure Menu database groups items by ten pleasures (beauty and awe, laugh, make people laugh, think deeply, story, calm and everyday, taste, make someone happy, make something, body and rhythm) and by three pathways (sensory, conceptual, relational). The tags are labelled **AI-assisted from the author's idea** (the author, 2026-11-13: "AI assisted but from my idea"). The idea of grouping is the author's; the wording of the groups and pathways is not quoted as theirs. The author-written list on the menu page is concrete and overlaps the tags: "making someone else happy", "riffing with someone else to create a series of jokes", eating something "fatty sweet or mildly spicy and a bit acidic".
 
 **For the generator.** Use the three pathways as the coarse mix, because the model can act on them. The ten groups are too fine for a world with four need clocks. This is a choice to confirm with the author (question 2).
 
@@ -307,7 +307,7 @@ Ten dimensions. Each says where it comes from and how sure the attribution is. A
 ## 8. Questions for the author
 
 1. Anchors: should one anchor be your own leanings, as written in your notes, or should all three be archetypes you describe? The persona rules say no real people.
-2. Pleasure sources: do you hold the Pleasure Menu's ten groups and three pathways (sensory, conceptual, relational) as your own? The database schema and the Pleasure Plan read as polished, possibly AI-assisted.
+2. Pleasure sources: do you hold the Pleasure Menu's ten groups and three pathways (sensory, conceptual, relational) as your own? **Answered 2026-11-13:** "AI assisted but from my idea". Used as dimensions; not quoted as the author's words.
 3. Default draws: population-like (traits correlated as in personality research) or space-filling (every combination equally likely), with the other as a check?
 
 ## Sources
