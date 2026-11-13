@@ -129,3 +129,25 @@ def test_hybrid_off_is_untouched_by_the_hooks():
                              rule={"agent_values": "v2", "decide_on": "pleasure", "decide_weeks": 13})
     wd = lived.world
     assert not hasattr(wd, "agree") and not hasattr(wd, "_ncall") and not hasattr(wd, "_wk_snap")
+
+
+def test_partner_payment_under_the_agreement_changes_nothing_when_shares_are_covered():
+    """PT-R amendment 1: in the settlement week, a payment by A counts toward A's agreed share, so the partner's projection must not
+    expect A to pay its full share on top. A's extra payment leaves B's week unchanged; without the amendment B would see the bill
+    short by less and value A's payment above 0."""
+    from mar import agent_values as AV
+    from mar import hybrid as HY
+    w = _world()
+    HY.set_agreement(w, "income")
+    w.step_agent = lambda *a, **k: None
+    last = {"busy": {"A": False, "B": False}}
+    for k in range(3):
+        last = {"busy": w.step_week(k, last)}
+    w.p["A"]["money"], w.p["B"]["money"] = 30, 4      # B cannot pay all its share this month; A can pay its own
+    w.pool, w.funded = 0, 0
+    s = AV.snapshot(w, "B", 3)
+    assert s["settle"] and s["agree"]["o_paid"] == 0
+    t = AV._paid(s, 3)
+    assert abs(AV.week_net(t) - AV.week_net(s)) < 1e-12
+    old = dict(t, agree=dict(t["agree"], o_paid=0))      # the projection before the amendment: A's share expected on top
+    assert AV.week_net(old) - AV.week_net(s) > 0.002

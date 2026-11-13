@@ -64,12 +64,17 @@ def task(args):
     return play(*args)
 
 
-def audit_run(workers=3):
-    OUT.mkdir(parents=True, exist_ok=True)
-    f = OUT / "rows.jsonl"
+A1 = {"pairs_every": 6, "seeds": (0,), "arms": ("G-L0",)}      # Amendment 1: a smaller PT-H rerun after the bill-mirror fix
+
+
+def audit_run(workers=3, out=None, sample=None):
+    out = out or OUT
+    sample = sample or {**SAMPLE, "arms": tuple(ARMS)}
+    out.mkdir(parents=True, exist_ok=True)
+    f = out / "rows.jsonl"
     done = {(r["arm"], r["a"], r["b"], r["seed"]) for r in load(f)} if f.exists() else set()
-    pairs = H38.pairings(H38.CONFIRM)[::SAMPLE["pairs_every"]]
-    tasks = [(arm, a, b, s) for (a, b) in pairs for s in SAMPLE["seeds"] for arm in ARMS if (arm, a, b, s) not in done]
+    pairs = H38.pairings(H38.CONFIRM)[::sample["pairs_every"]]
+    tasks = [(arm, a, b, s) for (a, b) in pairs for s in sample["seeds"] for arm in sample["arms"] if (arm, a, b, s) not in done]
     print(f"{len(tasks)} tasks, {min(3, workers)} workers -> {f}", flush=True)
     t0 = time.time()
     with Pool(min(3, workers)) as pool, f.open("a") as fh:
@@ -201,16 +206,17 @@ def reach():
     return res
 
 
-def analyze():
-    recs = load(OUT / "rows.jsonl")
+def analyze(out=None):
+    out = out or OUT
+    recs = load(out / "rows.jsonl")
     res = {"PT-H": held_out(recs), "PT-R": routine(),
            "cost": {"runs": len(recs), "mean_secs": round(float(np.mean([r["secs"] for r in recs])), 1),
                     "mean_futures": round(float(np.mean([r["stats"]["futures"] for r in recs])), 1),
                     "mean_forks": round(float(np.mean([r["stats"]["forks"] for r in recs])), 2),
                     "note": "audited runs: every choice also plays 16 held-out futures, so these are dearer than an unaudited run"},
            "lives": {arm: {"both_share": round(float(np.mean([r["both_share"] for r in recs if r["arm"] == arm])), 4),
-                           "terms": {t: sum(1 for r in recs if r["arm"] == arm and r["term"] == t) for t in HY.TERMS}} for arm in ARMS}}
-    (OUT / "analysis.json").write_text(json.dumps(res, indent=1, default=str))
+                           "terms": {t: sum(1 for r in recs if r["arm"] == arm and r["term"] == t) for t in HY.TERMS}} for arm in ARMS if any(r["arm"] == arm for r in recs)}}
+    (out / "analysis.json").write_text(json.dumps(res, indent=1, default=str))
     print(json.dumps(res, indent=1, default=str))
 
 
@@ -219,8 +225,16 @@ if __name__ == "__main__":
     ap.add_argument("--audit", action="store_true")
     ap.add_argument("--reach", action="store_true")
     ap.add_argument("--analyze", action="store_true")
+    ap.add_argument("--a1", action="store_true", help="Amendment 1: the smaller PT-H rerun; runs/hybrid-passtest-a1/")
     ap.add_argument("--workers", type=int, default=3)
     a = ap.parse_args()
+    if a.a1:
+        OUT_A1 = ROOT / "runs" / "hybrid-passtest-a1"
+        if a.audit:
+            audit_run(a.workers, OUT_A1, A1)
+        if a.analyze:
+            analyze(OUT_A1)
+        sys.exit(0)
     if a.audit:
         audit_run(a.workers)
     if a.reach:

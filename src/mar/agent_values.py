@@ -290,6 +290,8 @@ def _paid(s, step):
         t["pool"] += step
     else:
         t["funded"] += step
+    if "agree" in t:                  # hybrid (PT-R amendment 1): the payer is the partner, so it counts toward the partner's agreed share
+        t["agree"] = dict(t["agree"], o_paid=t["agree"]["o_paid"] + step)
     return t
 
 
