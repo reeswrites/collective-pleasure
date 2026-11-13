@@ -68,6 +68,7 @@ def task(args):
 A1 = {"pairs_every": 6, "seeds": (0,), "arms": ("G-L0",)}      # Amendment 1: a smaller PT-H rerun after the bill-mirror fix
 WORLD = {"satiety_expect": "world"}                              # Amendment 2: time together at the world's satiety (A1's sample)
 A3 = {**WORLD, "hybrid_w": "persona", "hybrid_readings": "world"}  # Amendment 3: suffering weight w and readings run by the world
+A4 = {**A3, "hybrid_lone": True, "hybrid_exit": True}              # Amendment 4: the lone member's reading; forecasts with the exit option
 
 
 def audit_run(workers=3, out=None, sample=None, extra=None):
@@ -102,7 +103,7 @@ def _units(recs):
         for e in rec["audit"]:
             if "options" not in e:
                 continue
-            for r in "AB":
+            for r in e.get("roles", "AB"):                   # a lone reading (Amendment 4) has one member
                 ch = e["chosen"][r] if isinstance(e["chosen"], dict) else e["chosen"]
                 opts = {k: (v["F"][r], v["R"][r]) for k, v in e["options"].items()}
                 rows.append({"cl": cl, "kind": e["kind"], "chosen": ch, "opts": opts})
@@ -232,8 +233,16 @@ if __name__ == "__main__":
     ap.add_argument("--a1", action="store_true", help="Amendment 1: the smaller PT-H rerun; runs/hybrid-passtest-a1/")
     ap.add_argument("--a2", action="store_true", help="Amendment 2: A1's sample with satiety_expect='world'; runs/hybrid-passtest-a2/")
     ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--a4", action="store_true", help="Amendment 4: A1's sample with A3's flags plus lone and exit; runs/hybrid-passtest-a4/")
     ap.add_argument("--a3", action="store_true", help="Amendment 3: A1's sample with w and world readings; runs/hybrid-passtest-a3/")
     a = ap.parse_args()
+    if a.a4:
+        OUT_A4 = ROOT / "runs" / "hybrid-passtest-a4"
+        if a.audit:
+            audit_run(a.workers, OUT_A4, A1, A4)
+        if a.analyze:
+            analyze(OUT_A4, ("value-consistency-hybrid-world-a4", "value-consistency-v2-sat-world"))
+        sys.exit(0)
     if a.a3:
         OUT_A3 = ROOT / "runs" / "hybrid-passtest-a3"
         if a.audit:

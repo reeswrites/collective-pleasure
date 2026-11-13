@@ -1090,6 +1090,9 @@ class BaselineLived:
         if _HY.due(self.world, w):
             self.world.cur_reading = w
             self.reading(w, last)
+        elif _HY.lone_due(self.world, w):          # Amendment 4 (hybrid_lone): an early reading for a member alone in the household
+            _HY.lone_reading(self, w, last)
+        _HY.lone_apart(self)                       # Amendment 4: an emptied household's pair counts as apart (13-week retries)
 
     def retry(self, w, last):
         world = self.world

@@ -267,6 +267,12 @@ class FixConfig:
     # and, where no harness drives it, the 13-week and return readings).
     hybrid_w: object = None
     hybrid_readings: str = "harness"
+    # The hybrid fixes before the many-agent world (docs/results/hybrid-exit-option-prereg.md; hybrid prereg Amendment 4). Defaults are the
+    # old rule, bit for bit. hybrid_lone: a member alone in the household holds the pair reading (13-week and distress, same bar), and a
+    # pair whose household empties may re-form at the 13-week retries. hybrid_exit: forecast futures hold in-future readings every 13
+    # weeks (a look-back against the outside option anchored at the choice), so future selves may leave (the option value of exit).
+    hybrid_lone: bool = False
+    hybrid_exit: bool = False
     # H41 choice aids (docs/results/h41-choice-aids-prereg.md). Defaults are the old world, bit for bit (tests/data/h41_off_fingerprints.json).
     # solo_cost: the extra weekly living cost of living alone (1.5 before; the housing note's cheap solo unit is 0.75 of it).
     # h41_trial: weeks of a trial household (0 off; hybrid only): every formation is scored over the trial window, and at its end each

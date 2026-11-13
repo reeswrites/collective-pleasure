@@ -24,13 +24,22 @@ Three parts:
   misforecasting  optional persona fields of the big-choice forecast, `Persona.forecast` = {"horizon": weeks, "discount": per week,
               "outside_bias": added to the outside option}. Neutral by default (empty dict).
 
+Amendment 4 (docs/results/hybrid-exit-option-prereg.md), two flags, both off by default:
+  hybrid_lone  a member alone in the household holds the pair reading (13-week and distress, same bar; lone_reading), and once the
+              household is empty the pair counts as apart so the 13-week retry runs (lone_apart).
+  hybrid_exit  every forecast future holds in-future readings every 13 weeks (future_reading): a member whose last 13 future weeks fell
+              short of its outside option, anchored at the choice (exit_ref, default_ref), by more than the margin twice in a row gets
+              leave on its menu, so forecasts carry the option value of exit.
+
 Not built: project protection (H39 makers) as a simulated choice. A makers world with negotiated protection refuses to run under the hybrid.
 """
 from __future__ import annotations
 
 import copy
 import random
+import types
 import zlib
+from contextlib import contextmanager
 
 from . import hedonic as HD
 
@@ -41,6 +50,9 @@ AUDIT_M = 16
 STATS = {"futures": 0, "future_weeks": 0, "forks": 0, "choices": 0}
 _NEUTRAL = [False]    # True while held-out values are computed: the declared yardstick, with no persona forecast trait
 _MEMO = {}            # forward forecasts within one forward_memo block: (id(world), w, weeks, fx, last) -> values
+_REF = [None]         # Amendment 4 (hybrid_exit): {role: (outside value, apart mode)}, the anchor of in-future readings, set by a choice
+_FLOG = [None]        # a list while a reading's status quo is logged: each future's exit weeks, relative to the reading (second measure)
+EXIT_LOG = None       # a list while the forecast-vs-lived exit check is on: one entry per reading status quo (hybrid-exit-option-prereg.md)
 
 
 def on(fx=None):
@@ -128,7 +140,9 @@ def resample(c, w, fs, weeks):
         c.pair_rng = random.Random(f"fut|{fs}|pair")
 
 
-def play_future(world, w, last, weeks, fs, fx=None, edit=None):
+def play_future(world, w, last, weeks, fs, fx=None, edit=None, ref=None):
+    """ref (Amendment 4, hybrid_exit): the anchors of in-future readings, every REVIEW_EVERY weeks of the future; None: nobody leaves by
+    a reading inside the future (the old rule)."""
     c = copy_world(world)
     if fx is not None:
         c.fx = fx
@@ -136,7 +150,10 @@ def play_future(world, w, last, weeks, fs, fx=None, edit=None):
         edit(c)
     resample(c, w, fs, weeks)
     lt = last
+    every = _every() if ref else 0
     for x in range(w, w + weeks):
+        if every and x > w and (x - w) % every == 0:
+            future_reading(c, ref)
         lt = {"busy": c.step_week(x, lt)}
     STATS["future_exits"] = STATS.get("future_exits", 0) + len(c.exit_log)
     STATS["futures"] += 1
@@ -157,9 +174,12 @@ def forecast(world, w, last, weeks, fx=None, edit=None, salt="fut", n=None):
 def _forecast(world, w, last, weeks, fx=None, edit=None, salt="fut", n=None):
     """-> {role: mean over n sampled futures of the yardstick}. edit: a function applied to each copy before it plays (an option)."""
     n = n or k_of(fx or world.fx)
+    ref = exit_ref_for(world, fx or world.fx)
     acc = {"A": 0.0, "B": 0.0}
     for k in range(n):
-        c = play_future(world, w, last, weeks, future_seed(world.seed, w, k, salt), fx, edit)
+        c = play_future(world, w, last, weeks, future_seed(world.seed, w, k, salt), fx, edit, ref)
+        if _FLOG[0] is not None:
+            _FLOG[0].append([e["week"] - w for e in c.exit_log if e["week"] >= w])
         for r in "AB":
             acc[r] += score(c.run.outcomes, r, world.personas[r], c.fx)
     return {r: v / n for r, v in acc.items()}
@@ -171,10 +191,18 @@ def forward_values(world, w, last, weeks, fx=None):
     use = world.fx if fx is None else fx
     key = None
     if NG._FWD is not None:
-        key = (id(world), w, weeks, repr(use), repr(last))
+        key = (id(world), w, weeks, repr(use), repr(last)) + ((repr(_REF[0]),) if _REF[0] is not None else ())
         if key in _MEMO:
             return dict(_MEMO[key])
-    v = forecast(world, w, last, weeks, fx)
+    if EXIT_LOG is not None and use is world.fx and all(world.p[r]["in"] for r in "AB") and _FLOG[0] is None:
+        _FLOG[0] = []
+        try:
+            v = forecast(world, w, last, weeks, fx)
+            EXIT_LOG.append({"w": w, "exits": _FLOG[0]})
+        finally:
+            _FLOG[0] = None
+    else:
+        v = forecast(world, w, last, weeks, fx)
     if key is not None:
         _MEMO[key] = dict(v)
     return v
@@ -222,8 +250,12 @@ def _fresh_value(make_world, seed, weeks, salt="fut", n=None):
         c.fork_ok = False
         c._hyb_fut = True
         resample(c, 0, future_seed(seed, 0, k, salt), weeks)
+        ref = _REF[0] if exit_on(c.fx) else None
+        every = _every() if ref else 0
         lt = {"busy": {"A": False, "B": False}}
         for x in range(weeks):
+            if every and x > 0 and x % every == 0:
+                future_reading(c, ref)
             lt = {"busy": c.step_week(x, lt)}
         STATS["future_exits"] = STATS.get("future_exits", 0) + len(c.exit_log)
         STATS["futures"] += 1
@@ -350,11 +382,21 @@ def trial_reading(lived, w, last):
     STATS["choices"] += 1
     world.trial_end = None
     weeks = NG.decide_weeks(NG.FORWARD_WEEKS)
-    sq = forecast(world, w, last, weeks)
+    Os = {}
+    if exit_on(world.fx):              # Amendment 4: the outside options first; they anchor the forecast's in-future readings
+        for r in "AB":
+            carry = world.p[r]["money"] + world.carry_out(r, 50)
+            Os[r] = outside_value(world.personas[r], r, carry, world.seed, world.hed[r], cx=NG._cx(world, r),
+                                  weeks=NG.decide_weeks(0) or None)
+        with exit_ref({r: (Os[r][0] - NG._PAIR.exit_anticipation(world), NG.apart_mode(Os[r][1])) for r in "AB"}):
+            sq = forecast(world, w, last, weeks)
+    else:
+        sq = forecast(world, w, last, weeks)
     out = []
     for r in "AB":
         carry = world.p[r]["money"] + world.carry_out(r, 50)
-        O, d = outside_value(world.personas[r], r, carry, world.seed, world.hed[r], cx=NG._cx(world, r), weeks=NG.decide_weeks(0) or None)
+        O, d = Os[r] if r in Os else outside_value(world.personas[r], r, carry, world.seed, world.hed[r], cx=NG._cx(world, r),
+                                                   weeks=NG.decide_weeks(0) or None)
         O -= NG._PAIR.exit_anticipation(world)
         if O > sq[r] - NG.trust_penalty(world.trust[r]):
             out.append((r, NG.apart_mode(d)))
@@ -409,14 +451,15 @@ def formation0(lived):
     def vals(salt, n=None):
         return score_options(lambda t: fresh_value(mk(t), lived.seed, weeks, salt, n), terms)
 
-    V = vals("fut")
-    term, formed = choose_term(V, O)
-    if AUDIT is not None:
-        Vh = {t: fresh_value(mk(t), lived.seed, weeks, "held", AUDIT_M) for t in V}
-        Oh, _ = _o_both(ps, {"A": hold, "B": hold}, lived.seed, salt="held", n=AUDIT_M, weeks=weeks if trial else None)
-        opts = {t: {"F": V[t], "R": Vh[t]} for t in V}
-        opts["outside"] = {"F": O, "R": Oh}
-        audit_choice("formation0", 0, (lived.pa.id, lived.pb.id), opts, (term if formed else "outside"))
+    with exit_ref({r: (O[r], modes[r]) for r in "AB"}):          # read only under hybrid_exit (Amendment 4)
+        V = vals("fut")
+        term, formed = choose_term(V, O)
+        if AUDIT is not None:
+            Vh = {t: fresh_value(mk(t), lived.seed, weeks, "held", AUDIT_M) for t in V}
+            Oh, _ = _o_both(ps, {"A": hold, "B": hold}, lived.seed, salt="held", n=AUDIT_M, weeks=weeks if trial else None)
+            opts = {t: {"F": V[t], "R": Vh[t]} for t in V}
+            opts["outside"] = {"F": O, "R": Oh}
+            audit_choice("formation0", 0, (lived.pa.id, lived.pb.id), opts, (term if formed else "outside"))
     if not lived.decline:
         formed = True
         if term == "lat":                      # forced formation means a household: the best household option
@@ -450,16 +493,17 @@ def retry(lived, w, last):
         return forecast(hyp, w, last, weeks, edit=lambda c, t=t: set_agreement(c, t), salt=salt, n=n)
 
     terms = tuple(TERMS) + (("lat",) if _lat_on(fx) else ())
-    V = score_options(value_of, terms)
-    term, formed = choose_term(V, O)
-    if AUDIT is not None:
-        Vh = {t: value_of(t, "held", AUDIT_M) for t in V}
-        Oh = {r: outside_value(p, r, world.p[r]["money"], lived.seed, world.hed[r], cx=NG._cx(world, r),
-                               weeks=(weeks if trial else NG.decide_weeks(0)) or None, salt="held", n=AUDIT_M)[0]
-              for r, p in zip("AB", (lived.pa, lived.pb))}
-        opts = {t: {"F": V[t], "R": Vh[t]} for t in V}
-        opts["outside"] = {"F": O, "R": Oh}
-        audit_choice("retry", w, (lived.pa.id, lived.pb.id), opts, term if formed else "outside")
+    with exit_ref({r: (O[r], modes[r]) for r in "AB"}):          # read only under hybrid_exit (Amendment 4)
+        V = score_options(value_of, terms)
+        term, formed = choose_term(V, O)
+        if AUDIT is not None:
+            Vh = {t: value_of(t, "held", AUDIT_M) for t in V}
+            Oh = {r: outside_value(p, r, world.p[r]["money"], lived.seed, world.hed[r], cx=NG._cx(world, r),
+                                   weeks=(weeks if trial else NG.decide_weeks(0)) or None, salt="held", n=AUDIT_M)[0]
+                  for r, p in zip("AB", (lived.pa, lived.pb))}
+            opts = {t: {"F": V[t], "R": Vh[t]} for t in V}
+            opts["outside"] = {"F": O, "R": Oh}
+            audit_choice("retry", w, (lived.pa.id, lived.pb.id), opts, term if formed else "outside")
     lived.retries.append({"week": w, "formed": formed, "outside": dict(O), "baseline": dict(V[term]), "term": term})
     if formed and term == "lat":
         make_lat(world, modes)
@@ -514,15 +558,18 @@ def return_reading(lived, w, last):
         if isinstance(c.solo, dict):
             c.solo = None
 
-    sq = forecast(world, w, last, weeks)
-    rv = forecast(world, w, last, weeks, edit=back)
-    gain = {x: rv[x] - sq[x] for x in "AB"}
-    world.ret_value = {r: (gain[r] * weeks if all(g > 0 for g in gain.values()) else 0.0)}
-    if AUDIT is not None:
-        audit_choice("return", w, (world.personas["A"].id, world.personas["B"].id),
-                     {"stay_out": {"F": sq, "R": forecast(world, w, last, weeks, salt="held", n=AUDIT_M)},
-                      "return": {"F": rv, "R": forecast(world, w, last, weeks, edit=back, salt="held", n=AUDIT_M)}},
-                     "return" if world.ret_value[r] > 0 else "stay_out")
+    with exit_ref(default_ref(world, world.fx, "AB") if exit_on(world.fx) else None):   # Amendment 4: either member may leave later
+        sq = forecast(world, w, last, weeks)
+        rv = forecast(world, w, last, weeks, edit=back)
+        gain = {x: rv[x] - sq[x] for x in "AB"}
+        world.ret_value = {r: (gain[r] * weeks if all(g > 0 for g in gain.values()) else 0.0)}
+        if AUDIT is not None:
+            audit_choice("return", w, (world.personas["A"].id, world.personas["B"].id),
+                         {"stay_out": {"F": sq, "R": forecast(world, w, last, weeks, salt="held", n=AUDIT_M)},
+                          "return": {"F": rv, "R": forecast(world, w, last, weeks, edit=back, salt="held", n=AUDIT_M)}},
+                         "return" if world.ret_value[r] > 0 else "stay_out")
+    if lone_on(world.fx):
+        lone_reading(lived, w, last)         # Amendment 4: the member left in holds its own reading at the same mark
 
 
 def due(world, w):
@@ -530,6 +577,154 @@ def due(world, w):
     fx = world.fx
     return (bool(getattr(world, "hyb_due", False)) and all(world.p[x]["in"] for x in "AB")
             and w - getattr(world, "hyb_last", -99) >= fx.hybrid_gap)
+
+
+# ---- Amendment 4: the member left alone, and forecasts with the option to leave (docs/results/hybrid-exit-option-prereg.md) ----------
+
+def lone_on(fx=None):
+    """FixConfig.hybrid_lone: a member alone in the household holds the pair reading, and an emptied household may re-form."""
+    fx = fx if fx is not None else HD.active_fixes()
+    return bool(getattr(fx, "hybrid_lone", False)) if fx is not None else False
+
+
+def exit_on(fx=None):
+    """FixConfig.hybrid_exit: forecast futures hold in-future readings, so future selves may leave (the option value of exit)."""
+    fx = fx if fx is not None else HD.active_fixes()
+    return bool(getattr(fx, "hybrid_exit", False)) if fx is not None else False
+
+
+def _every():
+    from . import negotiation as NG
+    return NG.REVIEW_EVERY
+
+
+def _lone(world):
+    ins = [r for r in "AB" if world.p[r]["in"]]
+    return ins[0] if len(ins) == 1 else None
+
+
+def lone_due(world, w):
+    """An early lone reading is due: hybrid_lone, exactly one member in, it flagged distress, and the last reading is hybrid_gap back."""
+    fx = world.fx
+    return (lone_on(fx) and _lone(world) is not None and bool(getattr(world, "hyb_due", False))
+            and w - getattr(world, "hyb_last", -99) >= fx.hybrid_gap)
+
+
+def bar_one(world, r, s, O, mode):
+    """The bar rule of negotiation.bar_reading for one member: s its stay value (minus the trust penalty), O its outside option."""
+    fx = world.fx
+    runs = getattr(world, "bar_runs", None)
+    if runs is None:
+        runs = world.bar_runs = {"A": 0, "B": 0}
+    gain = dict(getattr(world, "bar_gain", None) or {})
+    gain[r] = O - s
+    world.bar_gain = gain
+    runs[r] = runs[r] + 1 if O > s + fx.leave_margin else 0
+    world.bar_out[r] = runs[r] >= fx.bar_runs
+    if mode:
+        world.bar_mode[r] = mode
+    world.bar_log = getattr(world, "bar_log", [])
+    world.bar_log.append({"role": r, "sq": s, "out": O, "bar_out": world.bar_out[r]})
+
+
+def lone_reading(lived, w, last):
+    """Fix 1 (hybrid_lone): the member alone in the household holds the pair reading's arithmetic. Staying: the status quo over K futures
+    over the decision window, minus the trust penalty; the outside option at the carry, minus exit anticipation; the bar in force."""
+    from . import negotiation as NG
+    world = lived.world
+    r = _lone(world)
+    if r is None or not lone_on(world.fx) or not world.fx.bar_leave or not lived_world(world):
+        return
+    STATS["choices"] += 1
+    STATS["lone_readings"] = STATS.get("lone_readings", 0) + 1
+    weeks = NG.decide_weeks(NG.FORWARD_WEEKS)
+    carry = world.p[r]["money"] + world.carry_out(r, 50)
+    O, d = NG.outside_value(world.personas[r], r, carry, world.seed, world.hed[r], cx=NG._cx(world, r))
+    O -= NG._PAIR.exit_anticipation(world)
+    mode = NG.apart_mode(d)
+    tp = NG.trust_penalty(world.trust[r])
+    with exit_ref({r: (O, mode)}):
+        sq = forecast(world, w, last, weeks)
+        s = sq[r] - tp
+        if AUDIT is not None:
+            Rs = forecast(world, w, last, weeks, salt="held", n=AUDIT_M)[r] - tp
+            Oh = outside_value(world.personas[r], r, carry, world.seed, world.hed[r], cx=NG._cx(world, r),
+                               weeks=NG.decide_weeks(0) or None, salt="held", n=AUDIT_M)[0] - NG._PAIR.exit_anticipation(world)
+            audit_choice("lone", w, (world.personas["A"].id, world.personas["B"].id),
+                         {"stay": {"F": {r: s}, "R": {r: Rs}}, "outside": {"F": {r: O}, "R": {r: Oh}}},
+                         {r: ("outside" if O > s else "stay")})
+            AUDIT[-1]["roles"] = r
+    world.hyb_last, world.hyb_due = w, False
+    bar_one(world, r, s, O, mode)
+    world.lone_log = getattr(world, "lone_log", [])
+    world.lone_log.append({"week": w, "role": r, "stay": round(s, 5), "out": round(O, 5), "bar_out": bool(world.bar_out[r])})
+
+
+def lone_apart(lived):
+    """Fix 1: once the household is empty (and the pair is not living apart together), the pair counts as apart, so the harness's
+    13-week retry runs for it."""
+    world = lived.world
+    if lone_on(world.fx) and not lived.apart and not any(world.p[r]["in"] for r in "AB") and not getattr(world, "lat", False):
+        lived.apart = True
+        STATS["lone_apart"] = STATS.get("lone_apart", 0) + 1
+
+
+@contextmanager
+def exit_ref(ref):
+    """The anchors a choice gives its forecasts' in-future readings (read only under hybrid_exit)."""
+    prev = _REF[0]
+    _REF[0] = ref
+    try:
+        yield
+    finally:
+        _REF[0] = prev
+
+
+def default_ref(world, fx, roles=None):
+    """The anchors of a forecast no choice set: each member's outside option as a reading values it (members in: at the carry, money
+    plus the 50% take; members out: at their money), minus exit anticipation, with its apart mode. Valued under fx."""
+    from . import negotiation as NG
+    from . import pairing as PR
+    ref = {}
+    with HD.use_fixes(fx):
+        ea = PR.exit_anticipation(types.SimpleNamespace(fx=fx))
+        for r in (roles or [x for x in "AB" if world.p[x]["in"]]):
+            hold = world.p[r]["money"] + (world.carry_out(r, 50) if world.p[r]["in"] else 0)
+            O, d = NG.outside_value(world.personas[r], r, hold, world.seed, world.hed[r], cx=NG._cx(world, r))
+            ref[r] = (O - ea, NG.apart_mode(d))
+    return ref
+
+
+def exit_ref_for(world, fx):
+    """The anchors a forecast of `world` uses: None without hybrid_exit; else the choice's own (exit_ref), or default_ref."""
+    if not exit_on(fx):
+        return None
+    if _REF[0] is not None:
+        return _REF[0]
+    return default_ref(world, fx)
+
+
+def future_reading(c, ref):
+    """Fix 2 (hybrid_exit): an in-future reading inside a forecast copy. Each member in (a lone member only under hybrid_lone) compares
+    its yardstick over the REVIEW_EVERY future weeks just played (no horizon or discount trait), minus the trust penalty, with its
+    anchored outside option, on the lived bar. Past the bar, the routine may leave as in a lived world."""
+    from . import negotiation as NG
+    fx = c.fx
+    ins = [r for r in "AB" if c.p[r]["in"]]
+    if not ins or (len(ins) == 1 and not lone_on(fx)):
+        return
+    rows = c.run.outcomes[-_every():]
+    if not rows:
+        return
+    STATS["future_readings"] = STATS.get("future_readings", 0) + 1
+    for r in ins:
+        if r not in ref:
+            continue
+        wt = weight(c.personas[r], fx)
+        h = [o["hedonic"][r] for o in rows]
+        ys = [x["pleasure"] - (wt * (x["s_off"] + x["s_non"]) if wt is not None else 0.0) for x in h]
+        O, mode = ref[r]
+        bar_one(c, r, sum(ys) / len(ys) - NG.trust_penalty(c.trust[r]), O, mode)
 
 
 # ---- the week-0 commitment stub -------------------------------------------------------------------------------------------------
@@ -572,6 +767,9 @@ def lived(world):
     return not getattr(world, "_hyb_fut", False)
 
 
+lived_world = lived       # the same test, for functions whose harness argument is called `lived`
+
+
 def world_readings(world, w, last):
     """Amendment 3 (FixConfig.hybrid_readings="world"): any hybrid reading no harness ran this week. An early reading on distress
     (hybrid.due); and, in a world no harness drives (world.harness unset), the 13-week reading while both are in and the return reading
@@ -587,6 +785,9 @@ def world_readings(world, w, last):
         NG.BaselineLived.reading(shim, w, last)
     elif n_in == 1 and mark:
         return_reading(shim, w, last)
+    elif n_in == 1 and lone_due(world, w):
+        STATS["world_readings"] = STATS.get("world_readings", 0) + 1
+        lone_reading(shim, w, last)
 
 
 def week_start(world, w, last):
