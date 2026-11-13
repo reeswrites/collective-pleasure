@@ -64,6 +64,8 @@ V2 = {"agent_values": "v2", "bills_hurt": True}              # the recalibrated 
 # Bill horizon (docs/results/agent-bill-horizon-prereg.md): the 4-week horizon added, so a payment is measured through the settlement it feeds
 HORIZONS4 = (1, 4, 13, 52)
 V2B = {"agent_values": "v2b", "bills_hurt": True}
+# Saturating pleasure scale (docs/decisions/0019-saturating-pleasure-scale.md): v2 and bills on the new scale; rows in runs/value-consistency-v2-sat/
+V2SAT = {**V2, "pleasure_scale": "sat"}
 
 
 def _ctx(extra=None):
@@ -316,6 +318,8 @@ def target_fn(kind="net"):
     definition). unclipped: own unclipped pleasure - suffering."""
     if kind == "net":
         return lambda r, h: act_of(r, h)
+    if kind == "oldline":            # ADR 0019: the same rows held to the old capped line (clipped pleasure - suffering)
+        return lambda r, h: r["act"][h]["own"]["pcnet"]
     if kind == "unclipped":
         return lambda r, h: r["act"][h]["own"]["raw"] - (r["act"][h]["own"]["pl"] - r["act"][h]["own"]["net"])
     pro = _prosocial()
@@ -491,6 +495,7 @@ def main():
     ap.add_argument("--v2nobills", action="store_true", help="descriptive: v2 with bills off, a smaller sample (Amendment 2)")
     ap.add_argument("--v2h4", action="store_true", help="bill horizon prereg: v2 and bills, horizons 1/4/13/52; runs/value-consistency-v2-h4/")
     ap.add_argument("--v2b", action="store_true", help="bill horizon: agent_values v2b and bills, horizons 1/4/13/52; runs/value-consistency-v2b/")
+    ap.add_argument("--v2sat", action="store_true", help="ADR 0019: v2 and bills on the saturating scale; runs/value-consistency-v2-sat/")
     ap.add_argument("--gaps", action="store_true", help="carry-over terms: per action, per group, the k-week effect minus the 1-week effect")
     ap.add_argument("--passtest", action="store_true")
     ap.add_argument("--reach", action="store_true")
@@ -504,6 +509,8 @@ def main():
         OUT, extra, hz = ROOT / "runs" / "value-consistency-v2-h4", V2, HORIZONS4
     if a.v2b:
         OUT, extra, hz = ROOT / "runs" / "value-consistency-v2b", V2B, HORIZONS4
+    if a.v2sat:
+        OUT, extra = ROOT / "runs" / "value-consistency-v2-sat", V2SAT
     if a.v2nobills:
         OUT, extra = ROOT / "runs" / "value-consistency-v2-nobills", {"agent_values": "v2"}
         if a.run:
@@ -538,7 +545,8 @@ def main():
         a.reach = False
     if a.passtest:
         recs = load(OUT / "rows.jsonl")
-        res = {k: passtest(recs, k) for k in ("net", "social", "unclipped")}
+        kinds = ("net", "social", "unclipped") + (("oldline",) if "pcnet" in recs[0]["items"][0]["actual"]["1"]["own"] else ())
+        res = {k: passtest(recs, k) for k in kinds}
         print(json.dumps(res, indent=1, default=str))
         (OUT / "passtest.json").write_text(json.dumps(res, indent=1, default=str))
     if a.analyze:

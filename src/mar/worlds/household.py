@@ -1100,6 +1100,9 @@ class WeeklyWorld:
         self.fx = fixes if fixes is not None else HD.ACTIVE_FIXES      # household fixes (all off by default); set before any state() call
         if not HD.fixes_on(self.fx):
             self.fx = None
+        if self.fx is not None and self.fx.pleasure_scale == "sat":     # ADR 0019: the saturating pleasure scale
+            for h in self.hed.values():
+                h.knee = self.fx.sat_knee
         self.refused_until = {"A": -1, "B": -1}     # decency (fix flag `decency`): the actor's requests were refused until this week
         self.mech = any(c.aim in MECH_AIMS for c in self.gate.cards)
         self.commits, self.gifts = [], {"partner": 0, "friend": 0}

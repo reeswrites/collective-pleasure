@@ -134,8 +134,11 @@ def _rows(c, n_weeks, weights):
             p = parts[i] if i < len(parts) else None
             raw = h["pleasure"] - p["clip_p"] if p is not None else h["pleasure"]
             suf = h["s_off"] + h["s_non"]
-            acc.append({"pl": h["pleasure"], "raw": raw, "net": h["pleasure"] - suf, "wnet": h["pleasure"] - weights[r] * suf,
-                        "g": OB.groups(p, "net") if p is not None else None})
+            x = {"pl": h["pleasure"], "raw": raw, "net": h["pleasure"] - suf, "wnet": h["pleasure"] - weights[r] * suf,
+                 "g": OB.groups(p, "net") if p is not None else None}
+            if "p_clip" in h:            # ADR 0019, the saturating scale: the old capped line beside it (clipped pleasure, and its net)
+                x["pc"], x["pcnet"] = h["p_clip"], h["p_clip"] - suf
+            acc.append(x)
         out[r] = acc
     return out
 
@@ -181,8 +184,12 @@ def branch(snap, last, w, r, k, mode, cand=None, weeks=52, lived=None, crn=True)
     return tap, _rows(c, end - w, weights)
 
 
+OLD_LINE = ("pc", "pcnet")      # present only on the saturating scale (ADR 0019)
+
+
 def _sums(rows, h):
-    return {m: sum(x[m] for x in rows[:h]) for m in MEASURES}
+    ms = MEASURES + (OLD_LINE if rows and "pc" in rows[0] else ())
+    return {m: sum(x[m] for x in rows[:h]) for m in ms}
 
 
 def _gsum(rows, h):
@@ -222,7 +229,7 @@ def measure_decision(snap, last, w, r, k, horizons=HORIZONS, lived=None, skip=("
         ex = tap.executed()
         it = {"a": c["a"], "kind": c.get("kind"), "perceived": float(s) - pen, "score": float(s), "rule": dec, "sanction_est": pen, "listed": kk in listed, "applied": ex == kk, "actual": {}, "groups": {}}
         for h in horizons:
-            it["actual"][h] = {who: {m: _sums(rows[x], h)[m] - _sums(base[x], h)[m] for m in MEASURES}
+            it["actual"][h] = {who: {m: _sums(rows[x], h)[m] - _sums(base[x], h)[m] for m in _sums(rows[x], h)}
                                for who, x in (("own", o[0]), ("partner", o[1]))}
             g1, g0 = _gsum(rows[o[0]], h), _gsum(base[o[0]], h)
             it["groups"][h] = {g: g1.get(g, 0.0) - g0.get(g, 0.0) for g in set(g1) | set(g0)}

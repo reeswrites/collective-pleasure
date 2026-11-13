@@ -251,9 +251,10 @@ def _week_net(s, parts=None):
                 s_non += inten
             else:
                 s_off += c.pre_onset_share * inten
-    out = _c01(raw) - _c01(s_off) - _c01(s_non)
+    pl = _c01(raw) if h.knee is None else HD.saturate(raw, h.knee)        # ADR 0019: the close's own pleasure scale
+    out = pl - _c01(s_off) - _c01(s_non)
     if parts is not None:
-        parts.update(pleasure=_c01(raw), s_off=_c01(s_off), s_non=_c01(s_non), raw=raw,
+        parts.update(pleasure=pl, s_off=_c01(s_off), s_non=_c01(s_non), raw=raw,
                      levels={"rest": rest, "connection": conn, "money": mon, "security": sec}, bill_fric=bill_fric)
     return out
 

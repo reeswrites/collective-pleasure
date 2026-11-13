@@ -248,6 +248,11 @@ class FixConfig:
     bill_stress: float = 0.30        # friction per member at settlement x unfunded share x dryness (ASSUMED)
     bill_runway: float = 30.0        # pot at which dryness is 0: three months of the couple's bill (ASSUMED)
     evict_stress: float = 0.30       # friction per member when even the pot cannot pay (ASSUMED); the rest carries one month
+    # The pleasure scale (docs/decisions/0019-saturating-pleasure-scale.md). "clip" is the old weekly cap, bit for bit
+    # (tests/test_pleasure_scale.py). "sat" replaces the clip in Hedonic.close_week with the saturating curve `saturate` (knee sat_knee),
+    # so the spiral, the agents' own week and the evaluator all read it. Read only in worlds where the fixes are on; not part of fixes_on.
+    pleasure_scale: str = "clip"
+    sat_knee: float = 0.8            # ASSUMED (ADR 0019)
 
 
 ACTIVE_FIXES = None      # module default, set by `use_fixes`; WeeklyWorld(fixes=None) reads it
@@ -283,6 +288,20 @@ def fix_key(cfg=None):
     f = cfg if cfg is not None else active_fixes()
     lv = ACTIVE_LEVERS if levers_on(ACTIVE_LEVERS) else None
     return None if (f is None and lv is None) else (repr(f), repr(lv))
+
+
+def saturate(x, k):
+    """ADR 0019: the saturating pleasure scale. 0 at or below 0; x up to the knee k; above it k + (1 - k)(1 - exp(-(x - k)/(1 - k))),
+    continuous with slope 1 at the knee and rising ever more slowly toward 1."""
+    import math
+    if x <= k:
+        return 0.0 if x < 0.0 else x
+    return k + (1.0 - k) * (1.0 - math.exp(-(x - k) / (1.0 - k)))
+
+
+def pleasure_of(raw, knee):
+    """The week's pleasure from its raw sum: the old clip to [0, 1] when knee is None, else the saturating curve."""
+    return _clip(raw) if knee is None else saturate(raw, knee)
 
 
 def bought_pleasure(fx, spend):
@@ -382,6 +401,8 @@ def recording_parts(on=True):
 class Hedonic:
     """One agent's hedonic state. `persona` needs .needs (salience per need) and .aspirations (targets) and
     .weights (aspiration importances: security, autonomy, togetherness, money, other_connections)."""
+
+    knee = None          # ADR 0019: None = the old clip; a number = the saturating curve's knee (set by WeeklyWorld when the flag is on)
 
     ASP_WEIGHT = {"security_buffer": "security", "together_per_week": "togetherness",
                   "friends_per_week": "other_connections", "savings_per_week": "money", "autonomy": "autonomy"}
@@ -494,7 +515,7 @@ class Hedonic:
         s_asp = c.unmet_aspiration * sum(self.asp_w[k] * (1 - sat[k]) for k in sat)
         self.last_autonomy = aspiration_values.get("autonomy", 0.0)      # read only by agent values v2 (a record; the model never reads it)
         raw = c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * together_sessions + self.glow + extra_pleasure
-        pleasure = _clip(raw)
+        pleasure = _clip(raw) if self.knee is None else saturate(raw, self.knee)
         glow_used = self.glow
         self.glow *= c.glow_decay
         s_off = s_need + s_asp + friction
@@ -525,4 +546,5 @@ class Hedonic:
         return {"pleasure": round(pleasure, 4), "s_off": round(s_off, 4), "s_non": round(s_non, 4), "B": round(self.B, 4),
                 "N": round(self.N, 4), "capacity": round(self.capacity, 4), "tip": c.tip,
                 "nonoff_run": self.nonoff_run, "levels": {n: round(L[n], 3) for n in NEEDS},
-                "conditions": {k: v for k, (v, _) in active.items()}, **({"p_raw": round(raw, 4)} if report_raw else {})}
+                "conditions": {k: v for k, (v, _) in active.items()}, **({"p_raw": round(raw, 4)} if report_raw else {}),
+                **({"p_clip": round(_clip(raw), 4)} if self.knee is not None else {})}
