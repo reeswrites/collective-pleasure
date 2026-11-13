@@ -66,6 +66,9 @@ HORIZONS4 = (1, 4, 13, 52)
 V2B = {"agent_values": "v2b", "bills_hurt": True}
 # Saturating pleasure scale (docs/decisions/0019-saturating-pleasure-scale.md): v2 and bills on the new scale; rows in runs/value-consistency-v2-sat/
 V2SAT = {**V2, "pleasure_scale": "sat"}
+# The hybrid agent's routine pass test (docs/results/hybrid-agent-prereg.md, PT-R): a third of the pairings, seed 0; runs/value-consistency-hybrid/
+HYBRID = {"agent_values": "hybrid", "bills_hurt": True, "pleasure_scale": "sat"}
+HSAMPLE = {"pairs_every": 3, "seeds": (0,), "weeks": 6, "k": 2, "harness": False}
 
 
 def _ctx(extra=None):
@@ -94,12 +97,19 @@ def run_pair(a, b, seed, n_weeks, k, harness, extra=None, horizons=VC.HORIZONS):
         lived = NG.BaselineLived(ps[a], ps[b], seed, H.load_variant("baseline"), weeks=H.WEEKS, decline=True)
         world = lived.world
         last = {"busy": {"A": False, "B": False}}
+        hyb = world.fx is not None and world.fx.agent_values == "hybrid"
         for w in range(max(weeks) + 1):
             if w and w % NG.REVIEW_EVERY == 0:
                 if lived.apart and lived.decline:
                     lived.retry(w, last)
                 elif all(world.p[r]["in"] for r in "AB"):
                     lived.reading(w, last)
+                elif hyb and any(world.p[r]["in"] for r in "AB"):
+                    from mar import hybrid as HY
+                    HY.return_reading(lived, w, last)
+            elif hyb:
+                lived.hybrid_week(w, last)
+            world = lived.world
             if world.early_review:
                 world.ladder_reviewed(w)
             if w in weeks:
@@ -496,6 +506,7 @@ def main():
     ap.add_argument("--v2h4", action="store_true", help="bill horizon prereg: v2 and bills, horizons 1/4/13/52; runs/value-consistency-v2-h4/")
     ap.add_argument("--v2b", action="store_true", help="bill horizon: agent_values v2b and bills, horizons 1/4/13/52; runs/value-consistency-v2b/")
     ap.add_argument("--v2sat", action="store_true", help="ADR 0019: v2 and bills on the saturating scale; runs/value-consistency-v2-sat/")
+    ap.add_argument("--hybrid", action="store_true", help="the hybrid agent's routine pass test (PT-R); runs/value-consistency-hybrid/")
     ap.add_argument("--gaps", action="store_true", help="carry-over terms: per action, per group, the k-week effect minus the 1-week effect")
     ap.add_argument("--passtest", action="store_true")
     ap.add_argument("--reach", action="store_true")
@@ -511,6 +522,11 @@ def main():
         OUT, extra, hz = ROOT / "runs" / "value-consistency-v2b", V2B, HORIZONS4
     if a.v2sat:
         OUT, extra = ROOT / "runs" / "value-consistency-v2-sat", V2SAT
+    if a.hybrid:
+        OUT, extra = ROOT / "runs" / "value-consistency-hybrid", HYBRID
+        if a.run:
+            collect(HSAMPLE, OUT / "rows.jsonl", a.workers, extra)
+            a.run = False
     if a.v2nobills:
         OUT, extra = ROOT / "runs" / "value-consistency-v2-nobills", {"agent_values": "v2"}
         if a.run:

@@ -82,6 +82,7 @@ def play(pc, a, b, seed, stay=True, weeks=H.WEEKS, liberty=None, rule=None, decl
                     wd.run.liberty.append(_liberty(wd, wk_, liberty))
             world.hook = hook
         last = {"busy": {"A": False, "B": False}}
+        hyb = fx.agent_values == "hybrid"
         for w in range(world.weeks):                      # = BaselineLived.play, plus the stay lens before each reading
             if w and w % NG.REVIEW_EVERY == 0:
                 if lived.apart and lived.decline:
@@ -91,6 +92,11 @@ def play(pc, a, b, seed, stay=True, weeks=H.WEEKS, liberty=None, rule=None, decl
                         if stay:
                             readings.append((w, PR.stay_reading(world, w, last)))
                         lived.reading(w, last)
+                elif hyb and any(world.p[r]["in"] for r in "AB"):
+                    from mar import hybrid as HY       # the hybrid agent: is a return worth it to both? (mar.hybrid.return_reading)
+                    HY.return_reading(lived, w, last)
+            elif hyb:
+                lived.hybrid_week(w, last)                # the hybrid agent: an early reading when a member is in distress
             if world.early_review:
                 world.ladder_reviewed(w)
             last = {"busy": world.step_week(w, last)}

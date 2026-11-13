@@ -583,6 +583,9 @@ def wellbeing(outcomes, role, persona=None):
     (makers.suffering_weight; docs/notes/decision-weights-research.md)."""
     xs = [o["hedonic"][role] for o in outcomes]
     fx = HD.active_fixes()
+    if fx is not None and fx.agent_values == "hybrid":      # the hybrid's one declared yardstick (mar.hybrid.score)
+        from . import hybrid as _HY
+        return _HY.score(outcomes, role, persona)
     if fx is not None and fx.decide_on == "pleasure":
         return sum(h["pleasure"] for h in xs) / len(xs)
     if fx is not None and fx.decide_on == "weighted":
@@ -664,6 +667,10 @@ def outside_value(p, role, holdings, seed, hed=None, cx=None):
     """The member's real outside option: the better of living alone and living with Friend C, by its own evaluation.
     cx (fix 3, real_outside): the member's current closeness state, carried into the rollout. -> (value, {"alone": x, "friend": y})."""
     kw = {"weeks": decide_weeks(0)} if decide_weeks(0) else {}
+    fx = HD.active_fixes()
+    if fx is not None and fx.agent_values == "hybrid":      # K fresh futures per arrangement (mar.hybrid)
+        from . import hybrid as _HY
+        return _HY.outside_value(p, role, holdings, seed, hed, cx, kw.get("weeks"))
     d = {m: alone_value(p, role, holdings, seed, m, hed, cx=cx, **kw) for m in ("alone", "friend")}
     return max(d.values()), d
 
@@ -677,6 +684,12 @@ def pot_baseline(pa, pb, seed, base, weeks=OUT_WEEKS):
     ck = (pa.id, pb.id, seed, weeks, tuple(sorted(c.id for c in base)))
     if HD.fix_key() is not None:
         ck = ck + (HD.fix_key(),)
+    fx = HD.active_fixes()
+    if ck not in _PC and fx is not None and fx.agent_values == "hybrid":
+        from . import hybrid as _HY
+        cards = list(base) + compile_bundle(FAIR_DEFAULT, [pa.id, pb.id])
+        _PC[ck] = _HY.fresh_value(lambda: H.WeeklyWorld(cards, (pa, pb), seed, weeks, deal=deal_from_bundle(FAIR_DEFAULT),
+                                                        breach_forfeit=FAIR_DEFAULT["breach"]), seed, weeks)
     if ck not in _PC:
         cards = list(base) + compile_bundle(FAIR_DEFAULT, [pa.id, pb.id])
         wd = H.WeeklyWorld(cards, (pa, pb), seed, weeks, deal=deal_from_bundle(FAIR_DEFAULT), breach_forfeit=FAIR_DEFAULT["breach"])
@@ -708,6 +721,9 @@ def forward_values(world, w, last, weeks=FORWARD_WEEKS, parts=None):
     """Persona evaluation of the next 26 weeks of the live household under its current terms (a copy of the world plays them).
     parts (observer layer): a dict that receives each member's rollout parts, when the world's Hedonic records them."""
     weeks = decide_weeks(weeks)
+    if world.fx is not None and world.fx.agent_values == "hybrid":     # K sampled futures, not the lived world's own (mar.hybrid)
+        from . import hybrid as _HY
+        return _HY.forward_values(world, w, last, weeks)
     c = played_copy(world, w, last, weeks)
     STATS["rollouts"] += 1                      # counted as asked for, also when forward_memo serves the copy (counters stay as they were)
     STATS["rollout_weeks"] += weeks
@@ -727,11 +743,14 @@ def forward_memo():
     the stay lens and the reading that follows it (scripts/h38_pairing_run.py play). A rollout is deterministic given those inputs (the
     copy carries every random stream), so the reused copy is the one a second rollout would play."""
     global _FWD
+    from . import hybrid as _HY
     prev, _FWD = _FWD, []
+    _HY._MEMO.clear()                           # the hybrid's forecasts, memoized the same way (mar.hybrid.forward_values)
     try:
         yield
     finally:
         _FWD = prev
+        _HY._MEMO.clear()
 
 
 def played_copy(world, w, last, weeks, fx=None):
@@ -999,6 +1018,9 @@ def bar_reading(world, sq, out, modes=None):
     if runs is None:
         runs = world.bar_runs = {"A": 0, "B": 0}
     world.bar_log = getattr(world, "bar_log", [])
+    if fx.agent_values == "hybrid":
+        world.bar_gain = {r: out[r] - sq[r] for r in "AB"}     # the hybrid's leave value reads it (mar.hybrid.leave_value)
+        world.hyb_last, world.hyb_due = getattr(world, "cur_reading", None) or getattr(world, "hyb_last", -99), False
     for r in "AB":
         better = out[r] > sq[r] + fx.leave_margin
         runs[r] = runs[r] + 1 if better else 0
@@ -1019,6 +1041,10 @@ class BaselineLived:
         self.pa, self.pb, self.seed, self.cards, self.decline = pa, pb, seed, list(cards), decline
         self.world = H.WeeklyWorld(self.cards, (pa, pb), seed, weeks)
         self.apart, self.log, self.retries = False, [], []
+        fx = self.world.fx
+        if fx is not None and fx.agent_values == "hybrid":
+            self._hybrid_init(weeks)
+            return
         if decline:
             W = baseline_value(pa, pb, seed, self.cards)
             O, det = {}, {}
@@ -1037,8 +1063,33 @@ class BaselineLived:
                 for r in "AB":
                     self.world.p[r]["in"] = False
 
+    def _hybrid_init(self, weeks):
+        """The hybrid agent's week 0 (mar.hybrid.formation0): the bill term and formation chosen by simulation."""
+        from . import hybrid as _HY
+        formed, term, O, det, V = _HY.formation0(self)
+        self.week0 = {"W": V[term], "O": O, "term": term, "formed": formed}
+        if not formed:
+            self.apart = True
+            self.world = H.WeeklyWorld(self.cards, (self.pa, self.pb), self.seed, weeks, deal={"pot": False, "commits": []})
+            self.world.solo = {r: apart_mode(det[r]) for r in "AB"}
+            for r in "AB":
+                self.world.p[r]["in"] = False
+        else:
+            _HY.set_agreement(self.world, term)
+        self.world.fork_ok = True
+
+    def hybrid_week(self, w, last):
+        """The hybrid's extra harness steps at the start of week w (not a 13-week mark): an early reading on distress."""
+        from . import hybrid as _HY
+        if _HY.due(self.world, w):
+            self.world.cur_reading = w
+            self.reading(w, last)
+
     def retry(self, w, last):
         world = self.world
+        if world.fx is not None and world.fx.agent_values == "hybrid":
+            from . import hybrid as _HY
+            return _HY.retry(self, w, last)
         O, modes = {}, {}
         for r, p in zip("AB", (self.pa, self.pb)):
             O[r], d = outside_value(p, r, world.p[r]["money"], self.seed, world.hed[r], cx=_cx(world, r))
@@ -1080,6 +1131,11 @@ class BaselineLived:
             if fp is not None:
                 op[r] = outside_parts(p, r, carry, self.seed, world.hed[r], cx=_cx(world, r))
         self.log.append({"week": w, "outside": dict(O), "baseline": dict(fwd)})
+        if world.fx is not None and world.fx.agent_values == "hybrid":
+            from . import hybrid as _HY
+            world.cur_reading = w
+            _HY.reading_audit(world, w, last, {r: fwd[r] - trust_penalty(world.trust[r]) for r in "AB"}, O,
+                              {r: world.p[r]["money"] + world.carry_out(r, 50) for r in "AB"}, decide_weeks(FORWARD_WEEKS))
         bar_reading(world, {r: fwd[r] - trust_penalty(world.trust[r]) for r in "AB"}, O, modes)
         if fp is not None:
             _OBS.harness_record(world, self, _reading_rec(
@@ -1091,12 +1147,18 @@ class BaselineLived:
         world = self.world
         last = {"busy": {"A": False, "B": False}}
         bar = world.fx is not None and world.fx.bar_leave
+        hyb = world.fx is not None and world.fx.agent_values == "hybrid"
         for w in range(world.weeks):
             if w and w % REVIEW_EVERY == 0:
                 if self.apart and self.decline:
                     self.retry(w, last)
                 elif bar and all(world.p[r]["in"] for r in "AB"):
                     self.reading(w, last)
+                elif hyb and any(world.p[r]["in"] for r in "AB"):
+                    from . import hybrid as _HY
+                    _HY.return_reading(self, w, last)
+            elif hyb:
+                self.hybrid_week(w, last)
             if world.early_review:
                 world.ladder_reviewed(w)
             last = {"busy": world.step_week(w, last)}
@@ -1116,6 +1178,10 @@ def baseline_value(pa, pb, seed, cards, weeks=OUT_WEEKS):
     """Persona evaluation of living together under imposed cards for 26 weeks: {"A": x, "B": y}. Cached."""
     weeks = decide_weeks(weeks)
     ck = (pa.id, pb.id, seed, weeks, tuple(sorted(c.id for c in cards)), HD.fix_key())
+    fx = HD.active_fixes()
+    if ck not in _BC and fx is not None and fx.agent_values == "hybrid":
+        from . import hybrid as _HY
+        _BC[ck] = _HY.fresh_value(lambda: H.WeeklyWorld(list(cards), (pa, pb), seed, weeks), seed, weeks)
     if ck not in _BC:
         wd = H.WeeklyWorld(list(cards), (pa, pb), seed, weeks)
         run = wd.play()

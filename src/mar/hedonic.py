@@ -253,6 +253,9 @@ class FixConfig:
     # so the spiral, the agents' own week and the evaluator all read it. Read only in worlds where the fixes are on; not part of fixes_on.
     pleasure_scale: str = "clip"
     sat_knee: float = 0.8            # ASSUMED (ADR 0019)
+    # The hybrid agent (agent_values="hybrid"; mar.hybrid; docs/results/hybrid-agent-prereg.md)
+    hybrid_k: int = 4                # sampled futures per option of a big choice
+    hybrid_gap: int = 4              # weeks between an early (distress) reading and the last reading
 
 
 ACTIVE_FIXES = None      # module default, set by `use_fixes`; WeeklyWorld(fixes=None) reads it

@@ -37,6 +37,7 @@ from .. import observe as _OBS
 from .. import makers as _MAKERS
 from .. import pairing as _PAIR
 from .. import agent_values as _AV
+from .. import hybrid as _HY
 from ..patch_check import check_sanctions
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -969,13 +970,20 @@ class PersonaAgent:
         r, h = o["role"], o["hed"]
         out = []
         if not o["in_hh"]:
-            if o["other_in"] and self.persona.weights["togetherness"] >= 0.6 and o["weeks_out"] >= 8 and h.B < 0:
+            if o.get("hyb"):                     # hybrid: returning is a simulated choice (mar.hybrid.return_reading)
+                if o["other_in"] and o.get("return_value", 0.0) > 0:
+                    out.append((o["return_value"], _a("return")))
+            elif o["other_in"] and self.persona.weights["togetherness"] >= 0.6 and o["weeks_out"] >= 8 and h.B < 0:
                 out.append((0.3, _a("return")))
             u = self.utilities({**o, "gap": 0})
             out += [(v, _a(a)) for a, v in u.items() if v > 0.003 and a != "together"]
             return sorted(out, key=lambda t: -t[0])
         distress = o["low_weeks"] >= 4 or h.N >= 0.2 or o.get("trust", 1.0) < TRUST["leave_below"]
-        if o.get("fix"):                     # household fixes: leave also on the outside option (bar_leave); v2.3 ladder gates it
+        if o.get("hyb"):                     # hybrid: leave only on a simulated reading, valued at its gain times the horizon
+            if o.get("bar_leave") and o["leave_open"]:
+                out += [(o["leave_value"] - 1e-6 * i, _a("leave", take=t, why="bar"))
+                        for i, t in enumerate(o.get("leave_takes", LEAVE_TAKES))]
+        elif o.get("fix"):                     # household fixes: leave also on the outside option (bar_leave); v2.3 ladder gates it
             if (distress or o.get("bar_leave")) and o["leave_open"]:
                 why = "distress" if distress else "bar"
                 out += [(0.9 - 0.01 * i, _a("leave", take=t, why=why)) for i, t in enumerate(o.get("leave_takes", LEAVE_TAKES))]
@@ -1120,7 +1128,10 @@ class WeeklyWorld:
                 self.p[r]["money"] = NO_POT_MONEY
         if self.mech:
             if deal is None:
-                self.negotiate()
+                if _HY.on(self.fx):
+                    self._hyb_negotiate = True       # hybrid agent: chosen by simulation once the world is built (end of __init__)
+                else:
+                    self.negotiate()
             else:
                 self.commits = [dict(c) for c in deal["commits"]]
         self.lv = levers if levers is not None else HD.ACTIVE_LEVERS
@@ -1143,6 +1154,12 @@ class WeeklyWorld:
             self._fix_init()
         if _OBS.ACTIVE is not None:
             _OBS.Observer(self, _OBS.ACTIVE)         # use_observer block: every world built inside carries an observer
+        if self.fx is not None and self.fx.agent_values == "hybrid":
+            if self.makers and self.makers["cfg"].protect == "negotiated":
+                raise NotImplementedError("hybrid agent: project protection is not a simulated choice yet (mar.hybrid docstring)")
+            if getattr(self, "_hyb_negotiate", False):
+                self._hyb_negotiate = False
+                _HY.negotiate(self)
 
     # -- pleasure levers (ADR 0016; docs/results/pleasure-levers-prereg.md). Every method below is called only when self.lv is set.
     def _lever_init(self):
@@ -1730,7 +1747,7 @@ class WeeklyWorld:
     def sanction_cost(self, r, w, sanc):
         """What the agent subtracts for a soft rule's sanctions. v1: SANCTION_UTILITY per week (the old estimate, bit for bit); v2: the
         friction the sanctions would really add (agent_values.sanction_cost)."""
-        if self.fx and self.fx.agent_values in ("v2", "v2b"):
+        if self.fx and self.fx.agent_values in ("v2", "v2b", "hybrid"):
             return _AV.sanction_cost(self, r, w, sanc)
         return sum(SANCTION_UTILITY[s["kind"]] * MONTH_WEEKS * s["duration_months"] for s in sanc)
 
@@ -1903,10 +1920,16 @@ class WeeklyWorld:
             ob["partner_accepts"] = self.agents[oth].together_utility(oo) >= 0.02 and self.units[oth] >= V2_COST["together"]
         if self.fx:
             self._fix_obs(r, w, ob)
-            if self.fx.agent_values in ("v2", "v2b"):
+            if self.fx.agent_values in ("v2", "v2b", "hybrid"):
                 ob["v2"] = _AV.snapshot(self, r, w)
                 if me["in"] and o["in"]:
                     ob["v2_partner"] = _AV.snapshot(self, oth, w)
+            if self.fx.agent_values == "hybrid":    # the hybrid agent: leave and return carry simulated values; distress asks for a reading
+                ob["hyb"] = True
+                ob["leave_value"] = _HY.leave_value(self, r)
+                ob["return_value"] = getattr(self, "ret_value", {}).get(r, 0.0)
+                if me["in"] and self.distressed(r):
+                    self.hyb_due = True
         return ob
 
     def apply(self, r, cand, w, sanc):
@@ -2012,11 +2035,16 @@ class WeeklyWorld:
             wk["sanctioned"] += 1
 
     def step_agent(self, r, w, last_week, rec):
+        hyb = self.fx is not None and self.fx.agent_values == "hybrid"
+        if hyb:
+            self._ncall[r] += 1
         o = self.obs(r, w, last_week)
         ob = self.observer
         if ob is not None:
             o["_parts"] = {}
         cands = self.agents[r].propose(o)
+        if hyb:                                  # propose-only scores derived from a one-week simulation (mar.hybrid.rescore)
+            cands = _HY.rescore(self, r, w, cands)
         if self._force is not None:              # counterfactual replay copies only (observe.replay); never set on a live world
             cands = _OBS.forced(self, r, w, cands)
         # soft rules: the agent weighs the estimated sanction against the utility
@@ -2102,6 +2130,8 @@ class WeeklyWorld:
         if ob is not None:
             ob.week_begin(w, last_week)
         ev = []
+        if self.fx is not None and self.fx.agent_values == "hybrid":
+            _HY.week_start(self, w, last_week)
         self.wk = {r: {"income": 0, "spent_self": 0, "works": 0, "rests": 0, "friends": 0, "together": 0, "contrib": 0,
                        "friend_initiated": 0, "sanctioned": 0, "conn_hit": 0.0, "sec_hit": 0.0, "pressed": 0, "took": 0} for r in "AB"}
         self.units = {r: UNITS for r in "AB"}
@@ -2159,6 +2189,8 @@ class WeeklyWorld:
                 ob.flow_direct(w, r, "outside", m0 + (p0 - self.pool) - me["money"], "living_cost")
         settle = w % MONTH_WEEKS == MONTH_WEEKS - 1
         if settle:
+            if getattr(self, "agree", None) and self.fx is not None and self.fx.agent_values == "hybrid":
+                _HY.pay_agreed(self, w)                 # hybrid: the bill shares agreed at formation, paid as a standing transfer
             need = self.need_month()
             self.bills_met = need > 0 and self.funded >= need        # funded by contributions (what the oracle reads)
             short = max(0, need - self.funded)
@@ -2227,7 +2259,7 @@ class WeeklyWorld:
                     h.xparts["bills"] = wk.get("bill_fric", 0.0)
             if self.makers:                                                 # H39: what was made for r, and craving (0 when off)
                 mp, mf = _MAKERS.week_terms(self, r, w)
-                if self.fx and self.fx.agent_values in ("v2", "v2b"):
+                if self.fx and self.fx.agent_values in ("v2", "v2b", "hybrid"):
                     self._mk_last = {**getattr(self, "_mk_last", {}), r: (mp, mf)}     # agent values v2 reads last week's makers terms
                 ip, fric = ip + mp, fric + mf
             if self.fx:

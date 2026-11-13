@@ -79,6 +79,13 @@ def snapshot(world, r, w):
             s["pick"] = world._pick_bond(r)
             s["_strand_memo"] = {}          # shared by the snapshot's advanced copies: bond quality depends on sessions and visits only
     s["extra"], s["fric"] = extra, fric
+    if getattr(world, "agree", None) and fx.agent_values == "hybrid":     # the hybrid's bill agreement: its standing transfer at settlement
+        from . import hybrid as _HY
+        inn = [x for x in "AB" if world.p[x]["in"]]
+        z = sum(world.agree["share"][x] for x in inn) or 1.0
+        s["agree"] = {"share": world.agree["share"][r] / z if me["in"] else 0.0, "paid": H.SHARE_STEP * world.contrib_month[r],
+                      "o_share": world.agree["share"][oth] / z if o["in"] else 0.0, "o_paid": H.SHARE_STEP * world.contrib_month[oth],
+                      "o_money": float(o["money"]) - (HD.DEFAULT.living_cost + (1 if o["ill"] else 0)) if o["in"] else 0.0}
     if fx.contact:
         s["cx"] = dict(world.cx[r])
         s["overlap_ab"] = world.overlap_ab
@@ -99,6 +106,8 @@ def advance(s, friends=0, together=0, works=0, self_spends=0, shared=0, rests=0,
     t["rests"] += rests
     t["spent"] += self_step * self_spends
     t["money"] += inc * works - self_step * self_spends - share_step * shared
+    if "agree" in t and shared:
+        t["agree"] = dict(t["agree"], paid=t["agree"]["paid"] + share_step * shared)
     for _ in range(shared):                       # as the world applies a payment: the bill first, any surplus into the pot
         if t["funded"] >= t["need"]:
             t["pool"] += share_step
@@ -184,7 +193,19 @@ def _week_net(s, parts=None):
     sec_hit, bill_fric = s["sec_hit"], 0.0
     if s["settle"]:
         need = s["need"]
-        short = max(0, need - s["funded"])
+        funded = s["funded"]
+        ag = s.get("agree")
+        if ag:                                    # the hybrid's agreed shares, paid as the world pays them (mar.hybrid.pay_agreed): A, then B
+            def _pay(share, paid, money, f):
+                return min(max(0.0, share * need - paid), max(0.0, money), max(0.0, need - f))
+            if s["role"] == "B":
+                funded += _pay(ag["o_share"], ag["o_paid"], ag["o_money"], funded)
+            x = _pay(ag["share"], ag["paid"], m, funded)
+            m -= x
+            funded += x
+            if s["role"] == "A":
+                funded += _pay(ag["o_share"], ag["o_paid"], ag["o_money"], funded)
+        short = max(0, need - funded)
         if s["bills_hurt"] and short > 0:
             due = short * (1.0 + fx.late_fee)
             before = pool

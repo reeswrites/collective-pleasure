@@ -69,6 +69,8 @@ class Persona:
     varied: str = ""        # what changed, e.g. "weights.security=0.9"
     needs: dict = field(default_factory=dict)         # salience in [0,1] of each need clock (hedonic model)
     aspirations: dict = field(default_factory=dict)   # targets; their weights are the persona's weights
+    forecast: dict = field(default_factory=dict)      # hybrid agent only (mar.hybrid): optional big-choice forecast traits
+    #                                                   {"horizon": weeks, "discount": per week, "outside_bias": added to the outside option}; empty = neutral
 
     def __post_init__(self):
         """Missing needs or aspirations take the ASSUMED defaults from the weights (older files stay valid)."""

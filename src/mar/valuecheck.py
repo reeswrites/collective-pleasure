@@ -55,10 +55,13 @@ def snapshot(world):
     from .worlds import household as H
     run, hook = world.run, world.hook
     world.run, world.hook = H.Run(), None
+    ws = world.__dict__.pop("_wk_snap", None) if "_wk_snap" in world.__dict__ else None      # hybrid only: not part of the state
     try:
         return copy.deepcopy(world)
     finally:
         world.run, world.hook = run, hook
+        if ws is not None:
+            world._wk_snap = ws
 
 
 def _key(c):
@@ -83,6 +86,10 @@ class _Tap:
             self.n += 1
         if hit:
             u, cands = perceived_menu(ag, o)
+            fx = getattr(self.world, "fx", None)
+            if fx is not None and fx.agent_values == "hybrid":     # the hybrid's propose-only scores are its simulated values
+                from . import hybrid as HY
+                cands = HY.rescore(self.world, self.r, self.w, cands)
             self.menu = {"u": u, "cands": cands, "o": {"in_hh": o["in_hh"], "other_in": o["other_in"], "B": o["hed"].B,
                                                         "N": o["hed"].N, "cap": o["hed"].capacity,
                                                         "levels": dict(o["hed"].level), "gap": o["gap"],

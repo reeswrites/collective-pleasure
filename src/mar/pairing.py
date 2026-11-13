@@ -104,9 +104,18 @@ def exit_anticipation(world, out_weeks=None):
 
 # ---- the stay lens for pressure ----------------------------------------------------------------------------------------------
 
+def HD_fixes(fx):
+    from . import hedonic as HD
+    return HD.use_fixes(fx)
+
+
 def _forward(world, w, last, fx, weeks=None):
     from . import negotiation as NG
     weeks = weeks or NG.decide_weeks(NG.FORWARD_WEEKS)
+    if fx.agent_values == "hybrid":                  # the hybrid agent's own forecast: K sampled futures (mar.hybrid)
+        from . import hybrid as _HY
+        with HD_fixes(fx):
+            return _HY.forward_values(world, w, last, weeks, fx)
     c = NG.played_copy(world, w, last, weeks, fx)
     return {r: NG.wellbeing(c.run.outcomes, r, world.personas[r]) for r in "AB"}
 
