@@ -1263,7 +1263,17 @@ class WeeklyWorld:
         sat, rep = self.sat_tog, self.policy[r] == "repeat"
         ts = sat.scale(0) if rep else sat.scale(sat.best())
         b = self._pick_bond(r)
-        return {"adaptive": self.policy[r] == "adaptive", "together_scale": ts, "friend_scale": self._friend_sat(r, b).scale(0)}
+        out = {"adaptive": self.policy[r] == "adaptive", "together_scale": ts, "friend_scale": self._friend_sat(r, b).scale(0)}
+        if self.fx is not None and self.fx.satiety_expect == "world":
+            out["together_next"] = self._together_next()
+        return out
+
+    def _together_next(self):
+        """The scale the world would give one more together session this week (Satiety.use's arithmetic, read without changing
+        anything): the host's variant, its satiety and tolerance, and the switch cost. Hybrid prereg Amendment 2."""
+        sat, c = self.sat_tog, self.lv
+        k = self._pick_variant("A" if self.cur_w % 2 == 0 else "B")
+        return sat.scale(k) * (1.0 - (c.switch_cost if sat.last is not None and sat.last != k else 0.0))
 
     def _lever_end_week(self, w):
         """Update the slow state (satiety recovery, bond quality) after everyone has acted."""

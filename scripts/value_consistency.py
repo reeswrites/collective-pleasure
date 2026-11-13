@@ -507,6 +507,8 @@ def main():
     ap.add_argument("--v2b", action="store_true", help="bill horizon: agent_values v2b and bills, horizons 1/4/13/52; runs/value-consistency-v2b/")
     ap.add_argument("--v2sat", action="store_true", help="ADR 0019: v2 and bills on the saturating scale; runs/value-consistency-v2-sat/")
     ap.add_argument("--hybrid", action="store_true", help="the hybrid agent's routine pass test (PT-R); runs/value-consistency-hybrid/")
+    ap.add_argument("--world", action="store_true", help="hybrid prereg Amendment 2: with --v2sat or --hybrid, satiety_expect='world'; "
+                    "rows in the same directory name with -world")
     ap.add_argument("--gaps", action="store_true", help="carry-over terms: per action, per group, the k-week effect minus the 1-week effect")
     ap.add_argument("--passtest", action="store_true")
     ap.add_argument("--reach", action="store_true")
@@ -524,6 +526,9 @@ def main():
         OUT, extra = ROOT / "runs" / "value-consistency-v2-sat", V2SAT
     if a.hybrid:
         OUT, extra = ROOT / "runs" / "value-consistency-hybrid", HYBRID
+    if a.world and (a.v2sat or a.hybrid):          # Amendment 2: time together at the world's satiety
+        OUT, extra = OUT.parent / (OUT.name + "-world"), {**extra, "satiety_expect": "world"}
+    if a.hybrid:
         if a.run:
             collect(HSAMPLE, OUT / "rows.jsonl", a.workers, extra)
             a.run = False

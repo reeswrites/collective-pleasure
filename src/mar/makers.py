@@ -260,8 +260,7 @@ class WeekPlanner:
         o["gap"] = min(max(0, self.gap - self.share * sp), 10)
         if "v2" in self.o:              # agent values v2: the week so far moves with the plan (counts, rests, money, the bill funded)
             from . import agent_values as AV
-            lev = self.o.get("lever")
-            sc = (lev["friend_scale"], lev["together_scale"]) if (lev and lev["adaptive"]) else (1.0, 1.0)
+            sc = AV.expected_scales(self.o)
             o["v2"] = AV.advance(self.o["v2"], friends=f, together=t, works=wk, self_spends=ss, shared=sp, rests=st[5] if len(st) > 5 else 0,
                                  inc=self.inc, self_step=self.self_step, share_step=self.share, scale=sc)
             if self.o.get("v2_partner") is not None:

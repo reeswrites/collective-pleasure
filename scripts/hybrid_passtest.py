@@ -35,8 +35,9 @@ SAMPLE = {"pairs_every": 3, "seeds": (0,)}
 BARS = {"H1": 0.010, "H1_ci": 0.015, "H2": 0.80, "H3": 0.80, "H3_margin": 0.010}
 
 
-def play(arm, a, b, seed, bias=None, weeks=None):
-    """One audited lived run. bias: an outside-option bias planted on every persona (the --reach check only)."""
+def play(arm, a, b, seed, bias=None, weeks=None, extra=None):
+    """One audited lived run. bias: an outside-option bias planted on every persona (the --reach check only). extra: FixConfig
+    overrides on top of RULE (Amendment 2: satiety_expect)."""
     HY.AUDIT = []
     HY.STATS.update(futures=0, future_weeks=0, forks=0, choices=0)
     saved = None
@@ -47,7 +48,7 @@ def play(arm, a, b, seed, bias=None, weeks=None):
             p.forecast = {"outside_bias": bias}
     t0 = time.time()
     try:
-        run, lived, _ = H38.play(ARMS[arm], a, b, seed, stay=False, rule=RULE, **({"weeks": weeks} if weeks else {}))
+        run, lived, _ = H38.play(ARMS[arm], a, b, seed, stay=False, rule={**RULE, **(extra or {})}, **({"weeks": weeks} if weeks else {}))
     finally:
         if saved is not None:
             for pid, p in RT.personas().items():
@@ -65,16 +66,17 @@ def task(args):
 
 
 A1 = {"pairs_every": 6, "seeds": (0,), "arms": ("G-L0",)}      # Amendment 1: a smaller PT-H rerun after the bill-mirror fix
+WORLD = {"satiety_expect": "world"}                              # Amendment 2: time together at the world's satiety (A1's sample)
 
 
-def audit_run(workers=3, out=None, sample=None):
+def audit_run(workers=3, out=None, sample=None, extra=None):
     out = out or OUT
     sample = sample or {**SAMPLE, "arms": tuple(ARMS)}
     out.mkdir(parents=True, exist_ok=True)
     f = out / "rows.jsonl"
     done = {(r["arm"], r["a"], r["b"], r["seed"]) for r in load(f)} if f.exists() else set()
     pairs = H38.pairings(H38.CONFIRM)[::sample["pairs_every"]]
-    tasks = [(arm, a, b, s) for (a, b) in pairs for s in sample["seeds"] for arm in sample["arms"] if (arm, a, b, s) not in done]
+    tasks = [(arm, a, b, s, None, None, extra) for (a, b) in pairs for s in sample["seeds"] for arm in sample["arms"] if (arm, a, b, s) not in done]
     print(f"{len(tasks)} tasks, {min(3, workers)} workers -> {f}", flush=True)
     t0 = time.time()
     with Pool(min(3, workers)) as pool, f.open("a") as fh:
@@ -164,11 +166,12 @@ def held_out(recs):
     return out
 
 
-def routine():
-    """PT-R: the hybrid's one-week value check against v2 on the same pairings and seed, both on the saturating scale."""
+def routine(hdir="value-consistency-hybrid", vdir="value-consistency-v2-sat"):
+    """PT-R: the hybrid's one-week value check against v2 on the same pairings and seed, both on the saturating scale. Amendment 2:
+    hdir/vdir name the rows with the flag on (value-consistency-hybrid-world, value-consistency-v2-sat-world)."""
     import value_consistency as VCS
-    hf = ROOT / "runs" / "value-consistency-hybrid" / "rows.jsonl"
-    vf = ROOT / "runs" / "value-consistency-v2-sat" / "rows.jsonl"
+    hf = ROOT / "runs" / hdir / "rows.jsonl"
+    vf = ROOT / "runs" / vdir / "rows.jsonl"
     if not hf.exists():
         return {"note": "no hybrid value-check rows yet"}
     hyb = VCS.load(hf)
@@ -206,10 +209,10 @@ def reach():
     return res
 
 
-def analyze(out=None):
+def analyze(out=None, routine_dirs=()):
     out = out or OUT
     recs = load(out / "rows.jsonl")
-    res = {"PT-H": held_out(recs), "PT-R": routine(),
+    res = {"PT-H": held_out(recs), "PT-R": routine(*routine_dirs),
            "cost": {"runs": len(recs), "mean_secs": round(float(np.mean([r["secs"] for r in recs])), 1),
                     "mean_futures": round(float(np.mean([r["stats"]["futures"] for r in recs])), 1),
                     "mean_forks": round(float(np.mean([r["stats"]["forks"] for r in recs])), 2),
@@ -226,8 +229,16 @@ if __name__ == "__main__":
     ap.add_argument("--reach", action="store_true")
     ap.add_argument("--analyze", action="store_true")
     ap.add_argument("--a1", action="store_true", help="Amendment 1: the smaller PT-H rerun; runs/hybrid-passtest-a1/")
+    ap.add_argument("--a2", action="store_true", help="Amendment 2: A1's sample with satiety_expect='world'; runs/hybrid-passtest-a2/")
     ap.add_argument("--workers", type=int, default=3)
     a = ap.parse_args()
+    if a.a2:
+        OUT_A2 = ROOT / "runs" / "hybrid-passtest-a2"
+        if a.audit:
+            audit_run(a.workers, OUT_A2, A1, WORLD)
+        if a.analyze:
+            analyze(OUT_A2, ("value-consistency-hybrid-world", "value-consistency-v2-sat-world"))
+        sys.exit(0)
     if a.a1:
         OUT_A1 = ROOT / "runs" / "hybrid-passtest-a1"
         if a.audit:

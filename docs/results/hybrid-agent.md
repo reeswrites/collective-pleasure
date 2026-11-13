@@ -43,6 +43,40 @@ The value check on the hybrid sample (`scripts/value_consistency.py --hybrid --r
 
 **What is left.** Time together: 58 rows, rank correlation 0.03, valued 0.023 above its worth on average. It is v2's satiety misforecast on the new scale ([pleasure-scale.md](pleasure-scale.md)), here on more rows because the hybrid's households last (bill payments: 304 rows here, 77 in v2's sample). Without time together the hybrid's T1 to T4 are 0.974, 0.986, 96.9%, 98.3% (v2: 0.988, 0.992, 97.8%, 98.4%). The pass is narrow: T3 clears its bar by 0.2 points.
 
+## Amendment 2: time together at the world's satiety
+
+Run on 2026-11-12, after the prereg amendment (commit 51f7165) and before any step-3 run. The routine now values one more session of time together at the scale the world would give it, for every persona, behind `FixConfig.satiety_expect="world"` (the default `"persona"` keeps ADR 0016's trait, under which only an "adaptive" persona expects satiety). Fingerprints pinned at b3e9fc0 on the new scale (v1, v2, v2b, hybrid) reproduce with the flag off (`tests/test_satiety_expect.py`). Known answer: the scale an agent expects equals the one the world records when the session is played.
+
+**(a) The value check, v2 with bills, saturating scale, full sample** (`value_consistency.py --v2sat --world`; 480 lives, 1,083 s on 3 workers):
+
+| ID | Before (flag off) | **After** | Bar |
+|---|---|---|---|
+| T1 pooled rank correlation | 0.975 | **0.973** | ≥ 0.70 |
+| T2 within decision | 0.987 | **0.984** | ≥ 0.60 |
+| T3 best = actual best | 96.5% | **95.8%** | ≥ 60% |
+| T4 best beats next | 97.2% | **96.5%** | ≥ 60% |
+| T5 slope | 1.01 | **1.03** | 0.8 to 1.25 |
+| T6 time together: perceived / actual / gap | +0.023 / +0.006 / **+0.017** (fails) | +0.022 / +0.008 / **+0.013** (holds, bar 0.015) | |
+| | FAIL | **PASS** | |
+
+Every other action's gap is within 0.004 as before. The pass is narrow on time together, and the reason is worth saying: in 45% of the time-together rows the forced session changes nothing at all, because the partner would have held the session later that week anyway (traced in one pairing: the idle branch ends the week with the same three sessions). Those rows carry a gap of +0.021 before and after. That gap comes from a one-call agent that does not foresee its partner, not from satiety. On the rows where the session does change the week, the gap fell from +0.011 to +0.008. The lives moved too: the check now has 415 time-together rows, up from 298.
+
+**(b) PT-R for the hybrid** (`--hybrid --world`; 40 lives, the prereg's sample):
+
+| ID | Hybrid, flag off | **Hybrid, flag on** | v2, flag on, same sample | Bar (no more than 0.02 below v2) |
+|---|---|---|---|---|
+| T1 | 0.958 | **0.950** | 0.956 | ≥ 0.936 |
+| T2 | 0.974 | **0.967** | 0.973 | ≥ 0.953 |
+| T3 | 94.7% | **94.0%** | 94.7% | ≥ 92.7% |
+| T4 | 95.6% | **96.4%** | 95.9% | ≥ 93.9% |
+| T5 | 1.09 | **1.06** | 1.02 | 0.8 to 1.25 |
+| T6 | hold | **hold** | | |
+| | PASS | **PASS** | | |
+
+The hybrid's own T1 to T6 also pass at the recalibration's absolute bars. Its time together: 85 rows (58 before), valued +0.021 against +0.008 (gap +0.013, was +0.023), rank correlation 0.15 (was 0.03). Below 100 rows the clause carries no bar. Read against the old v2 rows instead, the hybrid's T1 to T3 sit more than 0.02 below. The v2 rows of the same 40 lives fell by as much with the flag on (T1 0.973 to 0.956). The routine's arithmetic changed only for time together, so the fall in the rank clauses comes from different lives giving different decisions, chiefly more bill payments with negative values. Without time together the hybrid's T1 is 0.966 (0.974 before).
+
+**(c) PT-H, small rerun** (Amendment 1's sample: G-L0, every sixth pairing, seed 0; flag on; `hybrid_passtest.py --a2`; 20 runs, 470 s on 3 workers; runs/hybrid-passtest-a2/): **PASS**. H1 −0.00002 [−0.00045, +0.00043], H2 0.986 (1,018 option-units), H3 99.5% (414 units), over 478 choice-units (Amendment 1's rerun: +0.0005, 0.979, 99.1%). The fix leaves the big-choice forecasts as faithful as before.
+
 ## What the hybrid's lives look like (descriptive, from the PT-H runs)
 
 | | G-L0 | G-L4 |

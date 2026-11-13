@@ -256,6 +256,10 @@ class FixConfig:
     # The hybrid agent (agent_values="hybrid"; mar.hybrid; docs/results/hybrid-agent-prereg.md)
     hybrid_k: int = 4                # sampled futures per option of a big choice
     hybrid_gap: int = 4              # weeks between an early (distress) reading and the last reading
+    # Time together valued at the world's satiety (docs/results/hybrid-agent-prereg.md, Amendment 2). "persona" is the old rule, bit for bit
+    # (tests/data/satiety_off_fingerprints.json): only an 'adaptive' persona expects satiety (ADR 0016, a persona trait). "world": every
+    # v2, v2b and hybrid agent values one more session at the scale the world would give it (World._together_next). v1 does not read it.
+    satiety_expect: str = "persona"
 
 
 ACTIVE_FIXES = None      # module default, set by `use_fixes`; WeeklyWorld(fixes=None) reads it

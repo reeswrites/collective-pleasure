@@ -9,7 +9,8 @@ The pieces:
                           with the extra actions d and nothing else this week.
   utilities(agent, o)     {action: value}: own change + prosocial share of the partner's change (together, shared bills), noise.
 
-Kept on purpose (prereg, "Kept as they are"): one-week horizon; only an adaptive persona expects satiety (ADR 0016); H38 withdrawal
+Kept on purpose (prereg, "Kept as they are"): one-week horizon; only an adaptive persona expects satiety (ADR 0016; with
+FixConfig(satiety_expect="world") every agent values time together at the world's satiety, hybrid prereg Amendment 2); H38 withdrawal
 scales the wish to see friends. Terms this week's close reads that no action here changes (items, pairing terms, ritual anticipation,
 commitment payoff and friction, glow, warnings and presses already running) are held at their current value; the makers' terms at last
 week's. Wording rule: agents feel nothing; "pleasure" and "value" are glosses for modeled numbers.
@@ -308,16 +309,26 @@ def settle_credit(s, step):
 
 # ---- the agent's values ---------------------------------------------------------------------------------------------------------
 
+def expected_scales(o):
+    """-> (friend, together): the per-session scales the agent expects. The old rule (FixConfig.satiety_expect "persona"): only an
+    'adaptive' persona expects satiety (ADR 0016). "world" (hybrid prereg Amendment 2): one more session of time together is valued at
+    the scale the world would give it (the observation's together_next); seeing a friend keeps the persona rule."""
+    lev = o.get("lever")
+    adaptive = bool(lev and lev["adaptive"])
+    ts = lev["together_scale"] if adaptive else 1.0
+    fs = lev["friend_scale"] if adaptive else 1.0
+    if lev and "together_next" in lev:
+        ts = lev["together_next"]
+    return fs, ts
+
+
 def utilities(agent, o, parts=None):
     """-> {action: value} (noise applied as v1 does: one draw per action, in order). parts: a dict to fill with each action's
     own and partner terms (observer layer)."""
     from .worlds import household as H
     s, ps = o["v2"], o.get("v2_partner")
     h = o["hed"]
-    lev = o.get("lever")
-    adaptive = bool(lev and lev["adaptive"])
-    ts = lev["together_scale"] if adaptive else 1.0
-    fs = lev["friend_scale"] if adaptive else 1.0
+    fs, ts = expected_scales(o)
     base = week_net(s)
     u, pp = {}, {}
 
