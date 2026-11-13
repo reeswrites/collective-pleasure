@@ -1,0 +1,118 @@
+# Hybrid agent: design and pass tests (preregistration)
+
+Wording rule: agents feel nothing; "pleasure", "value" and "forecast" are glosses for modeled numbers.
+
+Status: written and committed before either pass test ran. Nothing here about the hybrid is a result. Scripted agents, no model calls. Step 2 of the step-back plan ([step-back-review.md](../notes/step-back-review.md), "Recommended plan"), confirmed by the author ("Yes, both"; experiments/readbacks.jsonl, rb-2026-11-12-stepback). Follows ADR 0019 (the saturating pleasure scale) and its value check ([pleasure-scale.md](pleasure-scale.md)).
+
+What I knew when writing this, stated plainly: the code (`src/mar/hybrid.py` and its hooks) and its known-answer tests (`tests/test_hybrid.py`) were written and run before this commit, on unit worlds and one 30-week life. A timing probe of three lives per agent set (below) was run for the cost table. The step-1 value check of v2 on the new scale was run and read ([pleasure-scale.md](pleasure-scale.md): it fails T6 on time together, which is PT-R's reference). The free reachability check (`--reach`) was run twice on three pairings, 78 weeks, with a planted outside-option bias of +0.05. The first time, a bug put the bias into the held-out values too, so it cancelled: that run read as an unbiased audit of 36 choice-units and passed (H1 +0.003, H2 0.92, H3 8 of 8). That is the only audit-like number I saw. The bug was fixed (held-out values are scored on the neutral yardstick, `hybrid._NEUTRAL`) and the check rerun; its result is under "Can every verdict happen?". No PT-R or PT-H run was made.
+
+**Can be about / cannot be about (required).** This can be about whether the hybrid agent's two halves agree with the hedonic model's own answers in the formation check's household: its weekly routine at one week, and its big-choice forecasts against futures it did not use. It cannot be about how people decide, whether the hybrid's choices are good for anyone, or any hypothesis: no H38 or formation-check claim is tested here (that is step 3, [formation-check-3-prereg.md](formation-check-3-prereg.md)). Limits that apply (docs/limits.md): 1 (scripted agents), 2 (small persona set), 6 (passing predictions about the builder's own equations are code checks: both pass tests are), 9, 12 and 13. Not touched: the LLM limits.
+
+## Purpose
+
+The step-back review found three things moving at once between v1, v2 and v2b: the weekly policy, the world (bills that hurt) and the yardstick of the big choices. It also found that every status-quo forecast saw the lived world's own future. The hybrid fixes the agent once: an accurate routine, simulated big choices on one yardstick with fresh futures, bills as an agreement, every score on one scale, and misforecasting in one named place. The pass tests say whether it does what it says before any experiment uses it.
+
+## The switch
+
+`FixConfig.agent_values = "hybrid"`, off by default (v1 stays the default). With any other value no hybrid code runs: the pinned fingerprints of v1, v2, v2 with bills and v2b with bills (tests/data/scale_off_fingerprints.json, commit ae80dad) must still pass, and `tests/test_hybrid.py::test_hybrid_off_is_untouched_by_the_hooks` checks that the hooks leave no trace.
+
+## Design
+
+**Routine weeks.** v2, unchanged: an action is worth the change it makes to this week's close in the model's own arithmetic (`agent_values.week_net`), on the scale in force. Run on the saturating scale (ADR 0019) with bills that hurt. Kept: one-week horizon, the 0.003 floor, the ±10% noise, H38's withdrawal, the variety policy.
+
+**Big choices**, chosen by simulation (`mar.hybrid`):
+
+| Choice | Options | When |
+|---|---|---|
+| Form at week 0 | the household under each bill term; each member's outside option | week 0 |
+| Form later | the same, from the current state | every 13 weeks while apart |
+| Stay or leave | staying; each member's outside option | every 13 weeks while both are in, and an early reading when a member is in distress (at most every `hybrid_gap` = 4 weeks) |
+| Return | staying out; the member back in | every 13 weeks while one is out |
+| Week-0 stay and request commitments | with; without | at the world's start (only where the cards allow them) |
+
+- **K sampled futures per option, fresh on both sides.** Each option is played over K = 4 futures (`FixConfig.hybrid_k`). A future has a new shock schedule (job loss, illness, moves, new connections; bond shocks if on) and new random streams for every agent, drawn from a seed of (world seed, week, k). The status quo no longer deep-copies the lived world's own schedule; the outside option is K of `alone_value`'s rollouts with K seeds (it was one). Neither side sees the real future.
+- **One declared yardstick.** The member's mean weekly pleasure on the scale in force: the evaluator's own measure (`hybrid.score`). Suffering does not enter it, as under the formation check's corrected rule. The window is the decision window (`decide_weeks`, 52 in the formation check).
+- **Choosing.** Form iff every member's household value beats its outside option. Leave on the reading rule already in force (`bar_reading`: the outside option beats staying by more than 0.02 at two readings in a row), with leave valued at its simulated gain per week times the window, so it competes with the routine on one scale. Return iff both members gain. A commitment is made iff both members gain.
+
+**Bills as an agreement.** At formation the household agrees who pays the month's bill: shares proportional to income (6:5, the two earners' block pay) or equal. The term is chosen with the formation choice: the household under each term is scored on the same K futures, and the term is the one whose worse-off member gains most over the outside option. At month end each member in pays its share of the bill, less what it already paid that month by action, as a standing transfer (up to its money; no action unit). It is kept like a commitment, without breach mechanics: the agents do not need to foresee settlements. The routine's one-week arithmetic includes the transfer in the settlement week. If a member leaves, the one still in pays the whole (shares over the members in).
+
+**Fixed scores.** Request, refusing a request, veto, give and taking from the pot (the propose-only actions with fixed scores 0.06 to 0.55 under v1 and v2) are valued by a one-week simulation in the lived world: the week replayed from its start with the action forced at the same call, against idle there; own net plus the prosocial share of the partner's net. That is the value check's own known answer at one week. Leave and return are valued as above. Inside a forecast no such fork is made: forecasts assume no request, refusal, veto, gift or take. This is a declared simplification; the gap it leaves is measured by H1 on readings (a forecast without these actions against held-out futures also without them would not show it, so see "Weaknesses").
+
+**Misforecasting.** Optional persona fields `Persona.forecast`: `horizon` (weeks the member scores), `discount` (per week), `outside_bias` (added to the outside option). Empty by default, so every member forecasts neutrally. The weekly routine has no trait.
+
+**Not built.** Project protection (H39 makers) as a simulated choice: a makers world with negotiated protection refuses to run under the hybrid. Neither pass test nor step 3 uses makers.
+
+**Nothing is fitted.** K = 4 and the gap of 4 weeks are the review's cost-led choices, ASSUMED. The terms (income, equal) are the author's two examples. The yardstick is the evaluator's. No number was set from an outcome.
+
+## Pass test PT-R: the routine, one week
+
+The value check (`scripts/value_consistency.py --hybrid --run`): H39b's M0 world as in every earlier value check, a third of H38's 120 confirmatory pairings (every third), seed 0, six sampled weeks per run, both partners, the week's last call, on the saturating scale with bills that hurt. Reference: v2 on the same pairings, seed and weeks on the same scale (the step-1 rows, `runs/value-consistency-v2-sat/`). Measures and bars are the recalibration prereg's T1 to T6 on own net.
+
+| Clause | Bar |
+|---|---|
+| R1 to R4 | the hybrid's T1 (pooled rank correlation), T2 (within decision), T3 (best is the actual best), T4 (best beats next) are each no more than 0.02 below v2's on the same sample |
+| R5 | T5, the slope of actual on perceived, in 0.8 to 1.25 |
+| R6 | every action's mean gap within its T6 bar (max of 0.015 and a quarter of the actual) |
+
+PT-R passes iff R1 to R6 all hold.
+
+## Pass test PT-H: big-choice forecasts against held-out futures
+
+Lived runs of the formation check's world under the hybrid (saturating scale, bills that hurt, the corrected rule: 52-week windows), arms G-L0 and G-L4, every third confirmatory pairing, seed 0, 156 weeks: 80 runs. Every big choice is also scored on M = 16 held-out futures (a different seed family, never used by any choice). For each choice, member and option there is a forecast F (the mean of the K = 4 futures the choice used) and a held-out value R (the mean of the 16). The unit of resampling is the pairing.
+
+| Clause | Quantity | Bar |
+|---|---|---|
+| H1 calibration | mean over (choice, member) of F − R for the option chosen | within ±0.010, and its 95% bootstrap interval (clustered by pairing) inside ±0.015 |
+| H2 discrimination | Spearman rank correlation of F with R over every (choice, member, option) | ≥ 0.80 |
+| H3 choice agreement | among (choice, member) units whose two best options differ by at least 0.010 in R, the share where the best option by F is the best by R | ≥ 0.80 |
+
+PT-H passes iff H1, H2 and H3 all hold.
+
+Why these bars, stated before any audit row: a week of pleasure on this scale moves by a few hundredths across futures, so a mean of four futures carries a standard error of about 0.01 for one choice; a bias of 0.01 a week is a third of the formation check's whole L4 − L0 effect under v1, which is the size a forecast error must stay under to leave step 3 readable. The chosen option's forecast is biased upward by selection (it won on those four futures); H1 is where that shows. 0.80 is the recalibration's T1-style bar for a ranking, raised because the forecaster and the held-out futures share the same model.
+
+**If a test fails.** The design may change only where the audit disagrees (for example K, if the selection bias is the cause), each change documented with the numbers before and after, and the test rerun on the same sample. Never against a formation-check outcome. A failure that is not fixed is reported, and step 3 then reads the hybrid arm as descriptive.
+
+## Can every verdict happen? (required)
+
+- **PASS** is reachable: the clauses are bars on agreement, and a forecaster that is the held-out value itself meets them (H1 = 0, H2 = 1, H3 = 1).
+- **H1 can fail**: a planted outside-option bias of +0.05 on every persona (`hybrid_passtest.py --reach`, three pairings, 78 weeks, 36 choice-units): H1 +0.036 [+0.029, +0.050], **fails**; H2 0.64 and H3 0.40 fail too. Run; runs/hybrid-passtest/reach.json.
+- **H2 and H3 can fail**: the same rows with forecasts shuffled across units: H2 −0.04, H3 0.55, **fail**. Run.
+- **R1 to R6 can fail**: they failed for v1 (T1 0.43, T3 34%) on the old scale, and the hybrid's routine is not v2 where the bill agreement changes the settlement week.
+- **The metric sees the mechanism**: the audit records every option's F and R at the point of choice (`hybrid.audit_choice`), so a forecast that drifts from the futures it claims to stand for lands in H1 directly.
+
+## Are we measuring what we say? (required)
+
+- **Construct card.** "Forecast" = the mean yardstick over K sampled futures of this model, with the routine playing every later week and no propose-only actions. "Held-out" = the same, over 16 other futures. PT-H checks that a K-sample choice is a faithful estimate of the model's own expectation. It does not check that the model's futures look like the lived one (the lived run is one more future, read below as a descriptive), and it does not check that the choice is wise. "Routine one week" = the value check's actual, as before.
+- **Known-answer case.** `tests/test_hybrid.py`: futures differ from the lived world's schedule and are reproducible; agreed shares pay 6/11 and 5/11 of a bill of 10; the term choice maximizes the worse-off member's gain; a persona horizon, discount and outside bias change the yardstick exactly as stated; forecasts drop the propose-only actions and keep the value check's forced marker.
+- **One other way to measure it.** For readings where both stayed, the lived 13 weeks that followed against the stay forecast's first 13 weeks is reported as a descriptive (one lived future per choice, so noisy).
+- **Story spot-check.** Not applicable to an instrument check; the step-3 prereg carries one.
+
+## Verdict rule
+
+These are instrument checks, not hypothesis tests: they say PASS or FAIL, and nothing about pleasure or freedom. The evaluator's rule (pleasure and freedom, "trade-off" when they part) applies to step 3. The hybrid enters step 3 as a confirmatory arm only if both pass tests pass.
+
+## Cost
+
+Timing probe (one process, pairings p-anchor/p-host, g-00000/g-11111, g-01010/p-wanderer, seed 0, G-L4 with the stay lens on, 156 weeks, the corrected rule, saturating scale, bills that hurt, unaudited):
+
+| Agent set | Seconds per run (mean of 3) | Weeks together in these three |
+|---|---|---|
+| v1 | 2.0 | 1.00, 1.00, 1.00 |
+| v2 | 3.0 | 0.33, 0.25, 0.75 |
+| v2b | 4.5 | 1.00, 0.42, 1.00 |
+| hybrid | **20.4** | 1.00, 1.00, 1.00 |
+
+A hybrid run played 96 futures of 52 weeks (4,992 simulated weeks: 8 at week 0, then 8 per reading, the stay lens and the reading sharing the status quo) and made no fork (no propose-only action came up in the baseline world). About 7x v2b. PT-H's audit adds 16 held-out futures to every choice, so its runs cost several times more; PT-R costs about what v2's check costs per run.
+
+## Limits stated now
+
+Scripted agents; the H38 persona sample; one parameter point; K = 4 is small; the yardstick ignores suffering by declaration; forecasts omit the propose-only actions; the bill agreement has no breach and no renegotiation yet; project protection is not built.
+
+## Weaknesses
+
+- PT-H compares the model with itself. A forecast that is wrong in the same way in every future (for example, because forecasts omit requests and refusals that the lived run has) passes PT-H. The lived descriptive is the only check on that, and it is noisy.
+- The term choice and the formation choice share the same four futures, so the chosen term's value carries a little selection bias into H1. That is part of what H1 measures.
+
+## Amendments
+
+None yet.
