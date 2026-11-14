@@ -317,7 +317,8 @@ _instrument()
 
 
 def spells(tlog, exits):
-    """Rethink spells per member: runs of weeks its tally calls a rethink. Left: it left within the spell or 13 weeks after its start;
+    """NOT USED for any reported number: _TLOG also records the solo rollout worlds of outside options (they are not marked as
+    forecasts), which break lived spells apart. Kept so the rows' field can be read; episodes() replaces it. Rethink spells per member: runs of weeks its tally calls a rethink. Left: it left within the spell or 13 weeks after its start;
     came back: the spell ended and it did not leave."""
     out = {"spells": 0, "left": 0, "back": 0, "open": 0}
     for r in "AB":
@@ -464,7 +465,7 @@ def run_summary(rows, arm="B"):
     keys = ("together", "formed0", "liberty", "pleasure", "lived", "snon", "ended")
     m = A.arm_means(rows, arm, keys)
     sm = XO.second_measure(rows, arm)
-    sp = {k: sum(r.get("spells", {}).get(k, 0) for r in xs) for k in ("spells", "left", "back", "open")}
+    sp = episodes_table(xs, arm)          # not the instrumented `spells`: those also counted solo rollout worlds (see episodes)
     paths_ = path_table([{"exits": r.get("paths", []), "a": r["a"], "b": r["b"], "g": arm} for r in xs]) if any("paths" in r for r in xs) else None
     return {"n": len(xs), **{k: m[k] for k in keys}, "exits_per_run": float(np.mean([len(r["exits"]) for r in xs])),
             "tally_readings_per_run": float(np.mean([len(r.get("tally_log", [])) for r in xs])),
@@ -641,3 +642,35 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def episodes(rec, gap=13):
+    """Rethink episodes from a row's lived tally log (the instrumented `spells` also counted solo rollout worlds, so it is not used):
+    per member, rethinks no more than `gap` weeks apart form one episode; left if the member left between the episode's first rethink
+    and 13 weeks after its last, else came back (or still open at the run's end)."""
+    out = {"episodes": 0, "left": 0, "back": 0, "open": 0}
+    end = 156
+    for r in "AB":
+        ws = [x["week"] for x in rec.get("tally_log", []) if r in x["roles"]]
+        eps, cur = [], []
+        for w in ws:
+            if cur and w - cur[-1] > gap:
+                eps.append(cur)
+                cur = []
+            cur.append(w)
+        if cur:
+            eps.append(cur)
+        for e in eps:
+            out["episodes"] += 1
+            if any(x["role"] == r and e[0] <= x["week"] <= e[-1] + 13 for x in rec["exits"]):
+                out["left"] += 1
+            elif e[-1] + 13 > end:
+                out["open"] += 1
+            else:
+                out["back"] += 1
+    return out
+
+
+def episodes_table(rows, arm="B"):
+    xs = [episodes(r) for r in rows if r["g"] == arm]
+    return {k: sum(x[k] for x in xs) for k in ("episodes", "left", "back", "open")}

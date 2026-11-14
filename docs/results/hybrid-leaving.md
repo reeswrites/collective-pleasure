@@ -149,7 +149,7 @@ So playing the outside option in the lived world removes the story-4-sized misse
 
 Forecasts now look when life looks, and they now leave early, but **too often**: in B the 52-week gap is 0.20 (the prereg calls anything over 0.10 a weakness of the stand-in). The cause is the stand-in's arithmetic, not the timing: an in-future reading judges staying by a look-back over the last 13 future weeks against the anchor, while the lived reading forecasts 52 weeks ahead; a short bad stretch inside a future (now read at once by the tally) clears the bar on a look-back far more easily than on a forecast. Readings themselves are more frequent too: a status quo is logged at every rethink (1,592 in B against 842 under A4).
 
-**Rethinks.** Each B run has 3.7 lived rethinks on average. Over 621 rethink spells in B, 104 (17%) ended in leaving within 13 weeks, 504 (81%) came back without leaving, 13 were still open at the end. Thinking about leaving is common and mostly reversible here, as in Hawkins et al. (2017) (a quarter stop within a year, about one in ten leave), compared as a story only.
+**Rethinks.** Each B run has 3.7 lived rethinks on average (readings the tally called). Grouped into episodes per member (rethinks no more than 13 weeks apart; counted from the lived rethink log, `hybrid_leaving.episodes`): 96 episodes in B, of which **41 (43%) ended in leaving** within 13 weeks of the last rethink, **38 (40%) came back** without leaving, and 17 were still open when the run ended (P2: 68 episodes, 37 left, 25 back). Thinking about leaving is common and often reversible here, but far more often ends in leaving than in Hawkins et al. (2017) (about one in ten thinkers separate within a year); a story comparison only. (The per-week instrumentation first used for this, `spells`, also counted the solo rollout worlds of outside options and is not used; it was caught before reporting.)
 
 **Paths again (A5, B):** of 90 lived exits, suffering path 54, quiet path **1**, mixed 6, no fall 15, short spell 14 (second windows: quiet 1). P2: suffering 44, quiet 0. The tally does not create the quiet path.
 
@@ -157,7 +157,7 @@ Forecasts now look when life looks, and they now leave early, but **too often**:
 
 ## The swept assumed numbers (B arm, 60 pairings, one number at a time; DESCRIPTIVE)
 
-Centre (A5 on the same 60 pairings): weeks together 0.901, formed at week 0 0.833, lived exits 0.73 a run, 2.5 rethinks a run (on these pairings), forecast/lived leaving within 13 weeks 20.7% / 9.7%.
+Centre (A5 on the same 60 pairings): weeks together 0.901, formed at week 0 0.833, lived exits 0.73 a run, 2.5 rethinks a run (on these pairings), forecast/lived leaving within 13 weeks 20.7% / 9.7%; rethink episodes 41 (19 left, 16 back). Episodes per arm (left / back): half-life 4: 100 (32 / 62); 26: 31 (20 / 10); line 0: 73 (30 / 38); line 0.05: 29 (20 / 8); slope 101 (36 / 58); both 97 (36 / 50); growth 0: 42 (23 / 14); 0.02: 41 (21 / 15); 0.08: 42 (19 / 17); solo outside 40 (13 / 22); bias 0.02: 36 (11 / 21); bias 0.05: 32 (7 / 21).
 
 | Arm | Weeks together (vs centre) | Formed | Exits/run | Rethinks/run | Leave within 13 wk: forecast / lived | Pleasure vs centre | KO1 mean [interval] |
 |---|---|---|---|---|---|---|---|
@@ -182,4 +182,4 @@ What the numbers did:
 
 ## K1 under A5
 
-The trap's held share **0.128** (16 held of 125 staying member-weeks; 3 of 12 pairings carry all of it), baseline 0.000 (224 weeks): **PASS** for the first time (Amendment 3 and A4: 0.077). Read with care: every run in both fixtures ended (all 24 households), staying weeks are few, and the pass rests on three pairings (runs/hybrid-fix/trap-a5.json). With the lived outside option, members in the trap see that leaving with nothing is worse, which is what the trap's "held" means.
+The trap's held share **0.128** (16 held of 125 staying member-weeks; 3 of 12 pairings carry all of it), baseline 0.000 (224 weeks): **PASS** for the first time (Amendment 3 and A4: 0.077). Read with care: every run in both fixtures ended (all 24 households), staying weeks are few, and the pass rests on three pairings (runs/hybrid-fix/trap-a5.json). A likely reason, not checked run by run: with the lived outside option, a member in the trap now forecasts leaving with nothing as it would live it.
