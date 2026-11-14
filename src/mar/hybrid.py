@@ -859,6 +859,8 @@ def lived_outside(world, r, holdings, w, last, mode, fx, weeks, salt="fut", n=No
         c.bar_mode[r] = mode
         c.apply(r, {"a": "leave", "take": 50, "why": "bar"}, w, [])
         c.p[r]["money"] = holdings
+        if getattr(c, "ret_value", None):      # a return value left from an earlier spell is not a valuation of this exit
+            c.ret_value = {x: v for x, v in c.ret_value.items() if x != r}
         solo = dict(c.solo) if isinstance(c.solo, dict) else {x: c.solo for x in "AB"}
         solo[r] = mode
         c.solo = solo

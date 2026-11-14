@@ -68,6 +68,32 @@ def test_ko0_the_lived_outside_option_is_the_world_played_on_with_the_member_gon
     assert d_solo == d and v_solo != v                  # without a lived choice in view: the old rollout
 
 
+def test_the_lived_outside_does_not_return_on_a_stale_return_value():
+    """A return value set at an earlier spell (world.ret_value) must not send the counterfactual leaver straight back in."""
+    from mar import hedonic as HD
+    from mar import hybrid as HY
+    from mar import retest as RT
+    world, fx = _world(hybrid_outside="lived")
+    world.ret_value = {"A": 5.0}
+    seen = []
+    real = HY.play_future
+
+    def spy(*a, **k):
+        c = real(*a, **k)
+        if (a[6] if len(a) > 6 else k.get("edit")) is not None:      # an outside future (the member's exit forced by an edit)
+            seen.append(sum(o["both_in"] for o in c.run.outcomes))
+        return c
+    import pytest
+    mp = pytest.MonkeyPatch()
+    mp.setattr(HY, "play_future", spy)
+    try:
+        _outside(world, fx, "A")
+    finally:
+        mp.undo()
+    assert seen and all(n == 0 for n in seen)            # the leaver stays out in every outside future
+    assert world.ret_value == {"A": 5.0}                 # the lived world is untouched
+
+
 def test_ko0_a_member_out_keeps_the_old_value():
     world, fx = _world(hybrid_outside="lived")
     world.p["B"]["in"] = False
