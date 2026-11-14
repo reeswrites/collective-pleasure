@@ -589,3 +589,7 @@ Trait items say what a person enjoys. A delegate also needs what they will give 
 ### Carried from repo notes
 
 ADR 0011 (delegates and peers modes); ADR 0014 (domination); Dohmen et al. 2011 and Falk et al. 2018 (persona-generator-design.md); the `w` levels and sources (decision-weights-research.md); `φ`, `budget`, `start` (friend-network-design.md).
+
+## Status (2026-11-14)
+
+The author confirmed the five leans (chat interview first, short pass first, friends only for spreads and with consent, own records as second measure, in-model drift check before delegate items), but does not want to take the interview now. It waits until the author asks. Activation-level trait measures for LLM agents (persona vectors, trait neurons) are parked as a long-term idea for the AI arms (experiments/readbacks.jsonl, rb-2026-11-14-activations).
