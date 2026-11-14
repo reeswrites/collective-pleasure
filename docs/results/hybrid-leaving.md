@@ -119,3 +119,67 @@ B arm under A5, with the exit option in forecasts against without it (`hybrid_ex
 - Under A4 (no lock-in, solo outside), the same comparison was formed +0.067 [+0.025, +0.117] (+) and weeks together +0.012 [+0.002, +0.024].
 
 So with lock-in, the author's prediction holds for the moment of moving in (the formation gain shrinks from +0.067 to +0.050 and its interval reaches 0), but not for time together. What this can say: in this model, lock-in (an exit that gets dearer with time) takes some, not all, of the option value of exit at formation. What it cannot say: anything about sunk cost, which the agent does not have.
+
+## The outside forecast under A5 (KO1)
+
+B arm, bar exits with at least 13 weeks of room: mean L − O = **+0.016 [−0.010, +0.044]** over 79 exits. The bar was |mean| ≤ 0.02 with the interval inside ±0.04: the mean meets it, the interval's upper end (0.044) does not. **KO1: FAIL** (narrowly). In P2: +0.040 [+0.019, +0.064] (the forecast is somewhat too pessimistic under pressure).
+
+What the lived outside option did change is the tail:
+
+| Version (B) | Bar exits | Mean L − O | Mean abs error | Worst | Share below −0.2 |
+|---|---|---|---|---|---|
+| old | 48 | +0.014 | 0.109 | −0.96 | 0.06 |
+| A4 | 54 | +0.044 | 0.094 | −0.81 | 0.02 |
+| A5 | 79 | +0.016 | **0.076** | **−0.31** | 0.05 |
+| A5 with the solo outside (sweep, 60 pairings) | 26 | −0.010 | 0.089 | −0.25 | 0.08 |
+
+So playing the outside option in the lived world removes the story-4-sized misses (−0.8 to −0.96) and lowers the mean absolute error, but leaves a small optimistic-for-staying bias and a fat-ish tail. The remaining error is not fitted away (nothing may be). Known reasons it cannot be exact: the outside futures hold no in-future readings and no re-formation (a retry is a harness step, never inside a forecast), while lived leavers re-form (15 re-formations in B); the arrangement is ranked by the old solo rollouts; a lived leaver's own later choices follow the lived rule.
+
+## The second measures
+
+**Timing (lv-same; not a target).** Share of reading status quos whose forecast had a member leave, against the lived world:
+
+| Arm | Within 13 weeks: forecast / lived | Within 52 weeks: forecast / lived |
+|---|---|---|
+| B, A4 | 0% / 4.5% | 13.4% / 14.8% |
+| B, A5 | **28.6% / 9.4%** | **42.0% / 22.3%** |
+| P1, A5 | 21.6% / 9.4% | 34.3% / 20.7% |
+| trial, A5 | 13.3% / 14.2% | 29.5% / 25.2% |
+| prenup, A5 | 29.0% / 10.6% | 42.2% / 23.4% |
+
+Forecasts now look when life looks, and they now leave early, but **too often**: in B the 52-week gap is 0.20 (the prereg calls anything over 0.10 a weakness of the stand-in). The cause is the stand-in's arithmetic, not the timing: an in-future reading judges staying by a look-back over the last 13 future weeks against the anchor, while the lived reading forecasts 52 weeks ahead; a short bad stretch inside a future (now read at once by the tally) clears the bar on a look-back far more easily than on a forecast. Readings themselves are more frequent too: a status quo is logged at every rethink (1,592 in B against 842 under A4).
+
+**Rethinks.** Each B run has 3.7 lived rethinks on average. Over 621 rethink spells in B, 104 (17%) ended in leaving within 13 weeks, 504 (81%) came back without leaving, 13 were still open at the end. Thinking about leaving is common and mostly reversible here, as in Hawkins et al. (2017) (a quarter stop within a year, about one in ten leave), compared as a story only.
+
+**Paths again (A5, B):** of 90 lived exits, suffering path 54, quiet path **1**, mixed 6, no fall 15, short spell 14 (second windows: quiet 1). P2: suffering 44, quiet 0. The tally does not create the quiet path.
+
+**Lone weeks (A5).** B 3.1% of weeks, no run with a lone stretch over 26 weeks in serious suffering (longest 5 weeks); 75 lone readings, 10 put a member past the bar; 15 emptied households re-formed.
+
+## The swept assumed numbers (B arm, 60 pairings, one number at a time; DESCRIPTIVE)
+
+Centre (A5 on the same 60 pairings): weeks together 0.901, formed at week 0 0.833, lived exits 0.73 a run, 2.5 rethinks a run (on these pairings), forecast/lived leaving within 13 weeks 20.7% / 9.7%.
+
+| Arm | Weeks together (vs centre) | Formed | Exits/run | Rethinks/run | Leave within 13 wk: forecast / lived | Pleasure vs centre | KO1 mean [interval] |
+|---|---|---|---|---|---|---|---|
+| half-life 4 | +0.002 | 0.867 | 0.82 | 4.2 | 26% / 11% | +0.0006 (0) | +0.013 [−0.017, +0.038] |
+| half-life 26 | **−0.011** [−0.027, −0.001] | 0.833 | 0.70 | 1.8 | 16% / 9% | 0 | +0.030 |
+| line 0 | +0.002 | 0.883 | 1.05 | 5.3 | 24% / 13% | +0.0008 (0) | +0.032 |
+| line 0.05 | −0.010 | 0.833 | 0.70 | 1.6 | 15% / 10% | 0 | +0.045 |
+| slope | −0.006 | 0.867 | 1.00 | 2.5 | **15% / 14%** | +0.0006 | +0.044 |
+| both | −0.002 | 0.867 | 0.87 | 4.5 | 26% / 11% | 0 | +0.040 |
+| exit growth 0 (no lock-in) | 0.000 | 0.833 | 0.80 | 2.7 | 21% / 11% | **+0.0005** [+0.0003, +0.0008] | +0.024 |
+| exit growth 0.02 | −0.001 | 0.833 | 0.75 | 2.5 | 21% / 10% | +0.0002 | +0.025 |
+| exit growth 0.08 | +0.007 | 0.833 | 0.77 | 2.6 | 22% / 10% | **−0.0007** [−0.0012, −0.0003] | +0.026 |
+| solo outside (no slice f) | +0.008 | 0.833 | **0.48** | 3.1 | 19% / 8% | 0 | −0.010 [−0.049, +0.026] |
+| bias 0.02 | **+0.015** [+0.002, +0.032] | 0.833 | 0.45 | 3.2 | 22% / 7% | −0.0002 | +0.018 |
+| bias 0.05 | **+0.025** [+0.012, +0.041] | 0.833 | 0.30 | 2.9 | 20% / 4% | −0.0006 (0) | +0.088 |
+
+What the numbers did:
+- **The tally's numbers** move how often agents rethink (1.6 to 5.3 a run) and how often they leave (0.70 to 1.05 a run) far more than they move weeks together (within ±0.011) or pleasure (within the margin). A lower line or a shorter memory means more rethinks and more exits. **The slope arm is the only one whose forecasts leave within 13 weeks about as often as lived agents do** (15% against 14%); this is a second measure, not a target, and no number is changed for it.
+- **Lock-in** (exit growth 0 to 0.08) barely moves who forms, who stays or how often anyone leaves (0.80 to 0.75 to 0.77 exits a run, not monotonic); its only resolved effect is the cost itself, paid by leavers: pleasure +0.0005 without it, −0.0007 at double it. In this two-person world the growing exit cost is too small against the reasons people leave to change the decision, at these sizes.
+- **The lived outside option** (against solo) raises lived exits from 0.48 to 0.73 a run without changing weeks together or pleasure: the solo rollout's misses ran both ways, and correcting them sends more members out (more of them re-form).
+- **The bias arm** (agents overpredict the pain of leaving) does what E7 expected: fewer exits (0.45, 0.30 a run), more weeks together (+0.015, +0.025), no pleasure change inside the margin, and a forecast now more pessimistic about leaving than life is (KO1 +0.088 at b = 0.05). It holds members in without making them better off: by the verdict rule's lens it is staying more without pleasure, not a win.
+
+## K1 under A5
+
+The trap's held share **0.128** (16 held of 125 staying member-weeks; 3 of 12 pairings carry all of it), baseline 0.000 (224 weeks): **PASS** for the first time (Amendment 3 and A4: 0.077). Read with care: every run in both fixtures ended (all 24 households), staying weeks are few, and the pass rests on three pairings (runs/hybrid-fix/trap-a5.json). With the lived outside option, members in the trap see that leaving with nothing is worse, which is what the trap's "held" means.
