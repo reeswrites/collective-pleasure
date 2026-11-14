@@ -4,7 +4,11 @@ Wording rule: agents feel nothing; "pleasure", "suffering", "value", "forecast",
 
 Model: slice (b) ran on A4 (`hybrid · sat · bills · satiety=world · hybrid_w=persona · hybrid_readings=world · hybrid_lone · hybrid_exit`) and on the old version (Amendment 3, the same without the last two flags). Later slices name their version where they report. Preregistration: [hybrid-leaving-prereg.md](hybrid-leaving-prereg.md) (commit 8a291b0, before any code or run).
 
-Status: in progress, written slice by slice. Scripted agents, no model calls, every number ASSUMED.
+Status: run on 2026-11-14 after the preregistration (8a291b0; code 3b11009, one bug fix at 1affe34 before the confirmatory run restarted). Scripted agents, no model calls, every number ASSUMED. Label for H41 under ADR 0020: three versions now (old, A4, A5), see "Three versions".
+
+## In one paragraph
+
+**Measured first: in this model people leave because suffering rises, almost never because the good quietly fades** (0 of 242 exits on the primary windows; 2 on the second), so the quiet path is close to a gap. **Then built, behind flags, all off by default (pins byte for byte):** a fading tally that calls a rethink in life and inside forecasts by the same rule; an exit cost that grows with weeks together; and an outside option played in the lived world itself. **KX2, with a pure exit cost, now passes** under A4 and A5 (DiD +0.019 and +0.015, intervals above 0): A4's failure was its fixture. K1 passes for the first time (0.128, thinly). PT-R, KW and the unit checks pass. **KO1 fails narrowly**: the outside forecast's mean error is +0.016 but its interval reaches +0.044 (bar ±0.04); the story-4-sized misses (−0.8 to −0.96) are gone (worst −0.31). So **A5 is not ready to freeze** by its own rule. Forecasts now look when life looks, and leave too often (52-week rate 42% against 22% lived in B). **H41 stays not supported** in all three versions; pressure still holds people in under all three, but its gain in weeks together is now version-dependent (0 under A5). The author's prediction holds for moving in (the exit option raises week-0 formation by +0.050 [0.000, +0.100], not clear of 0) but not for time together (+0.047 [+0.017, +0.088]). Lock-in at the swept sizes barely changes anyone's choices. The starved rest and connection of story 4 is a routine valuation error (friend visits valued without the world's habituation), reported, not fixed.
 
 ## Slice (b): how lived exits come about (measured before any rule change)
 
@@ -183,3 +187,57 @@ What the numbers did:
 ## K1 under A5
 
 The trap's held share **0.128** (16 held of 125 staying member-weeks; 3 of 12 pairings carry all of it), baseline 0.000 (224 weeks): **PASS** for the first time (Amendment 3 and A4: 0.077). Read with care: every run in both fixtures ended (all 24 households), staying weeks are few, and the pass rests on three pairings (runs/hybrid-fix/trap-a5.json). A likely reason, not checked run by run: with the lived outside option, a member in the trap now forecasts leaving with nothing as it would live it.
+
+## Known-answer checks (A5)
+
+| ID | Result | Bar | |
+|---|---|---|---|
+| PIN | all 50 slow pin tests byte for byte with every new flag off (code 3b11009; the fix at 1affe34 touches only `hybrid_outside="lived"`) | byte for byte | **PASS** |
+| KT0, KT1, KT2 | 8 tests (tests/test_hybrid_tally.py) | | **PASS** |
+| KC1 | 5 tests (tests/test_hybrid_xcost.py) | | **PASS** |
+| KO0 | 6 tests incl. the stale-return regression (tests/test_hybrid_outside.py) | | **PASS** |
+| KX2 (pure exit cost) | A4: DiD +0.019 [+0.005, +0.036]; A5: +0.015 [+0.007, +0.028]; formation not lower; exits in 45/48 and 48/48 futures | DiD > 0, interval above 0 | **PASS** (both) |
+| KO1 | +0.016 [−0.010, +0.044], 79 bar exits in B | ±0.02, interval inside ±0.04 | **FAIL** (interval) |
+| KL2 | story 4 under A5: both leave at the trial's end (week 78), nobody is ever alone | no stuck stretch over 26 weeks | **PASS** (trivially: no lone weeks) |
+| K1 | trap 0.128, baseline 0.000 | ≥ 0.10 / ≤ 0.02 | **PASS** (first time; 3 pairings carry it) |
+| PT-R | T1 0.953 (v2 0.955), T2 0.966 (0.973), T3 95.0% (94.7%), T4 98.1% (95.9%), T5 1.05, T6 holds (see_friend gap 0.0005) | no more than 0.02 below v2; T5 in 0.8–1.25 | **PASS** |
+| KW | w = 2 declines, w = 0 forms, with A5's flags (tests/test_hybrid_tally.py) | | **PASS** |
+| PT-H | (running; reported below when done) | ±0.010 (interval in ±0.015); ≥ 0.80; ≥ 80% | pending |
+
+**Ready to freeze? No.** The prereg's rule needs every check but K1 to pass; KO1 fails. Nothing was changed to make it pass.
+
+## Expectations written before the run
+
+| ID | Expected | Actual | |
+|---|---|---|---|
+| E1 | Pressure raises weeks together and holds people in | held + at every level; weeks together +0.010 to +0.031, intervals reach 0 | **misses** (half) |
+| E2 | Forecasts leave within 13 weeks (> 0); lived 13-week rate > 0 | 28.6% and 9.4% in B | holds |
+| E3 | Exits rise A5 > A4; lock-in pulls them down | 0.75 vs 0.50 a run in B (holds); growth 0 / 0.02 / 0.04 / 0.08: 0.80 / 0.75 / 0.73 / 0.77 (60 pairings) | holds in part (lock-in effect small, not monotonic) |
+| E4 | KO1 passes and the error moves toward 0 | KO1 fails on its interval; mean abs error 0.094 → 0.076, worst −0.81 → −0.31 | **misses** (the bar), holds (the direction) |
+| E5 | B's formation under A5 ≤ A4 | 0.80 vs 0.82 | holds |
+| E6 | P-AUTH holds | held on formation (+0.050, interval touches 0); weeks together + | holds as preregistered |
+| E7 | Bias arms leave less and hold more members below their outside option | exits 0.73 → 0.45 → 0.30 a run; weeks together +0.015, +0.025 | holds |
+
+## Story check (four lives)
+
+1. **Story 4 (trial, p-peacekeeper with p-wanderer).** As under A4: both leave at the trial's end; nobody is left alone; the bad spiral never starts. Matches.
+2. **B, p-host with p-peacekeeper.** B's tally crosses at week 44 and calls a rethink; A leaves on the bar that week; B, alone, rethinks at 48 and leaves at 52; they re-form; at 130 both leave. Reading this life found the stale-return bug (the outside forecast said −0.20; B lived +0.77): fixed before the confirmatory run.
+3. **B, g-01110 with g-11011 (a rethink that came back).** From week 78 a shock raises B's suffering (0.07 → 0.45 a week); its tally falls to −0.12 and it rethinks every 4 weeks from week 95; every forecast says stay (the 52-week future includes recovery); suffering returns to 0.07 by week 117 and the tally climbs back above 0. Matches "thinking about leaving is reversible".
+4. **P2, p-bargainer with p-wanderer (pressure with lock-in).** B (p-wanderer) suffers 0.3 to 0.45 a week for most of the run; its tally sits at −0.2 to −0.3 for about 120 weeks and calls a rethink every 4 weeks (about 30), and it never leaves; the stay lens marks it held. Matches the measures (pressure holds people in); also a mismatch worth naming: in this model a member can "think about leaving" every month for two years with nothing changing, because each rethink is a fresh forecast that says staying (with the reward) beats leaving.
+
+## New gaps
+
+- **The quiet path is close to absent** (slice b; A5 the same: 1 of 90). People here leave on rising suffering. Not fixed: the saturating pleasure scale leaves little room for the good to fade.
+- **The routine misvalues repeated friend visits** (story 4): it values one more visit at full strength while the world habituates it, so a member alone can spend every unit on visits that no longer restore connection, and rest starves. Same class as Amendment 2's time-together fix. Not fixed (the author's call; it is the routine, not the leave rule). PT-R does not see it (population gap 0.0005): it bites in long same-friend streaks.
+- **Stale return values in the lived world and in A4's forecasts.** `world.ret_value` survives a return, so a member who leaves later can walk straight back on a value from an earlier spell. Fixed only inside the lived outside option; elsewhere reported, not changed.
+- **The in-future look-back leaves too often** now that it reads when life reads (52-week rate 42% vs 22% in B). The stand-in judges 13 weeks back where life forecasts 52 ahead.
+- **Re-formation is invisible to every forecast** (a retry is a harness step), one reason the outside forecast stays a little pessimistic about leaving.
+- **Lock-in at these sizes does not bite** in the two-person world: exits, formation and weeks together barely move between growth 0 and 0.08.
+
+## Can be about / cannot be about
+
+This can be about how the hybrid's leaving behaves in the formation check's two-person household when a fading tally sets when it rethinks, exits get dearer with time and the outside option is played in the lived world, and how H41's arms move under that version beside two earlier ones. It cannot be about people, how people time their exits, sunk cost (not in the agent), real leases or pets, or the many-agent world.
+
+## Reproduction
+
+`uv run python scripts/hybrid_leaving.py --paths`, `--paths-analyze` (slice b); `--kx2 --flags a4|a5`; `--story`; `--run a5` (about 6 hours on 4 workers); `--run a5_noexit --arms B`; `--run half4,half26,line0,line05,slope,both,grow0,grow02,grow08,solo,bias02,bias05 --arms B --every 2`; `--analyze`; `--life ARM A B`; `--reach`. `uv run python scripts/hybrid_fix_check.py --trap --a5`; `uv run python scripts/value_consistency.py --hybrid --world --a5 --run`; `uv run python scripts/hybrid_passtest.py --a5 --audit`, `--a5 --analyze`. Tests: `uv run pytest tests/test_hybrid_tally.py tests/test_hybrid_xcost.py tests/test_hybrid_outside.py`; pins `uv run pytest -m slow`. The run queue is runs/hybrid-leaving/queue.sh.

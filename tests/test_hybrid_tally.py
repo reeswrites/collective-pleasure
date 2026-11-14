@@ -153,3 +153,19 @@ def test_off_by_default():
     assert HD.FixConfig().hybrid_tally is None
     assert not HY.tally_on(HD.FixConfig(agent_values="hybrid"))
     assert not HY.leave_on(HD.FixConfig(agent_values="hybrid"))
+
+
+def test_kw_rerun_with_a5_flags_on():
+    """KW (Amendment 3's known answer for w), rerun with Amendment 5's flags on: none of them touches the yardstick or the rule."""
+    from mar import hedonic as HD
+    from mar import hybrid as HY
+
+    def rows(pl, s_off, s_non, n=10):
+        return [{"hedonic": {r: {"pleasure": pl, "s_off": s_off, "s_non": s_non} for r in "AB"}} for _ in range(n)]
+    home, out = rows(0.90, 0.15, 0.05), rows(0.88, 0.10, 0.00)
+    for w, forms in ((2.0, False), (0.0, True), (None, True)):
+        fx = dataclasses.replace(HD.FixConfig(), agent_values="hybrid", hybrid_w=w, hybrid_lone=True, hybrid_exit=True,
+                                 hybrid_tally="level", exit_grow=0.04, hybrid_outside="lived")
+        V = {t: {r: HY.score(home, r, None, fx) for r in "AB"} for t in HY.TERMS}
+        O = {r: HY.score(out, r, None, fx) for r in "AB"}
+        assert HY.choose_term(V, O)[1] is forms, w
