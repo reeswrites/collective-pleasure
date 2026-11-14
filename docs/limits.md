@@ -59,6 +59,8 @@ Fix: a month plan for the bill (the household sets each member's share once a mo
 
 **Update 2026-11-13, later.** The hybrid can now weigh each person's suffering in its big choices (`hybrid_w="persona"`, hybrid prereg Amendment 3), and H41 ran with it ([results/h41-choice-aids.md](results/h41-choice-aids.md)). Two limits remain on this agent: its forecasts assume no leaving, so it cannot value an exit option, and a member left alone in the household has no reading to leave.
 
+**Update 2026-11-13, Amendment 4.** Both now have a fix behind a flag ([results/hybrid-exit-option.md](results/hybrid-exit-option.md)): `hybrid_lone` gives the member left alone the pair's reading, and `hybrid_exit` lets future selves leave inside forecasts (a 13-week look-back against the outside option anchored at the choice). Under them the old checks pass, but the exit option's known answer (KX2, from the exact model) failed in its fixture, the in-future rule never leaves within 13 weeks (so trials cannot see it), and a new gap appeared: the routine can starve rest and connection, and no forecast sees it. Results on this version cannot be about an agent that values the option to leave the way the exact model's optimal chooser does.
+
 ## What results here CAN be about
 
 - What a rule system does to scripted agents in a stated toy world.

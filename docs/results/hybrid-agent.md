@@ -4,6 +4,8 @@ Wording rule: agents feel nothing; "pleasure", "value" and "forecast" are glosse
 
 Status: run on 2026-11-12 after the preregistration ([hybrid-agent-prereg.md](hybrid-agent-prereg.md), commit b529d24; code 929caa8; Amendment 1 committed with this file). Scripted agents, no model calls. Instrument checks, not hypothesis tests: they say whether the hybrid does what it says, not whether its choices are good.
 
+**Note 2026-11-13, later.** Amendment 4 (a reading for the member left alone, `hybrid_lone`; forecasts with the option to leave, `hybrid_exit`) is reported in [hybrid-exit-option.md](hybrid-exit-option.md). With all four flags on: PT-H passes (H1 +0.0051 [+0.0022, +0.0083], H2 0.937, H3 93.2%), PT-R passes (T1 0.958 against v2's 0.955), KW passes, K1 fails as before (0.077 / 0); the new known answers pass except KX2 (the exact model's exit-option answer), which fails. Pins reproduce byte for byte with both flags off. Nothing below is changed.
+
 **Note 2026-11-13.** Amendment 3 (the suffering weight in big choices, and readings run by the world) is reported in its own section below. PT-H, PT-R and the weight's known answer pass; the trap's known answer (K1) fails as preregistered. The sections above stand as run.
 
 ## In one paragraph

@@ -65,6 +65,8 @@ Why employers, landlords and lenders are rules: the calibration notes all say th
 
 ### The decision model: the hybrid, frozen
 
+**Note 2026-11-13 (which version this freezes).** The two gaps H41 named were fixed behind two new flags (`hybrid_lone`, `hybrid_exit`; hybrid prereg Amendment 4, [hybrid-exit-option.md](../results/hybrid-exit-option.md)). Both fixes do what they say and the old checks still pass, but the exit option's own known answer (KX2) failed, so by that prereg's rule the new version is **not** frozen. This spec still freezes the Amendment 3 version below as `hybrid-N/1`. The candidate for `hybrid-N/2` is `... · hybrid_lone · hybrid_exit`, pending a check with a pure exit cost (its own prereg). A third option the author may prefer: freeze with `hybrid_lone` only (its checks KL1, KL2 and the pins pass; PT-H and PT-R have not been run on it alone). Whichever is frozen, layer a2 must port against that version's own formation check: the third formation check's hybrid column ran on the Amendment 3 version.
+
 **The hybrid, as of Amendment 3, with both new flags on**: `hybrid · sat · bills · satiety=world · hybrid_w=persona · hybrid_readings=world`. That is the agent H41 is running now.
 
 Why this one:

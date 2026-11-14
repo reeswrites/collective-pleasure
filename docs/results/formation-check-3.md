@@ -2,6 +2,8 @@
 
 Wording rule: agents feel nothing; "pleasure", "suffering" and "value" are glosses for modeled numbers.
 
+**Note 2026-11-13.** The hybrid column here ran on the version before Amendments 3 and 4 (no suffering weight, no lone reading, no exit option in forecasts). It is not rerun (hybrid-exit-option-prereg.md, "Findings this could move"); the many-agent spec's layer a2 must compare against the frozen version's own formation check. Nothing below is changed.
+
 Status: run on 2026-11-12 to 13, after the preregistration ([formation-check-3-prereg.md](formation-check-3-prereg.md), commit 9ed02ba) and its Amendment 1 (commit cfa6c7a: the time-together fix carried by v2, v2b and the hybrid; the analysis details; the reach checks). Step 3 of the step-back plan. Scripted agents, no model calls, every number ASSUMED. 5,760 runs (4 agent sets × 3 arms × 120 pairings × seeds 0 to 3), 17,817 s on 4 workers, kept awake with `caffeinate -i`. Rows in runs/formation-check-3/.
 
 ## In one paragraph

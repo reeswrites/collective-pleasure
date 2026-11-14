@@ -4,6 +4,8 @@ Wording rule: agents feel nothing; "pleasure", "suffering" and "held" are glosse
 
 Model: `hybrid · sat · bills · satiety=world · hybrid_w=persona · hybrid_readings=world`, exit fallback F4 with items, corrected rule (ADR 0020). Label: **single-version** (run on the hybrid only).
 
+**Note 2026-11-13, later.** Rerun on the hybrid with both fixes this doc asked for (`hybrid_lone`, `hybrid_exit`): [hybrid-exit-option.md](hybrid-exit-option.md). H41 is still not supported. Holds across both versions: pressure raises weeks together and holds people in; LAT and all aids lower weeks together and raise liberty; cheap solo housing never bites. Version-dependent (not patched): all aids is now harm (pleasure −0.0031), the trial lowers week-0 formation against a B that now forms more, the trial raises and the prenup lowers liberty, and better information raises weeks together (+0.019; better than matched pressure, no pleasure gain). The label of this finding is now two-version, as above. Nothing below is changed.
+
 Status: run on 2026-11-13, after the preregistration ([h41-choice-aids-prereg.md](h41-choice-aids-prereg.md), commit 07b7c6a) and the hybrid's Amendment 3 ([hybrid-agent.md](hybrid-agent.md)). Scripted agents, no model calls, every number ASSUMED. 1,320 runs (11 arms × 120 pairings × seed 0), 11,985 s on 4 workers, kept awake with `caffeinate -i`. Rows in runs/h41-choice-aids/.
 
 ## In one paragraph
