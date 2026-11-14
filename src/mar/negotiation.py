@@ -1020,6 +1020,8 @@ def bar_reading(world, sq, out, modes=None):
     world.bar_log = getattr(world, "bar_log", [])
     if fx.agent_values == "hybrid":
         world.bar_gain = {r: out[r] - sq[r] for r in "AB"}     # the hybrid's leave value reads it (mar.hybrid.leave_value)
+        from . import hybrid as _HY
+        _HY.set_tally_ref(world, out)                          # Amendment 5: the tally compares against the outside option just valued
         world.hyb_last, world.hyb_due = getattr(world, "cur_reading", None) or getattr(world, "hyb_last", -99), False
     for r in "AB":
         better = out[r] > sq[r] + fx.leave_margin
@@ -1079,6 +1081,7 @@ class BaselineLived:
                 _HY.make_lat(self.world, self.world.solo)
         else:
             _HY.set_agreement(self.world, term)
+            _HY.set_tally_ref(self.world, O)       # Amendment 5: the tally compares against the outside option valued at formation
             if self.world.fx.h41_trial:    # H41: a trial household, decided again at its end (hybrid.trial_reading)
                 self.world.trial_end = self.world.fx.h41_trial
         self.world.fork_ok = True
@@ -1088,9 +1091,11 @@ class BaselineLived:
         """The hybrid's extra harness steps at the start of week w (not a 13-week mark): an early reading on distress."""
         from . import hybrid as _HY
         if _HY.due(self.world, w):
+            _HY.note_rethink(self.world, w)
             self.world.cur_reading = w
             self.reading(w, last)
         elif _HY.lone_due(self.world, w):          # Amendment 4 (hybrid_lone): an early reading for a member alone in the household
+            _HY.note_rethink(self.world, w)
             _HY.lone_reading(self, w, last)
         _HY.lone_apart(self)                       # Amendment 4: an emptied household's pair counts as apart (13-week retries)
 
@@ -1128,6 +1133,15 @@ class BaselineLived:
             world.solo = modes
 
     def reading(self, w, last):
+        world = self.world
+        hy = world.fx is not None and world.fx.agent_values == "hybrid"
+        if hy:
+            from . import hybrid as _HY
+            with _HY.outside_ctx(world, w, last):        # Amendment 5: members' outside options valued in this lived world
+                return BaselineLived._reading(self, w, last)
+        return BaselineLived._reading(self, w, last)
+
+    def _reading(self, w, last):
         world = self.world
         fp = {} if _recording(world) else None
         fwd = forward_values(world, w, last, parts=fp)

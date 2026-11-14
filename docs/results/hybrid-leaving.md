@@ -38,4 +38,18 @@ On average the old forecast is not far off (and A4's B leavers lived slightly be
 
 ## Slice (c): KX2 with a pure exit cost
 
-(below)
+Fixture: `FixConfig.exit_fixed` = 0.04 (a leaver's raw weekly pleasure lower by 0.04 for the 13 weeks after it leaves; nothing while it stays), the stay test's baseline fixture, 12 control pairings, seed 900, one week-0 forecast per member (`scripts/hybrid_leaving.py --kx2 --flags a4`, runs/hybrid-leaving/kx2-a4.json, 38 s).
+
+**KX2 under A4: PASS.**
+
+| | Value |
+|---|---|
+| D(off) = V(no cost) − V(cost), exit option off | 0.000 (exactly, by construction: nobody leaves in a flag-off forecast) |
+| D(on), exit option on | +0.019 |
+| (i) DiD | **+0.019 [+0.005, +0.036]** (11 of 12 pairings above 0) |
+| (ii) share whose household beats the outside option, no cost vs cost (flag on) | 0.083 vs 0.083 (not lower) |
+| (iii) futures with an in-future exit (flag on) | 45 of 48 with no cost, 45 of 48 with the cost; first exit at week 29.5 vs 30.6 on average |
+
+So with a cost paid only on leaving, the exit option behaves as the exact model says: a cheaper exit raises the value of forming only for the chooser that values exit. A4's failure in the trap fixture was the fixture (its cost fell on staying), not the exit option. Two things to read with it: the cost barely changes who would form (clause ii is met by equality), and with the exit option on fewer members beat their outside option than with it off (0.083 against 0.125), so in this fixture the option to leave lowered the value of forming: future selves leave at about week 29 into an outside life the solo rollout overrates (slice b's tail).
+
+KX2 under A5 is reported with slice (g).

@@ -1612,6 +1612,11 @@ class WeeklyWorld:
             d.update(dd)
             d["friends"] = self.wk[r]["friends"] + self.wk[r]["friend_initiated"]
             d["together_now"] = _PAIR.paired(self, r)
+        if _HY.xcost_on(fx):                              # Amendment 5: a leaver's exit cost (lease, stuff, pets), weeks after leaving
+            xc = _HY.exit_cost_now(self, r, w)
+            if xc:
+                pl -= xc
+                d["exit_cost"] = xc
         ck = self.wk[r].get("checkin", 0)
         if ck:
             d["checkin"] = fx.checkin_cost * ck
@@ -2033,6 +2038,8 @@ class WeeklyWorld:
                 if _EXIT.ACTIVE == "F3" and _EXIT.world_arm(self) == "F3":
                     _EXIT.start_contest(self, r, w)
             self.exit_log.append({"week": w, "role": r, "assets": round(me["money"], 2), "take": take, "breach": bool(cand.get("breach"))})
+            if self.fx is not None and _HY.xcost_on(self.fx):
+                _HY.on_leave(self, r, w)             # Amendment 5: the exit cost it pays from this week, sized at its weeks in
             if self.fx:
                 why = cand.get("why", "distress")
                 if why == "bar":
@@ -2332,6 +2339,8 @@ class WeeklyWorld:
                "blocked": {r: sorted(rec["blocked"][r]) for r in "AB"},
                "sanctioned": {r: self.wk[r]["sanctioned"] for r in "AB"}}
         self.run.outcomes.append(row)
+        if self.fx is not None and self.fx.agent_values == "hybrid" and _HY.leave_on(self.fx):
+            _HY.week_end(self, w, row)              # Amendment 5: weeks in the household spell, and each member's fading tally
         self.month_rows.append(row)
         if settle:
             for rw in self.month_rows:

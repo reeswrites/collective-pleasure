@@ -27,6 +27,8 @@ A4 = {"both": {"hybrid_readings": "world", "hybrid_w": "persona"},
       "a4": {"hybrid_readings": "world", "hybrid_w": "persona", "hybrid_lone": True, "hybrid_exit": True},
       "a4_lone": {"hybrid_readings": "world", "hybrid_w": "persona", "hybrid_lone": True},
       "a4_exit": {"hybrid_readings": "world", "hybrid_w": "persona", "hybrid_exit": True}}   # Amendment 4 (hybrid-exit-option-prereg.md)
+A5 = {"a5": {"hybrid_readings": "world", "hybrid_w": "persona", "hybrid_lone": True, "hybrid_exit": True, "hybrid_tally": "level", "tally_half": 13.0, "tally_line": 0.02, "exit_grow": 0.04, "hybrid_outside": "lived"}}
+# Amendment 5 (hybrid-leaving-prereg.md): the fading tally, the growing exit cost, the lived outside option
 BARS = {"trap_min": 0.10, "baseline_max": 0.02}
 
 
@@ -37,7 +39,7 @@ def _one(args):
     import stay_test_run as STR
     cfg, arm, a, b, seed = args
     ps = STR.personas()
-    fx = dataclasses.replace(RT.FIXES_ON, pairing=PR.dial(0), **FC3.rule("hybrid"), **{**CONFIGS, **A4}[cfg])
+    fx = dataclasses.replace(RT.FIXES_ON, pairing=PR.dial(0), **FC3.rule("hybrid"), **{**CONFIGS, **A4, **A5}[cfg])
     t0 = time.time()
     with HD.use_levers(RT.LEVERS), HD.use_fixes(fx):
         world = H.WeeklyWorld(H.PyGate(H.load_variant(arm)), (ps[a], ps[b]), seed, H.WEEKS)
@@ -80,8 +82,11 @@ if __name__ == "__main__":
     ap.add_argument("--trap", action="store_true")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--a4", action="store_true", help="Amendment 4: K1 with all four flags; each new flag alone beside; trap-a4.json")
+    ap.add_argument("--a5", action="store_true", help="Amendment 5: K1 with A5's flags; trap-a5.json")
     a = ap.parse_args()
-    if a.trap and a.a4:
+    if a.trap and a.a5:
+        trap(a.workers, configs=A5, key="a5", fname="trap-a5.json")
+    elif a.trap and a.a4:
         trap(a.workers, configs=A4, key="a4", fname="trap-a4.json")
     elif a.trap:
         trap(a.workers)

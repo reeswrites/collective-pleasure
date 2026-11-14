@@ -273,6 +273,22 @@ class FixConfig:
     # weeks (a look-back against the outside option anchored at the choice), so future selves may leave (the option value of exit).
     hybrid_lone: bool = False
     hybrid_exit: bool = False
+    # How the hybrid decides to leave (docs/results/hybrid-leaving-prereg.md; hybrid prereg Amendment 5). Defaults are the old rule, bit
+    # for bit. hybrid_tally: None, or "level" / "slope" / "both": a fading running tally of each member's weekly yardstick against its
+    # outside option calls a reading (in the lived world and inside forecasts by the same rule) when it falls below -tally_line (level)
+    # or falls by more than tally_line over hybrid_gap weeks (slope); tally_half is its half-life in weeks (both ASSUMED, swept).
+    # exit_fixed, exit_grow: a leaver's raw weekly pleasure is lower for exit_cost_weeks after leaving by exit_fixed + exit_grow x (weeks
+    # in the household spell) / 52 (ASSUMED; exit_fixed is the KX2 fixture's pure exit cost). hybrid_outside: "solo" (a fresh solo
+    # rollout) or "lived" (for a member in a household: the lived world played on with that member gone). leave_bias: subtracted from
+    # the outside option of a member in a household (the biased-forecast sensitivity arm).
+    hybrid_tally: object = None
+    tally_half: float = 13.0
+    tally_line: float = 0.02
+    exit_fixed: float = 0.0
+    exit_grow: float = 0.0
+    exit_cost_weeks: int = 13
+    hybrid_outside: str = "solo"
+    leave_bias: float = 0.0
     # H41 choice aids (docs/results/h41-choice-aids-prereg.md). Defaults are the old world, bit for bit (tests/data/h41_off_fingerprints.json).
     # solo_cost: the extra weekly living cost of living alone (1.5 before; the housing note's cheap solo unit is 0.75 of it).
     # h41_trial: weeks of a trial household (0 off; hybrid only): every formation is scored over the trial window, and at its end each

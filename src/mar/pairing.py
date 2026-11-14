@@ -127,6 +127,11 @@ def stay_reading(world, w, last):
     outside option: negotiation.outside_value at the holdings an equal-claim exit carries, minus the exit stigma (pressure case)."""
     from . import hedonic as HD
     from . import negotiation as NG
+    if world.fx.agent_values == "hybrid":                    # Amendment 5: outside options valued in this lived world
+        from . import hybrid as _HY
+        if _HY._OCTX[0] is None or _HY._OCTX[0][0] is not world:
+            with _HY.outside_ctx(world, w, last):
+                return stay_reading(world, w, last)
     pc = active(world)
     fx_free = dataclasses.replace(world.fx, pairing=free(pc))
     sq = NG.forward_values(world, w, last)
