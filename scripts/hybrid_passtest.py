@@ -70,6 +70,7 @@ WORLD = {"satiety_expect": "world"}                              # Amendment 2: 
 A3 = {**WORLD, "hybrid_w": "persona", "hybrid_readings": "world"}  # Amendment 3: suffering weight w and readings run by the world
 A4 = {**A3, "hybrid_lone": True, "hybrid_exit": True}              # Amendment 4: the lone member's reading; forecasts with the exit option
 A5 = {**A4, "hybrid_tally": "level", "tally_half": 13.0, "tally_line": 0.02, "exit_grow": 0.04, "hybrid_outside": "lived"}   # Amendment 5 (hybrid-leaving-prereg.md)
+A6 = {**A5, "friend_satiety": True, "fresh_return": True}          # Amendment 6 (hybrid-a6-prereg.md)
 
 
 def audit_run(workers=3, out=None, sample=None, extra=None):
@@ -237,7 +238,15 @@ if __name__ == "__main__":
     ap.add_argument("--a4", action="store_true", help="Amendment 4: A1's sample with A3's flags plus lone and exit; runs/hybrid-passtest-a4/")
     ap.add_argument("--a3", action="store_true", help="Amendment 3: A1's sample with w and world readings; runs/hybrid-passtest-a3/")
     ap.add_argument("--a5", action="store_true", help="Amendment 5: A1's sample with A5's flags; runs/hybrid-passtest-a5/")
+    ap.add_argument("--a6", action="store_true", help="Amendment 6: A1's sample with A6's flags; runs/hybrid-passtest-a6/")
     a = ap.parse_args()
+    if a.a6:
+        OUT_A6 = ROOT / "runs" / "hybrid-passtest-a6"
+        if a.audit:
+            audit_run(a.workers, OUT_A6, A1, A6)
+        if a.analyze:
+            analyze(OUT_A6, ("value-consistency-hybrid-world-a6", "value-consistency-v2-sat-world"))
+        sys.exit(0)
     if a.a5:
         OUT_A5 = ROOT / "runs" / "hybrid-passtest-a5"
         if a.audit:

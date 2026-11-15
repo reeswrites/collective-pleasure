@@ -289,6 +289,12 @@ class FixConfig:
     exit_cost_weeks: int = 13
     hybrid_outside: str = "solo"
     leave_bias: float = 0.0
+    # Two bugs fixed before the freeze (docs/results/hybrid-a6-prereg.md; hybrid prereg Amendment 6). Defaults are the old rule, bit for
+    # bit. friend_satiety: the routine values one more friend visit at the scale the world would give it now (World._friend_next), as
+    # satiety_expect="world" does for time together. fresh_return: a member's return value (world.ret_value) is dropped when it leaves,
+    # so a return needs a valuation made during this out-spell (lived world, forecast copies and outside futures alike).
+    friend_satiety: bool = False
+    fresh_return: bool = False
     # H41 choice aids (docs/results/h41-choice-aids-prereg.md). Defaults are the old world, bit for bit (tests/data/h41_off_fingerprints.json).
     # solo_cost: the extra weekly living cost of living alone (1.5 before; the housing note's cheap solo unit is 0.75 of it).
     # h41_trial: weeks of a trial household (0 off; hybrid only): every formation is scored over the trial window, and at its end each

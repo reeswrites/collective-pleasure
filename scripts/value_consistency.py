@@ -515,6 +515,8 @@ def main():
                     "Amendment 3's flags plus hybrid_lone and hybrid_exit; rows in runs/value-consistency-hybrid-world-a4/")
     ap.add_argument("--a5", action="store_true", help="hybrid prereg Amendment 5 (hybrid-leaving-prereg.md): with --hybrid --world, "
                     "Amendment 4's flags plus the tally, the growing exit cost and the lived outside option; runs/value-consistency-hybrid-world-a5/")
+    ap.add_argument("--a6", action="store_true", help="hybrid prereg Amendment 6 (hybrid-a6-prereg.md): with --hybrid --world, "
+                    "Amendment 5's flags plus friend_satiety and fresh_return; runs/value-consistency-hybrid-world-a6/")
     ap.add_argument("--gaps", action="store_true", help="carry-over terms: per action, per group, the k-week effect minus the 1-week effect")
     ap.add_argument("--passtest", action="store_true")
     ap.add_argument("--reach", action="store_true")
@@ -542,6 +544,11 @@ def main():
     if a.a5 and a.hybrid and a.world:              # Amendment 5: how the hybrid decides to leave
         OUT, extra = OUT.parent / (OUT.name + "-a5"), {**extra, "hybrid_w": "persona", "hybrid_readings": "world", "hybrid_lone": True,
                                                        "hybrid_exit": True, "hybrid_tally": "level", "tally_half": 13.0, "tally_line": 0.02, "exit_grow": 0.04, "hybrid_outside": "lived"}
+    if a.a6 and a.hybrid and a.world:              # Amendment 6: the two bug fixes on top of Amendment 5
+        OUT, extra = OUT.parent / (OUT.name + "-a6"), {**extra, "hybrid_w": "persona", "hybrid_readings": "world", "hybrid_lone": True,
+                                                       "hybrid_exit": True, "hybrid_tally": "level", "tally_half": 13.0, "tally_line": 0.02,
+                                                       "exit_grow": 0.04, "hybrid_outside": "lived", "friend_satiety": True,
+                                                       "fresh_return": True}
     if a.hybrid:
         if a.run:
             collect(HSAMPLE, OUT / "rows.jsonl", a.workers, extra)

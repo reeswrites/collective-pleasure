@@ -50,6 +50,10 @@ CFGS = {"a5": A5, "a5_noexit": {**A5, "hybrid_exit": False},
         "slope": {**A5, "hybrid_tally": "slope"}, "both": {**A5, "hybrid_tally": "both"},
         "grow0": {**A5, "exit_grow": 0.0}, "grow02": {**A5, "exit_grow": 0.02}, "grow08": {**A5, "exit_grow": 0.08},
         "solo": {**A5, "hybrid_outside": "solo"}, "bias02": {**A5, "leave_bias": 0.02}, "bias05": {**A5, "leave_bias": 0.05}}
+# Amendment 6 (hybrid-a6-prereg.md): A5 plus the two bug fixes. Rows in runs/hybrid-a6/.
+A6 = {**A5, "friend_satiety": True, "fresh_return": True}
+CFGS.update({"a6": A6, "a6_noexit": {**A6, "hybrid_exit": False}})
+OUT6 = ROOT / "runs" / "hybrid-a6"
 SWEEPS = ("half4", "half26", "line0", "line05", "slope", "both", "grow0", "grow02", "grow08", "solo", "bias02", "bias05")
 XO.VERSIONS.update(CFGS)
 OLD_ROWS = ROOT / "runs" / "h41-choice-aids" / "rows.jsonl"
@@ -227,7 +231,8 @@ def paths_analyze():
 
 # ---- slice (c): KX2 with a pure exit cost --------------------------------------------------------------------------------------
 
-KX2_FLAGS = {"a4": {"hybrid_lone": True}, "a5": {k: v for k, v in A5.items() if k != "hybrid_exit"}}
+KX2_FLAGS = {"a4": {"hybrid_lone": True}, "a5": {k: v for k, v in A5.items() if k != "hybrid_exit"},
+             "a6": {k: v for k, v in A6.items() if k != "hybrid_exit"}}
 
 
 def _kx2_one(args):
@@ -288,8 +293,9 @@ def kx2(flags="a4", workers=WORKERS, n_pairs=12, seed=900):
            "clauses": {"i": c1, "ii": c2, "iii": c3},
            "KX2": "PASS" if (c1 and c2 and c3) else ("FAIL" if c3 else "CANNOT FAIL (no in-future exits)"),
            "rows": recs, "secs": round(time.time() - t0)}
-    OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / f"kx2-{flags}.json").write_text(json.dumps(out, indent=1, default=str))
+    od = OUT6 if flags == "a6" else OUT
+    od.mkdir(parents=True, exist_ok=True)
+    (od / f"kx2-{flags}.json").write_text(json.dumps(out, indent=1, default=str))
     print(json.dumps({k: v for k, v in out.items() if k != "rows"}, indent=1, default=str))
     return out
 
@@ -359,6 +365,8 @@ def cfg_task(args):
 
 
 def cfg_file(name):
+    if name.startswith("a6"):
+        return OUT6 / ("rows.jsonl" if name == "a6" else f"{name}.jsonl")
     return OUT / ("rows.jsonl" if name == "a5" else f"{name}.jsonl")
 
 
@@ -380,12 +388,12 @@ def run_cfg(name, arms, every=1, workers=WORKERS):
 
 # ---- KL2 under A5 ----------------------------------------------------------------------------------------------------------------
 
-def story():
+def story(version="a5"):
     arm, a, b, seed = XO.STORY
     a, b = next(((x, y) for x, y in A.pairings(A.CONFIRM) if {x, y} == {a, b}))
     t0 = time.time()
     _TLOG.clear()
-    run, lived, rd, ex = XO.play(arm, a, b, seed, "a5")
+    run, lived, rd, ex = XO.play(arm, a, b, seed, version)
     log = ex["lone_log"]
     m = 0.02
     stuck = False
@@ -404,7 +412,9 @@ def story():
            "suff_blocks": {r: [round(float(np.mean([o["hedonic"][r]["s_off"] + o["hedonic"][r]["s_non"] for o in run.outcomes[k:k + 13]])), 3)
                                for k in range(0, len(run.outcomes), 13)] for r in "AB"},
            "secs": round(time.time() - t0)}
-    (OUT / "story-a5.json").write_text(json.dumps(out, indent=1, default=str))
+    od = OUT6 if version == "a6" else OUT
+    od.mkdir(parents=True, exist_ok=True)
+    (od / f"story-{version}.json").write_text(json.dumps(out, indent=1, default=str))
     print(json.dumps(out, indent=1, default=str))
     return out
 
@@ -624,11 +634,13 @@ def main():
     if a.kx2:
         kx2(a.flags, a.workers)
     if a.story:
-        story()
+        story(a.version)
     if a.run:
         for name in a.run.split(","):
             run_cfg(name, [x for x in a.arms.split(",") if x], a.every, a.workers)
-    if a.analyze:
+    if a.analyze and a.version == "a6":
+        analyze_a6()
+    elif a.analyze:
         analyze()
     if a.life:
         life(*a.life, version=a.version)
@@ -639,9 +651,6 @@ def main():
     if a.paths_analyze:
         paths_analyze()
 
-
-if __name__ == "__main__":
-    main()
 
 
 def episodes(rec, gap=13):
@@ -674,3 +683,83 @@ def episodes(rec, gap=13):
 def episodes_table(rows, arm="B"):
     xs = [episodes(r) for r in rows if r["g"] == arm]
     return {k: sum(x[k] for x in xs) for k in ("episodes", "left", "back", "open")}
+
+
+# ---- Amendment 6 (hybrid-a6-prereg.md): four versions -------------------------------------------------------------------------
+
+def four_way(vs):
+    """As three_way, over every version present (old, a4, a5, a6)."""
+    out = {}
+    arms = set.intersection(*[set(v) for v in vs.values()])
+    for arm in sorted(arms):
+        out[arm] = {}
+        for k in vs["a6"][arm]:
+            cls = {v: vs[v][arm][k]["class"] for v in vs}
+            same = len(set(cls.values())) == 1
+            out[arm][k] = {**cls, "label": f"holds across versions ({len(cls)})" if same else
+                           "version-dependent (" + ", ".join(f"{v} {c}" for v, c in cls.items()) + ")"}
+    return out
+
+
+def analyze_a6():
+    old, a4, a5, a6 = A.load(OLD_ROWS), A.load(A4_ROWS), A.load(cfg_file("a5")), A.load(cfg_file("a6"))
+    V = (("old", old), ("a4", a4), ("a5", a5), ("a6", a6))
+    have = [x for x in A.ARMS if any(r["g"] == x for r in a6)]
+    res = {"n_rows": len(a6), "arms_present": have}
+    if set(have) == set(A.ARMS):
+        res["h41_a6"] = A.analyze_rows(a6)
+    arms = [x for x in have if x != "B"]
+    if arms:
+        vs = {v: {arm: XO.vs_b(rows, arm) for arm in arms} for v, rows in V}
+        res["vsB"] = vs
+        res["stop_rule"] = four_way(vs)
+    res["arms"] = {v: {arm: A.arm_means(rows, arm, A.KEYS) for arm in have} for v, rows in V}
+    res["held_pooled"] = {v: {arm: A.pooled_held(rows, arm) for arm in have} for v, rows in V}
+    keys = ("together", "formed0", "liberty", "pleasure", "lived", "snon")
+    res["paired_a6_minus_a5"] = {arm: {k: paired_diff(a6, a5, arm, k) for k in keys} for arm in have}
+    res["paired_a6_minus_old"] = {arm: {k: paired_diff(a6, old, arm, k) for k in keys} for arm in have}
+    res["second_measure"] = {v: {arm: XO.second_measure(rows, arm) for arm in ("B", "P1", "trial", "prenup") if arm in have}
+                             for v, rows in (("a5", a5), ("a6", a6))}
+    res["lone"] = {arm: XO.lone_summary(a6, arm) for arm in have}
+    res["KO1"] = ko1(a6, "B")
+    res["KO1_P2"] = ko1(a6, "P2") if "P2" in have else None
+    res["outside_tail"] = {v: tail(rows) for v, rows in (("a5", a5), ("a6", a6))}
+    res["summary"] = {v: {arm: _strip(run_summary(rows, arm)) for arm in ("B", "P2", "trial") if arm in have} for v, rows in (("a5", a5), ("a6", a6))}
+    if cfg_file("a6_noexit").exists():
+        res["P_AUTH"] = p_auth(a6, A.load(cfg_file("a6_noexit")))
+        res["P_AUTH_a5"] = p_auth(a5, A.load(cfg_file("a5_noexit")))
+        res["P_AUTH_a4"] = {k: paired_diff(a4, A.load(XO.OUT / "lone.jsonl"), "B", k) for k in ("formed0", "together")} \
+            if (XO.OUT / "lone.jsonl").exists() else None
+    OUT6.mkdir(parents=True, exist_ok=True)
+    (OUT6 / "analysis.json").write_text(json.dumps(res, indent=1, default=str))
+    print(json.dumps({k: res.get(k) for k in ("n_rows", "arms_present", "KO1", "KO1_P2", "outside_tail", "second_measure", "P_AUTH",
+                                              "P_AUTH_a5", "P_AUTH_a4")}, indent=1, default=str))
+    for v in ("a5", "a6"):
+        for arm, s in res["summary"][v].items():
+            print(v, arm, json.dumps(s, default=str))
+    if "stop_rule" in res:
+        for arm, d in res["stop_rule"].items():
+            print(f"{arm:<7}", {k: v["label"] for k, v in d.items() if not v["label"].startswith("holds")})
+    if "h41_a6" in res:
+        for aid, v in res["h41_a6"]["aids"].items():
+            print(f"== {aid}: {v['verdict']}")
+        print("H41 a6:", res["h41_a6"]["H41"])
+    return res
+
+
+def _strip(s):
+    if s:
+        s.pop("pairs", None)
+    return s
+
+
+def tail(rows, arm="B"):
+    err = [e["err"] for r in rows if r["g"] == arm for e in r.get("paths", []) if "err" in e and e["why"] == "bar"]
+    if not err:
+        return None
+    return {"n": len(err), "mean": float(np.mean(err)), "mean_abs": float(np.mean(np.abs(err))), "worst": float(min(err)),
+            "below_-0.2": float(np.mean([x < -0.2 for x in err]))}
+
+
+if __name__ == "__main__":
+    main()

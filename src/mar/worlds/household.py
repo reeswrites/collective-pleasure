@@ -1266,7 +1266,15 @@ class WeeklyWorld:
         out = {"adaptive": self.policy[r] == "adaptive", "together_scale": ts, "friend_scale": self._friend_sat(r, b).scale(0)}
         if self.fx is not None and self.fx.satiety_expect == "world":
             out["together_next"] = self._together_next()
+        if self.fx is not None and getattr(self.fx, "friend_satiety", False):
+            out["friend_next"] = self._friend_next(r)
         return out
+
+    def _friend_next(self, r):
+        """The scale the world would give one more visit by r to a friend now (_lever_visit's arithmetic, read without changing
+        anything: the bond the visit would go to, its satiety; one variant per friend, so no switch cost). Hybrid prereg Amendment 6."""
+        sat = self._friend_sat(r, self._pick_bond(r))
+        return sat.scale(0) * (1.0 - (self.lv.switch_cost if sat.last is not None and sat.last != 0 else 0.0))
 
     def _together_next(self):
         """The scale the world would give one more together session this week (Satiety.use's arithmetic, read without changing
@@ -2059,6 +2067,8 @@ class WeeklyWorld:
                 if self.fx.pairing is not None:
                     self.left_at[r] = w
             me["in"], me["weeks_out"], self.pending[r] = False, 0, set()
+            if self.fx is not None and getattr(self.fx, "fresh_return", False) and getattr(self, "ret_value", None):
+                self.ret_value = {x: v for x, v in self.ret_value.items() if x != r}   # Amendment 6: no return on an earlier spell's value
         elif a == "return":
             me["in"], me["months_in"] = True, 0
         for s in sanc:

@@ -312,13 +312,16 @@ def settle_credit(s, step):
 def expected_scales(o):
     """-> (friend, together): the per-session scales the agent expects. The old rule (FixConfig.satiety_expect "persona"): only an
     'adaptive' persona expects satiety (ADR 0016). "world" (hybrid prereg Amendment 2): one more session of time together is valued at
-    the scale the world would give it (the observation's together_next); seeing a friend keeps the persona rule."""
+    the scale the world would give it (the observation's together_next); seeing a friend keeps the persona rule unless
+    FixConfig.friend_satiety is on (hybrid prereg Amendment 6: one more visit at the observation's friend_next)."""
     lev = o.get("lever")
     adaptive = bool(lev and lev["adaptive"])
     ts = lev["together_scale"] if adaptive else 1.0
     fs = lev["friend_scale"] if adaptive else 1.0
     if lev and "together_next" in lev:
         ts = lev["together_next"]
+    if lev and "friend_next" in lev:          # hybrid prereg Amendment 6 (FixConfig.friend_satiety): a visit at the world's satiety
+        fs = lev["friend_next"]
     return fs, ts
 
 
