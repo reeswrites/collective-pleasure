@@ -239,3 +239,8 @@ Three paid framings (capability v2, propensity, win; about $10 in all) reported 
 - `P-AUTH held on formation again (+0.050 [0.000, +0.100], DESCRIPTIVE) but not on weeks together (+0.053 [+0.021, +0.094]): the exit option makes pairs spend more time together.`
 - `F2 not measured as stated: "fewer immediate re-entries" had no direct measure in the rows; only exits per run (0.75 -> 0.67) speak to it.`
 
+## 2026-11-15: Where LAT's non-offsettable suffering comes from (docs/results/lat-suffering.md)
+
+- `The model's LAT suffering has nothing to do with time together: under A6 all of LAT's extra non-offsettable suffering (+0.00079 [+0.00016, +0.00160] per member-week) is denied money during job loss while apart with no shared pot; connection is never denied. The author's question about losing time together had no hook in it.`
+- `Concentrated in 6 of 120 pairings: the interval is clear of 0 but rests on when 6 job losses land.`
+- `All-aids attribution stopped at 32 of 120 pairings to save time (all money there too).`
