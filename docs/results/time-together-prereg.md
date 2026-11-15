@@ -116,4 +116,4 @@ One persona sample (38 personas, 120 pairings, one seed); scripted agents; every
 
 ## Amendments
 
-(none yet)
+**Amendment 1, 2026-11-15, before any TT run (code at 6464472).** (a) KB1's "at `together_bg=1/3` the connection level equals the flag-off world's exactly" holds at full capacity only: a session's connection gain is scaled by capacity and `conn_cohabit` is not. The unit check tests it at capacity 1. Below full capacity, background time at 1/3 gives slightly less connection than the old `conn_cohabit`. No number changes. (b) Task 1's attribution finished before any TT run ([lat-suffering.md](lat-suffering.md)): A6's extra LAT suffering is denied money during job loss with no shared pot, never connection. So TT5's direction stays unpredicted; I now expect TT to change it only through who chooses LAT, since nothing here touches the pot. (c) The sweeps run on every second pairing (60 pairings, B and LAT arms) to save time; they stay descriptive. The instrumented LAT-suffering rerun under TT covers B and LAT only.
