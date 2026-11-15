@@ -61,7 +61,8 @@ TT_SWEEPS = {"tt_bg033": {**TT, "together_bg": 1.0 / 3.0}, "tt_bg22": {**TT, "to
              "tt_tr017": {**TT, "lat_travel": 0.17}, "tt_tr067": {**TT, "lat_travel": 0.67},
              "tt_keep0": {**TT, "lat_bg_keep": 0.0}, "tt_keep04": {**TT, "lat_bg_keep": 0.4},
              "tt_nosubst": {**TT, "together_subst": False}}
-CFGS.update({"tt": TT, **TT_SWEEPS})
+TT_REACH = {"tt_reach0": {**TT, "together_bg": 0.0}, "tt_reach3": {**TT, "together_bg": 3.0}}   # the prereg's free reach check
+CFGS.update({"tt": TT, **TT_SWEEPS, **TT_REACH})
 OUTTT = ROOT / "runs" / "time-together"
 SWEEPS = ("half4", "half26", "line0", "line05", "slope", "both", "grow0", "grow02", "grow08", "solo", "bias02", "bias05")
 XO.VERSIONS.update(CFGS)
