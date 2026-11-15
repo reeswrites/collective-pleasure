@@ -303,6 +303,29 @@ class FixConfig:
     solo_cost: float = 1.5
     h41_trial: int = 0
     h41_lat: bool = False
+    # Time together in two kinds (docs/results/time-together-prereg.md; evidence docs/notes/time-together-research.md). Defaults are the
+    # old world, bit for bit. together_bg: background co-presence from sharing a home, in chosen-session equivalents a week (0 = off,
+    # living with the partner adds conn_cohabit as before); when on it replaces conn_cohabit for living with the partner and adds
+    # together_event x together_bg to weekly pleasure (1.1 = 33 shared waking hours, ATUS, x 0.1 ASSUMED value of a background hour / a
+    # 3-hour evening). lat_bg_keep: under living apart together, the share of background time kept in a week with a chosen session
+    # (ASSUMED 0.2; acts only when together_bg > 0). lat_travel: extra time units each member pays per chosen session under living apart
+    # together (ASSUMED 0.33 = 30 minutes each way, hosts taking turns, against a 3-hour, 2-unit session). together_subst: each member's
+    # pleasure from time together (chosen and background) scaled by s / SUBST_MEAN, s = togetherness / (togetherness + other_connections)
+    # from the persona's own weights (ASSUMED form).
+    together_bg: float = 0.0
+    lat_bg_keep: float = 0.2
+    lat_travel: float = 0.0
+    together_subst: bool = False
+
+
+SUBST_MEAN = 0.50      # mean of togetherness / (togetherness + other_connections) over H41's 38 personas (0.499; persona file, not outcomes)
+
+
+def subst_factor(persona):
+    """Time-together prereg, together_subst: the persona's partner share of its social weight over the persona-set mean."""
+    w = persona.weights
+    t, o = max(0.0, float(w["togetherness"])), max(0.0, float(w["other_connections"]))
+    return (t / (t + o) if t + o > 0 else SUBST_MEAN) / SUBST_MEAN
 
 
 ACTIVE_FIXES = None      # module default, set by `use_fixes`; WeeklyWorld(fixes=None) reads it
@@ -472,6 +495,7 @@ class Hedonic:
         self.nonoff_run = 0                         # consecutive weeks with S_non > 0
         self.max_nonoff_run = 0
         self.parts_on, self.parts_acc, self.xparts = PARTS, [], None     # observer layer only; never read by the model
+        self.tog_k = 1.0                            # time-together prereg: substitution factor on the together event (1 = off)
 
     def __deepcopy__(self, memo):
         """The default deep copy, except that a copy starts with no recorded parts (observer layer: a rollout's parts are its own)."""
@@ -531,7 +555,7 @@ class Hedonic:
         sa = {k: c.unmet_aspiration * self.asp_w[k] * (1 - sat[k]) for k in sat}
         pre = {k: (c.pre_onset_share * inten if on and self.run[k] < c.onset_weeks else 0.0) for k, (on, inten) in active.items()}
         non = {k: (inten if on and self.run[k] >= c.onset_weeks else 0.0) for k, (on, inten) in active.items()}
-        return {"p_need": pn, "p_asp": pa, "together_event": c.together_event * together_sessions, "glow": glow_used,
+        return {"p_need": pn, "p_asp": pa, "together_event": c.together_event * together_sessions * self.tog_k, "glow": glow_used,
                 "extra": extra_pleasure, "x": self.xparts, "clip_p": pleasure - raw,
                 "s_need": sn, "s_asp": sa, "friction": friction, "pre_onset": pre, "clip_off": s_off - s_off_raw,
                 "s_non": non, "clip_non": s_non - s_non_raw, "pleasure": pleasure, "s_off": s_off, "s_non_total": s_non}
@@ -564,7 +588,7 @@ class Hedonic:
         p_asp = sum(self.asp_w[k] * sat[k] for k in sat)
         s_asp = c.unmet_aspiration * sum(self.asp_w[k] * (1 - sat[k]) for k in sat)
         self.last_autonomy = aspiration_values.get("autonomy", 0.0)      # read only by agent values v2 (a record; the model never reads it)
-        raw = c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * together_sessions + self.glow + extra_pleasure
+        raw = c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * together_sessions * self.tog_k + self.glow + extra_pleasure
         pleasure = _clip(raw) if self.knee is None else saturate(raw, self.knee)
         glow_used = self.glow
         self.glow *= c.glow_decay

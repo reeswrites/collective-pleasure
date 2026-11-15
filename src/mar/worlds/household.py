@@ -1111,6 +1111,9 @@ class WeeklyWorld:
         if self.fx is not None and self.fx.pleasure_scale == "sat":     # ADR 0019: the saturating pleasure scale
             for h in self.hed.values():
                 h.knee = self.fx.sat_knee
+        if self.fx is not None and getattr(self.fx, "together_subst", False):     # time-together prereg: substitution factor
+            for r in "AB":
+                self.hed[r].tog_k = HD.subst_factor(self.personas[r])
         self.refused_until = {"A": -1, "B": -1}     # decency (fix flag `decency`): the actor's requests were refused until this week
         self.mech = any(c.aim in MECH_AIMS for c in self.gate.cards)
         self.commits, self.gifts = [], {"partner": 0, "friend": 0}
@@ -1223,7 +1226,7 @@ class WeeklyWorld:
     def _can_together(self):
         a, b = self.p["A"], self.p["B"]
         return (self.can_meet() and not a["ill"] and not b["ill"] and not self.moved
-                and all(self.units[r] >= V2_COST["together"] for r in "AB"))
+                and all(self.units[r] >= self.together_cost() for r in "AB"))
 
     def _lever_start(self, w):
         lv = self.lv
@@ -1251,8 +1254,9 @@ class WeeklyWorld:
                 self.lstats["adhoc"] += 1
 
     def _start_session(self, tag):
+        cost = self.together_cost()
         for r in "AB":
-            self.units[r] -= V2_COST["together"]
+            self.units[r] -= cost
             self.wk[r]["together"] += 1
         self._lever_session(tag)
         if self.observer is not None:
@@ -1411,6 +1415,26 @@ class WeeklyWorld:
     def lat_on(self):
         """Living apart together (H41, FixConfig.h41_lat): both out, and the pair chose to keep time together without a shared home."""
         return bool(getattr(self, "lat", False)) and not self.p["A"]["in"] and not self.p["B"]["in"]
+
+    def together_cost(self):
+        """Time units one chosen together session costs each member: 2, plus FixConfig.lat_travel under living apart together
+        (time-together prereg). The plain int 2 when there is no travel, so old runs keep integer units bit for bit."""
+        extra = getattr(self.fx, "lat_travel", 0.0) if (self.fx is not None and self.lat_on()) else 0.0
+        return V2_COST["together"] + extra if extra else V2_COST["together"]
+
+    def bg_on(self):
+        return self.fx is not None and getattr(self.fx, "together_bg", 0.0) > 0
+
+    def bg_time(self, r):
+        """Background time this week for member r, in chosen-session equivalents (time-together prereg): together_bg when both live in
+        the household; lat_bg_keep x together_bg under living apart together in a week with a chosen session; else 0 (0 when off)."""
+        if not self.bg_on():
+            return 0.0
+        if self.p["A"]["in"] and self.p["B"]["in"]:
+            return self.fx.together_bg
+        if self.lat_on() and self.wk[r]["together"] > 0:
+            return self.fx.together_bg * self.fx.lat_bg_keep
+        return 0.0
 
     def can_meet(self):
         """Partners can spend time together: both in the household, or living apart together."""
@@ -1916,7 +1940,8 @@ class WeeklyWorld:
         if a == "spend_self":
             return me["money"] >= SELF_STEP
         if a == "together":
-            return self.can_meet() and self.units[self.other(r)] >= V2_COST["together"]
+            return (self.can_meet() and self.units[self.other(r)] >= self.together_cost()
+                    and self.units[r] >= self.together_cost())
         if a == "request":
             return me["in"] and o["in"] and kind in REQUEST_KINDS_V3
         if a == "veto":
@@ -1954,7 +1979,7 @@ class WeeklyWorld:
             ob["lat"] = True                     # H41 living apart together: time together without a shared home
         if self.can_meet():
             oo = {"hed": self.hed[oth]}
-            ob["partner_accepts"] = self.agents[oth].together_utility(oo) >= 0.02 and self.units[oth] >= V2_COST["together"]
+            ob["partner_accepts"] = self.agents[oth].together_utility(oo) >= 0.02 and self.units[oth] >= self.together_cost()
         if self.fx:
             self._fix_obs(r, w, ob)
             if self.fx.agent_values in ("v2", "v2b", "hybrid"):
@@ -1980,7 +2005,7 @@ class WeeklyWorld:
     def _apply(self, r, cand, w, sanc):
         a, me, oth = cand["a"], self.p[r], self.other(r)
         o, wk = self.p[oth], self.wk[r]
-        self.units[r] -= V2_COST.get(a, 0)
+        self.units[r] -= self.together_cost() if a == "together" else V2_COST.get(a, 0)
         if a == "work":
             me["money"] += V2_INCOME[r]; wk["income"] += V2_INCOME[r]; wk["works"] += 1
         elif a == "rest":
@@ -2001,7 +2026,7 @@ class WeeklyWorld:
             if self.lv and (self.lv.adapt or self.lv.network):
                 self._lever_visit(r)
         elif a == "together":
-            self.units[oth] -= V2_COST["together"]
+            self.units[oth] -= self.together_cost()
             wk["together"] += 1; self.wk[oth]["together"] += 1
             if self.lv:
                 self._lever_session("adhoc_agent")
@@ -2269,9 +2294,12 @@ class WeeklyWorld:
                     tog_in, fr_in = eff_t, sum(self.lw["fr"][r])
                 if lvl.network and self._down("H", 0, w):
                     cpen += lvl.partner_rupture_conn
+            bg = self.bg_time(r)                 # time-together prereg: background time (0.0 when off; then tog_in is unchanged)
+            if bg:
+                tog_in = tog_in + bg
             h.tick(rest_actions=wk["rests"], work_blocks=wk["works"], friend_visits=fr_in, together=tog_in,
                    friend_initiated=wk["friend_initiated"] + (1 if self.with_friend(r) else 0),
-                   cohabiting=(me["in"] and oth["in"]) or self.with_friend(r), assets=assets,
+                   cohabiting=((me["in"] and oth["in"]) and not self.bg_on()) or self.with_friend(r), assets=assets,
                    money=me["money"], extra_rest_drain=ill, extra_security_drain=wk["sec_hit"],
                    connection_penalty=cpen)
             pr = self.probe(r, w)

@@ -54,6 +54,15 @@ CFGS = {"a5": A5, "a5_noexit": {**A5, "hybrid_exit": False},
 A6 = {**A5, "friend_satiety": True, "fresh_return": True}
 CFGS.update({"a6": A6, "a6_noexit": {**A6, "hybrid_exit": False}})
 OUT6 = ROOT / "runs" / "hybrid-a6"
+# Time together in two kinds (docs/results/time-together-prereg.md): A6 plus background time, LAT travel, substitution. Rows in
+# runs/time-together/. Sweeps one at a time from TT (B and LAT arms).
+TT = {**A6, "together_bg": 1.1, "lat_bg_keep": 0.2, "lat_travel": 0.33, "together_subst": True}
+TT_SWEEPS = {"tt_bg033": {**TT, "together_bg": 1.0 / 3.0}, "tt_bg22": {**TT, "together_bg": 2.2},
+             "tt_tr017": {**TT, "lat_travel": 0.17}, "tt_tr067": {**TT, "lat_travel": 0.67},
+             "tt_keep0": {**TT, "lat_bg_keep": 0.0}, "tt_keep04": {**TT, "lat_bg_keep": 0.4},
+             "tt_nosubst": {**TT, "together_subst": False}}
+CFGS.update({"tt": TT, **TT_SWEEPS})
+OUTTT = ROOT / "runs" / "time-together"
 SWEEPS = ("half4", "half26", "line0", "line05", "slope", "both", "grow0", "grow02", "grow08", "solo", "bias02", "bias05")
 XO.VERSIONS.update(CFGS)
 OLD_ROWS = ROOT / "runs" / "h41-choice-aids" / "rows.jsonl"
@@ -232,7 +241,8 @@ def paths_analyze():
 # ---- slice (c): KX2 with a pure exit cost --------------------------------------------------------------------------------------
 
 KX2_FLAGS = {"a4": {"hybrid_lone": True}, "a5": {k: v for k, v in A5.items() if k != "hybrid_exit"},
-             "a6": {k: v for k, v in A6.items() if k != "hybrid_exit"}}
+             "a6": {k: v for k, v in A6.items() if k != "hybrid_exit"},
+             "tt": {k: v for k, v in TT.items() if k != "hybrid_exit"}}
 
 
 def _kx2_one(args):
@@ -293,7 +303,7 @@ def kx2(flags="a4", workers=WORKERS, n_pairs=12, seed=900):
            "clauses": {"i": c1, "ii": c2, "iii": c3},
            "KX2": "PASS" if (c1 and c2 and c3) else ("FAIL" if c3 else "CANNOT FAIL (no in-future exits)"),
            "rows": recs, "secs": round(time.time() - t0)}
-    od = OUT6 if flags == "a6" else OUT
+    od = OUT6 if flags == "a6" else OUTTT if flags == "tt" else OUT
     od.mkdir(parents=True, exist_ok=True)
     (od / f"kx2-{flags}.json").write_text(json.dumps(out, indent=1, default=str))
     print(json.dumps({k: v for k, v in out.items() if k != "rows"}, indent=1, default=str))
@@ -365,6 +375,8 @@ def cfg_task(args):
 
 
 def cfg_file(name):
+    if name.startswith("tt"):
+        return OUTTT / ("rows.jsonl" if name == "tt" else f"{name}.jsonl")
     if name.startswith("a6"):
         return OUT6 / ("rows.jsonl" if name == "a6" else f"{name}.jsonl")
     return OUT / ("rows.jsonl" if name == "a5" else f"{name}.jsonl")

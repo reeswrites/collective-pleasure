@@ -50,6 +50,10 @@ def snapshot(world, r, w):
          "settle": w % H.MONTH_WEEKS == H.MONTH_WEEKS - 1, "need": world.need_month(), "funded": world.funded,
          "bills_hurt": bool(fx.bills_hurt), "fx": fx, "lv": lv,
          "autonomy": getattr(h, "last_autonomy", 1.0)}
+    if world.bg_on():                    # time-together prereg: background time (full when both in; kept share under LAT with a session)
+        s["bg"] = (fx.together_bg if (me["in"] and o["in"]) else fx.together_bg * fx.lat_bg_keep if world.lat_on() else 0.0)
+        s["bg_lat"] = not (me["in"] and o["in"])
+        s["cohab"] = with_f
     if fx.valued_money:
         s["v_s"] = min(1.0, float(world.personas[r].weights["security"]) / fx.w_ref)
     # terms this week's close reads that no action here changes
@@ -184,8 +188,12 @@ def _week_net(s, parts=None):
     h, c, cap, L, fx = s["h"], s["h"].cfg, s["cap"], s["L"], s["fx"]
     rest = _c01(L["rest"] + c.rest_base + c.rest_action * cap * s["rests"] - c.rest_decay - c.work_fatigue * s["works"]
                 - (0.3 if s["ill"] else 0.0))
+    bg = s.get("bg", 0.0)                 # time-together prereg: background time (under LAT only in a week with a chosen session)
+    if bg and s.get("bg_lat") and s["together"] <= 0:
+        bg = 0.0
+    eff_tog = s["eff_tog"] + bg if bg else s["eff_tog"]
     conn = _c01(L["connection"] + (c.conn_cohabit if s["cohab"] else 0.0) - c.conn_decay - s["conn_pen"]
-                + cap * (c.conn_friend * s["eff_fr"] + c.conn_together * s["eff_tog"] + c.conn_friend_initiated * s["fi"]))
+                + cap * (c.conn_friend * s["eff_fr"] + c.conn_together * eff_tog + c.conn_friend_initiated * s["fi"]))
     m, pool = s["money"] - s["out_cost"], s["pool"]
     if m < 0:
         d = min(pool, -m + 2)
@@ -261,7 +269,7 @@ def _week_net(s, parts=None):
     if "n_sess" in s:
         pay, suf = _strands(s)
         extra += pay; fric += suf
-    raw = c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * s["eff_tog"] + extra
+    raw = c.w_need * p_need + c.w_aspiration * p_asp + c.together_event * eff_tog * getattr(h, "tog_k", 1.0) + extra
     s_off, s_non = s_need + s_asp + fric, 0.0
     run = h.run
     dmin, dsal = c.denied_below, c.denied_min_salience

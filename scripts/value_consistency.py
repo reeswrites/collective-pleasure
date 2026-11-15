@@ -517,6 +517,8 @@ def main():
                     "Amendment 4's flags plus the tally, the growing exit cost and the lived outside option; runs/value-consistency-hybrid-world-a5/")
     ap.add_argument("--a6", action="store_true", help="hybrid prereg Amendment 6 (hybrid-a6-prereg.md): with --hybrid --world, "
                     "Amendment 5's flags plus friend_satiety and fresh_return; runs/value-consistency-hybrid-world-a6/")
+    ap.add_argument("--tt", action="store_true", help="time-together prereg (time-together-prereg.md): with --hybrid --world, A6's "
+                    "flags plus background time, LAT travel and substitution; runs/value-consistency-hybrid-world-tt/")
     ap.add_argument("--gaps", action="store_true", help="carry-over terms: per action, per group, the k-week effect minus the 1-week effect")
     ap.add_argument("--passtest", action="store_true")
     ap.add_argument("--reach", action="store_true")
@@ -549,6 +551,12 @@ def main():
                                                        "hybrid_exit": True, "hybrid_tally": "level", "tally_half": 13.0, "tally_line": 0.02,
                                                        "exit_grow": 0.04, "hybrid_outside": "lived", "friend_satiety": True,
                                                        "fresh_return": True}
+    if a.tt and a.hybrid and a.world:              # time together in two kinds, on top of Amendment 6
+        OUT, extra = OUT.parent / (OUT.name + "-tt"), {**extra, "hybrid_w": "persona", "hybrid_readings": "world", "hybrid_lone": True,
+                                                       "hybrid_exit": True, "hybrid_tally": "level", "tally_half": 13.0, "tally_line": 0.02,
+                                                       "exit_grow": 0.04, "hybrid_outside": "lived", "friend_satiety": True,
+                                                       "fresh_return": True, "together_bg": 1.1, "lat_bg_keep": 0.2, "lat_travel": 0.33,
+                                                       "together_subst": True}
     if a.hybrid:
         if a.run:
             collect(HSAMPLE, OUT / "rows.jsonl", a.workers, extra)
