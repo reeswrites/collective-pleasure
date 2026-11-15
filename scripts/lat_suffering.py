@@ -60,8 +60,10 @@ def _instrument():
                 cfg = h.cfg
                 low = [n for n in NEEDS if h.level[n] < cfg.denied_below and h.sal[n] >= cfg.denied_min_salience]
                 rec[r] = {"mode": pre[r], "lv": {n: round(h.level[n], 5) for n in NEEDS}, "low": low,
-                          "run": dict(h.run), "s_non": row[r]["s_non"], "cond": row[r]["conditions"],
-                          "money": float(self.p[r]["money"]), "share": float(self.share(r))}
+                          "run": dict(h.run), "s_non": row[r]["s_non"], "pl": row[r]["pleasure"], "cond": row[r]["conditions"],
+                          "money": float(self.p[r]["money"]), "share": float(self.share(r)),
+                          "works": self.wk[r]["works"], "jobless": self.p[r]["jobless"], "ill": self.p[r]["ill"],
+                          "together": self.wk[r]["together"]}
             _LOG.append(rec)
         return out
     wrapped._lat_wrapped = True
@@ -190,6 +192,59 @@ def analyze(version="a6"):
             "lone": {"member_weeks": lone_cases["member_weeks"], "share_of_weeks": lone_cases["member_weeks"] / n_mw,
                      "snon": lone_cases["snon"] * scale, "runs": lone_cases["runs"]},
         }
+    # where the denied weeks sit in a life: after the member lived in a household (an exit), or never in one; the money held then;
+    # and, paired by pairing, how much of each arm's total over B comes from each mode
+    detail = {}
+    for arm in sorted({r["arm"] for r in rows}):
+        rr = [r for r in rows if r["arm"] == arm]
+        d = {"after_household": 0.0, "never_in_household": 0.0, "money_held": [], "share_held": [], "runs": defaultdict(float),
+             "lat_ever_runs": 0, "by_run_mode": defaultdict(lambda: defaultdict(float))}
+        for rec in rr:
+            key = (rec["a"], rec["b"])
+            lat_ever = any(wk[r]["mode"].startswith("lat") for wk in rec["weeks"] for r in "AB")
+            d["lat_ever_runs"] += lat_ever
+            seen = {"A": False, "B": False}
+            n = len(rec["weeks"]) * 2
+            for wk in rec["weeks"]:
+                for r in "AB":
+                    m = wk[r]
+                    if m["mode"] in ("household", "alone_in_household"):
+                        seen[r] = True
+                    add = {k: rec["intens"][k] for k, on in m["cond"].items() if on and m["run"][k] >= rec["onset"]}
+                    t = min(1.0, sum(add.values()))
+                    if not t:
+                        continue
+                    d["after_household" if seen[r] else "never_in_household"] += t / n
+                    d["money_held"].append(m["money"])
+                    d["share_held"].append(m["share"])
+                    d["runs"][key] += t / n
+                    d["by_run_mode"][key][m["mode"]] += t / n
+        nr = len(rr)
+        detail[arm] = {"after_household": d["after_household"] / nr, "never_in_household": d["never_in_household"] / nr,
+                       "money_held_mean": float(np.mean(d["money_held"])) if d["money_held"] else None,
+                       "share_held_mean": float(np.mean(d["share_held"])) if d["share_held"] else None,
+                       "lat_ever_runs": d["lat_ever_runs"], "runs": {f"{a}|{b}": v for (a, b), v in d["runs"].items()},
+                       "by_run_mode": {f"{a}|{b}": dict(v) for (a, b), v in d["by_run_mode"].items()}}
+    res["detail"] = detail
+    if "B" in detail:
+        for arm in detail:
+            if arm == "B":
+                continue
+            keys = {(r["a"], r["b"]) for r in rows if r["arm"] == arm} & {(r["a"], r["b"]) for r in rows if r["arm"] == "B"}
+            diff = defaultdict(float)
+            for a, b in keys:
+                k = f"{a}|{b}"
+                for mode, v in detail[arm]["by_run_mode"].get(k, {}).items():
+                    diff[mode] += v / len(keys)
+                for mode, v in detail["B"]["by_run_mode"].get(k, {}).items():
+                    diff[mode] -= v / len(keys)
+            per = [detail[arm]["runs"].get(f"{a}|{b}", 0.0) - detail["B"]["runs"].get(f"{a}|{b}", 0.0) for a, b in sorted(keys)]
+            rng = np.random.default_rng(0)
+            per = np.array(per)
+            bs = [float(np.mean(per[rng.integers(0, len(per), len(per))])) for _ in range(2000)]
+            res.setdefault("vs_B", {})[arm] = {"n": len(keys), "diff_by_mode": dict(diff), "diff": float(per.mean()),
+                                               "ci": [float(np.percentile(bs, 2.5)), float(np.percentile(bs, 97.5))],
+                                               "pairings_up": int((per > 0).sum()), "pairings_down": int((per < 0).sum())}
     # the check: per-run snon as A.record computes it, against the A6 rows
     a6 = {(r["g"], r["a"], r["b"]): r["snon"] for r in A.load(ROOT / "runs" / "hybrid-a6" / "rows.jsonl")}
     for rec in rows:
@@ -218,6 +273,10 @@ def show(res):
         print("  low-need weeks:", d["low_need_weeks"])
         print("  personas:", {p: (round(v['snon'], 5), round(v['per_week'], 4)) for p, v in list(d["by_persona"].items())[:12]})
         print("  lone:", d["lone"])
+        dd = res["detail"][arm]
+        print("  detail:", {k: v for k, v in dd.items() if k not in ("runs", "by_run_mode")})
+        if arm in res.get("vs_B", {}):
+            print("  vs B (per member-week, paired by pairing):", res["vs_B"][arm])
 
 
 def main():
