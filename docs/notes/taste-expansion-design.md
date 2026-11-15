@@ -1,6 +1,6 @@
 # Taste expansion: how the taste menu could enter the model (draft)
 
-Status: DRAFT by Claude, 2026-11-15, for the author to confirm (read-backs rb-2026-11-15-taste in experiments/readbacks.jsonl). Nothing here is built. Quotes are the author's, verbatim, from the Notion page "Exploration Mapping: A taste expansion application framework" (2026-08-25, labelled author-written in docs/notes/persona-generator-design.md). Everything not in quotation marks is Claude's drafting, not the author's words. Updated 2026-11-15: the open questions are replaced by DRAFT proposed conclusions, with research evidence and more author quotes from the Notion pages labelled in the last section.
+Status: DRAFT by Claude, 2026-11-15, for the author to confirm (read-backs rb-2026-11-15-taste in experiments/readbacks.jsonl). Nothing here is built. Quotes are the author's, verbatim, from the Notion page "Exploration Mapping: A taste expansion application framework" (2026-08-25, labelled author-written in docs/notes/persona-generator-design.md). Everything not in quotation marks is Claude's drafting, not the author's words. Updated 2026-11-15: the open questions are replaced by DRAFT proposed conclusions, grounded first in the author's Hedonic Expansionism doc (AI-assisted, author confirmed 2026-11-15; paraphrased), then in research, then in Notion pages labelled in the last section.
 
 ## Why
 
@@ -37,60 +37,98 @@ The author's floor / menu / exit message (experiments/questions.jsonl, 2026-11-1
 
 The author asked to settle the four open questions, with no never-lists, but with some kinds of taste harder to move than others ("sensory stuff maybe or acutla hardiwring", chat, 2026-11-15). Each conclusion below is a DRAFT proposal by Claude, not the author's view until confirmed. Every new number is ASSUMED, to be set before runs and swept.
 
+**Sources, in order of weight.** First, the author's Hedonic Expansionism doc ("Hedonic Expansionism: Thesis, Defense, Open Problems", 2026-11-15, https://claude.ai/artifact/DAjLTLBkdCZGegukBQrbEM). Label: the author's doc (AI-assisted, author confirmed 2026-11-15). Its ideas are cited as the author's doc and paraphrased below; its wording is never quoted as the author's words, and it is not copied into the repo. Second, the research literature. Third, the author's Notion notes (last section).
+
 Evidence strength uses three words. **Strong**: many studies agree, including reviews or meta-analyses. **Moderate**: several studies, some mixed. **Weak**: few studies, anecdote, or a long step from the lab to this model.
 
-### 1. Can a try hurt? Yes, but rarely, and mostly for sensory things.
+### 1. Can a try hurt? Yes. A try needs a small dose and a safe person, or it teaches nothing or teaches dislike.
 
-**Conclusion (DRAFT).** Most failed tries are just a dull hour. A few leave a dislike that makes the next try less likely to land. This happens most with food and bodily things, and when the try is too far from what the person already likes.
+**Conclusion (DRAFT).** Most failed tries are just a dull hour. But a try only teaches when the dose is manageable and the person feels safe enough to stay with it. A try made under threat (unmet basic needs, distress, pressure) teaches nothing and can leave a dislike. A few things are gates, not tastes: disgust and closeness do not give way to tries at all. And some things that feel bad are bad: real harm is not an acquired taste.
 
-**Evidence.**
-- One bad pairing can make a lasting aversion. Garcia and Koelling (1966) showed one-trial taste aversion in rats. Bernstein (1978) found children on chemotherapy turned against a new ice cream after one pairing. Surveys of adults (Logue and colleagues, 1981) find many people hold an aversion from a single illness, often for years, even when they know the food did not cause it. **Strong for food and illness. Weak for other domains:** there is little direct evidence that one bad film or album sets up a lasting aversion.
-- Too much novelty is unpleasant. Berlyne's inverted U says liking rises with novelty and complexity up to a point, then falls. **Moderate:** the shape often shows up, but where the peak sits varies by person and by how well they can make sense of the thing (Silvia, 2005).
+**From the author's Hedonic Expansionism doc (paraphrased).** Surprise updates taste the way exposure updates fear: a prediction of dislike meets a better outcome, and the gap teaches. That needs a manageable dose, enough safety and repetition. Exploration switches on only when threat is quiet, and threat shuts taste learning down. Disgust works as a gate that decides what gets close; it relaxes for valued people, opens rather than flips into liking, fades slowly and can return under stress. Benign masochism needs the benign part; liking real danger is misjudging it as safe. Expansion under pressure does not count, and "I don't like this" stays final in the moment.
 
-**For the model.** A try has three outcomes: it joins the menu, nothing happens, or it leaves an aversion. An aversion lowers the join chance for that source on later tries. It is not a ban. Aversion odds are higher for sensory sources and for tries far from the current menu. ASSUMED: aversion chance per failed try 0.05 for sensory sources and 0.01 for others; an aversion halves later join chance.
+**Literature.**
+- One bad pairing can make a lasting aversion: one-trial taste aversion (Garcia and Koelling, 1966); children on chemotherapy turned against a new ice cream after one pairing (Bernstein, 1978); adults report aversions from single illnesses that last for years (Logue and colleagues, 1981). **Strong for food and illness. Weak for other domains.**
+- Too much novelty is unpleasant: Berlyne's inverted U, with the peak set partly by how well a person can make sense of the thing (Silvia, 2005). **Moderate.**
+- Exploration needs a secure base (attachment work, Mikulincer and Shaver, 2003). **Moderate to strong** for the general link; **weak** for taste learning in particular.
 
-### 2. Does depth come from understanding as well as returning? Yes. Returning saturates; understanding raises the ceiling.
+**For the model.** A try has three outcomes: it joins the menu, nothing happens, or it leaves an aversion. An aversion lowers later join chance; it is not a ban. Join chance is scaled by the agent's security that week, so an agent below the floor (unmet needs, distress) learns almost nothing from a try and risks more aversion. A try can be dropped mid-way at no extra cost (stopping is final in the moment). Gates are handled in conclusion 4. ASSUMED: aversion chance per failed try 0.05 for reversal sources (bitter, spicy, scary) and 0.01 for others, doubled under distress; join chance times the security reading (0 to 1); an aversion halves later join chance.
 
-**Conclusion (DRAFT).** Depth has two sources. Returning to a thing raises liking up to a point and then wears off. Understanding it (noticing more, knowing what to listen or look for) raises how high liking can go, and pushes back the point where it wears off. Understanding matters most for complex things.
+### 2. Does depth come from understanding as well as returning? Yes. Attention is the mechanism, and depth counts as expansion.
 
-**Evidence.**
-- Mere exposure is real but modest. Zajonc (1968) found repeated exposure raises liking. Bornstein's meta-analysis (1989, about 200 experiments) found a reliable but modest effect that peaks after a number of exposures and then declines, and is weaker for complex stimuli. **Strong that it exists; moderate on its shape.**
-- Food needs several tries. Children often need around 8 to 15 tastes before a new food is accepted (Birch and Marlin, 1982; Wardle and colleagues, 2003). **Strong for children; moderate for adults.**
-- Music follows an inverted U. With focused listening, liking rises then falls with repeats (Szpunar, Schellenberg and Pliner, 2004; review by Chmiel and Schubert, 2017). **Moderate.**
-- Understanding raises interest. Silvia's appraisal work finds interest depends on novelty and on feeling able to understand; giving people a way into hard art raises their interest in it (Silvia, 2005, 2008). Experts perceive more differences in wine and art (Leder and colleagues' model of aesthetic experience, 2004). **Moderate for interest and appreciation; weak for plain liking**, since information sometimes raises understanding without raising liking.
+**Conclusion (DRAFT).** Depth has three routes: returning, understanding (knowledge and vocabulary) and making. All three work by giving attention more to notice. Returning alone raises liking up to a point and then wears off. Understanding and making raise how high liking can go and slow the wear-off, most for complex things. Finer liking of a familiar thing is expansion in its own right, not a lesser kind.
 
-**For the model.** Each source in a menu carries two values: familiarity (from returns) and understanding (from effort spent learning about it). Liking from returns follows an inverted U on familiarity. Understanding lifts the peak and moves it later, more for complex sources. Understanding costs time, like a try. This fits the existing habituation: habituation is the falling side of the curve, understanding is how a person climbs past it. ASSUMED: peak at 10 returns for simple sources and 20 for complex ones; understanding can raise the peak by up to 50%.
+**From the author's Hedonic Expansionism doc (paraphrased).** Attention is the mechanism and pleasure the value: noticing more parts of an experience gives more to like (a second viewing moves from plot to craft). Knowledge and framing change how a thing tastes; naming parts sharpens discrimination; making a thing deepens how you receive it, and this is where skill slope comes from. Sharper discrimination within something you like counts as expansion. Skilled pleasures renew on return; cheap novelty depletes. The doc also cites Stigler and Becker's consumption capital: appreciation as a stock built by past consumption.
 
-### 3. Do domains connect? Yes, but near, not far.
+**Literature.**
+- Mere exposure is real but modest, peaks after a number of exposures and then declines, and is weaker for complex stimuli (Zajonc, 1968; Bornstein's 1989 meta-analysis of about 200 experiments). **Strong that it exists; moderate on its shape.**
+- Food needs several tries: often 8 to 15 for children (Birch and Marlin, 1982; Wardle and colleagues, 2003). **Strong for children; moderate for adults.**
+- Music liking follows an inverted U with focused listening (Szpunar, Schellenberg and Pliner, 2004; Chmiel and Schubert, 2017). **Moderate.**
+- Feeling able to understand raises interest in hard art (Silvia, 2005, 2008); experts perceive more (Leder and colleagues, 2004). **Moderate for interest; weak for plain liking.**
 
-**Conclusion (DRAFT).** Liking one thing makes nearby things easier to like. "Nearby" means sharing features (a rhythm, a flavour, a warmth), not sharing a domain label. Some people are open across the board, and that is a persona trait. Far jumps (cooking to jazz) get no direct boost unless the two share a feature.
+**For the model.** Each source on a menu carries familiarity (from returns) and understanding (a stock built by learning about it or making it). Liking from returns follows an inverted U on familiarity, which is the model's existing habituation on its falling side. Understanding lifts the peak and slows the fall, more for complex sources and for sources with a skill slope. Learning and making cost time, like a try. Depth gains count in the breadth-and-depth measure. This links to H39 makers: making could raise the maker's own understanding, not only the other person's pleasure. ASSUMED: peak at 10 returns for simple sources and 20 for complex ones; understanding raises the peak by up to 50%; making builds understanding at twice the rate of learning about.
 
-**Evidence.**
-- Openness is a general trait. Openness to experience predicts liking for complex and unfamiliar music (Rentfrow and Gosling, 2003), and food neophobia is lower in open people (Pliner and Hobden, 1992). **Strong that a general trait exists.**
-- Variety spills over to new items. Infants fed a variety of vegetables accept a new food more readily (Gerrish and Mennella, 2001). Children who taste several new foods become more willing to try other new foods (Loewen and Pliner, 1999). **Moderate, mostly food and mostly children.**
-- Spillover is strongest between similar items. Exposure effects generalize to items that resemble the exposed ones (Gordon and Holyoak, 1983). **Moderate.** Evidence for far transfer across unrelated domains is **weak**.
+### 3. Do domains connect? Yes, through anchors and stacked routes, and other people reach farther.
 
-**For the model.** Each source carries a few feature tags. The join chance for a new source rises with how many features it shares with sources already on the menu. This is the author's "paths into" a thing rather than trying it cold. Openness stays a persona trait (D3, D10). A successful try gives a small, fading lift to openness, so breadth compounds a little. ASSUMED: join chance multiplied by 1 + 0.5 x (share of features matched); openness lift 0.02 per successful try, fading over 8 weeks.
+**Conclusion (DRAFT).** A new thing is easiest to like when you enter through a part that connects to something you already like (an anchor). Several routes at once (a friend plus the history) beat one route. Alone, people explore near what they already like. Other people carry them farther, into things they would never wander to. Openness is a general persona trait. Far jumps get no boost by themselves, only through a shared feature or a person.
 
-### 4. No never-lists. Plasticity varies by kind instead.
+**From the author's Hedonic Expansionism doc (paraphrased).** Enter through the part that already connects (for jazz, the bass lines), then widen. Routes stack, so two at once beat either alone. Gateways work near what you already like. Other people bring a whole history of liking and lead you beyond your habits; love is a faster route to new liking than repetition. In Rozin's chili study, children came to love chili through repeated, socially supported exposure.
 
-**Conclusion (DRAFT).** No persona has a list of things it will never like. Instead, each kind of source has a plasticity level: how much tries, returns and understanding can move it. Raw sensory signals and a few early-wired traits move least. Learned meaning moves most. A low-plasticity source can still join the menu; it is just slow and risky. The things that truly do not move (sexual orientation is the clearest case) are not on the taste menu at all, so the model never treats them as something to expand.
+**Literature.**
+- Openness to experience is a general trait that predicts liking for complex music (Rentfrow and Gosling, 2003) and lower food neophobia (Pliner and Hobden, 1992). **Strong.**
+- Variety spills over to new items (Gerrish and Mennella, 2001; Loewen and Pliner, 1999). **Moderate, mostly food and children.**
+- Exposure effects spread to similar items (Gordon and Holyoak, 1983). **Moderate.** Far transfer across unrelated domains: **weak**.
+- Social exposure drives acquired tastes such as chili (Rozin and Schiller, 1980). **Moderate to strong.**
 
-**Evidence.**
-- Some defaults are inborn. Newborns accept sweet and reject bitter (Steiner, 1973). **Strong.** Yet adults learn to love bitter coffee and beer, so the default is a starting point, not a wall.
-- Sensing is partly genetic; liking much less so. Sensitivity to the bitter compound PROP (non-tasters and supertasters, Bartoshuk) is set by genes, but its link to what people actually like to eat is modest and inconsistent (reviews by Tepper). One gene variant near the smell receptor OR6A2 is linked to finding cilantro soapy, but it explains only a small part of who dislikes it (Eriksson and colleagues, 2012). **Strong for sensing; weak to moderate for liking.**
-- Pain can become pleasure. Chili burns every time, yet people learn to love it through repeated, social exposure (Rozin and Schiller, 1980), what Rozin calls benign masochism. Twin studies find liking for chili is partly heritable (Törnwall and colleagues, 2012). **Strong that it is learnable; moderate on how much is inherited.**
-- Fear of new food is highly heritable. Twin studies put the heritability of food neophobia at about two thirds or more, in children and in adults (Cooke and colleagues, 2007; Knaapila and colleagues, 2007). **Strong.** This supports openness as a persona trait, not a fitted number.
-- Early windows matter. Flavours met in the womb and in breast milk are liked more later (Mennella and colleagues, 2001). Music taste tends to settle in early adulthood (Holbrook and Schindler, 1989). Adults can still change, but it takes attention, not background exposure. **Strong for early effects; moderate for adult change.**
-- Sexual orientation is very stable, and efforts to change it fail and do harm (American Psychological Association task force, 2009). **Strong.**
+**For the model.** Each source carries a few feature tags. Join chance rises with the share of its features already on the menu (the anchor). Each extra active route (a friend who loves it, understanding, an anchor) multiplies join chance. Solo tries draw candidates near the menu; a friend, partner or maker can offer candidates from their own menu at any distance, with the person as the anchor. Openness stays a persona trait (D3, D10), with a small, fading lift after each successful try. ASSUMED: join chance times (1 + 0.5 x feature share); each extra route times 1.5; openness lift 0.02 per successful try, fading over 8 weeks.
 
-**For the model.** Use the three pathways from the persona design (D1) as plasticity kinds, so no new taxonomy is needed. Sensory sources: low plasticity, higher aversion risk. Relational sources: middle. Conceptual sources: high. A persona also has a sensory sensitivity trait that lowers sensory plasticity further (high sensitivity is like a supertaster, or someone easily overloaded). This replaces "hard constraints" with something closer to the author's view: hard to move, not never. ASSUMED: plasticity multipliers 0.2 sensory, 0.6 relational, 1.0 conceptual, applied to join chance and to depth gain.
+### 4. No never-lists. Plasticity varies by kind, and the rule is add, don't erase.
+
+**Conclusion (DRAFT).** No persona has a list of things it will never like. Each kind of source has a plasticity class instead:
+
+- **Open** (activities, contexts, genres, cuisines, aesthetic and sensual tastes): high yield, low cost. Tries, returns and understanding all work.
+- **Reversal** (bitter, spicy, sour, scary): learnable with dose and safety. The signal stays unpleasant; what changes is how it is read.
+- **Gates** (disgust, closeness, sociability): tries do not open them. They open slowly as a side effect of valued relationships, open rather than flip into liking, and can close again under stress.
+- **Fixed core** (the senses themselves, core sexual taste): never removed or retrained. New likings can be added on top. Whether adding to sexual taste belongs on the taste menu at all is left open for the author (see below).
+
+The senses differ between people (a supertaster's coffee is not your coffee), so the same source can sit in a different class for different personas.
+
+**From the author's Hedonic Expansionism doc (paraphrased).** The senses are largely fixed; expansion happens in how the brain evaluates and attends. Genes change the experience itself (bitterness strength, soapy cilantro): people can learn to like such foods, but the experience stays different. Disgust is a gate, not a brake. New associations can be learned on top of old ones; attempts to remove core preferences, as in conversion therapy, fail and harm. Return on investment differs: activities, contexts, sensual and aesthetic tastes, genres and cuisines are high yield and low cost; core disgust and deep aversions are low yield and high cost. Whether sexual taste can be expanded by adding is one of the doc's open problems.
+
+**Open for the author: sexual orientation and sexual taste.** Removing or retraining core sexual taste is ruled out, by the doc and by strong evidence. Whether the model should let agents add to sexual taste, or keep it off the taste menu entirely, is not decided here. Until the author decides, the model leaves it out.
+
+**Literature.**
+- Inborn sweet acceptance and bitter rejection (Steiner, 1973), yet adults learn bitter coffee and beer. **Strong.**
+- Sensing is partly genetic, liking much less: PROP taster status (Bartoshuk; reviews by Tepper) has a modest, inconsistent link to food liking; a variant near OR6A2 explains a small part of cilantro dislike (Eriksson and colleagues, 2012). **Strong for sensing; weak to moderate for liking.**
+- Chili is learned through repeated, social exposure (Rozin and Schiller, 1980); benign masochism (Rozin and colleagues, 2013); chili liking partly heritable (Törnwall and colleagues, 2012). **Strong that it is learnable.**
+- Food neophobia is about two-thirds heritable or more (Cooke and colleagues, 2007; Knaapila and colleagues, 2007). **Strong.** Supports openness as a trait.
+- Early windows: flavours met before and after birth are liked more later (Mennella and colleagues, 2001); music taste settles in early adulthood (Holbrook and Schindler, 1989). **Strong for early effects; moderate for adult change.**
+- Disgust relaxes for one's own group (Reicher and colleagues, 2016) and serves to keep things at a distance (Tybur and colleagues, 2013). **Moderate.**
+- Sexual orientation is very stable, and efforts to change it fail and harm (American Psychological Association task force, 2009). **Strong.**
+
+**For the model.** Each source has a class. Plasticity multiplies join chance and depth gain. Gates take no tries; they open a little with time spent with a valued person and close a little under distress. Fixed-core sources are never removed or retrained. Personas carry a sensory sensitivity trait that moves some sources from open to reversal. This replaces "hard constraints" with hard to move, not never. ASSUMED: plasticity 1.0 open, 0.4 reversal, 0 by tries for gates (gate opening 0.01 per week with a valued person, closing 0.02 per distressed week), fixed core never lowered or retrained.
 
 ### What changes in the draft design
 
-- Step 2 (expansion by trying) gains the aversion outcome and the feature-share boost.
-- Step 3 (depth by return) becomes depth by return and understanding.
-- The "hard constraints" idea is replaced by plasticity by kind. Nothing is ever impossible inside the taste menu.
+- Step 2 (expansion by trying) gains the aversion outcome, the security scaling, the anchor and the route multiplier.
+- Step 3 (depth by return) becomes depth by return, understanding and making.
+- Step 4 (social path) gains reach: people offer far candidates, not only near ones.
+- The "hard constraints" idea is replaced by the four plasticity classes.
+
+## How the Hedonic Expansionism doc maps onto this model (DRAFT)
+
+Claude's mapping, for the author to confirm. Paraphrase only.
+
+- **The floor.** The doc puts safety and basic needs first: material security comes before taste work, and threat shuts taste learning down. In this model that is the floor. It gives a sharp test already listed above: a floor should raise exploration and join chance, not only pleasure now.
+- **The survival-liking measure.** The doc's sour-grapes test (Elster): a liking that only appears once better options are gone is adaptation, not expansion. This is the existing measure of likings that vanish once there is a floor or exit. Expansion counts only likings that survive the floor and exit.
+- **The menu.** The doc's social carry (others carry you through; Scitovsky's taught consumption skills; a partner brings a whole history of liking) is the menu. Friends, partners and makers widen what an agent can reach.
+- **Relationships: redesign versus expand.** The doc sorts relationship friction into five kinds, each with its own move:
+  - *Tying* (a convention that bundles things and produces nothing): unbundle. This is H38b, which separates nesting, romantic priority and exclusivity, and H22 on unbundling love.
+  - *Rival inputs* (one bed, one kitchen, one evening): logistics. Living apart together is already a modelled option; separate bedrooms would be a second rival-input fix, not yet modelled. Both are design moves, not taste moves.
+  - *Cheap taste gap* (a partner's music or cuisine): learn to like it. This is the taste menu's social path between partners.
+  - *Gate or temperament* (disgust, core sexual taste, sociability): do not train it; share roles across people or treat it as a dealbreaker. This maps to unbundled networks and to exit.
+  - *Fairness* (an unequal share of chores or mental load): always redesign, never learn to like it. So the taste mechanism must never apply to an agent's share of chores. H39b models disliked making as a chore cost; that cost should only fall by changing the arrangement, never by the agent coming to like it. The doc's test is who pays: if one person quietly absorbs the cost, it is appeasement.
+- **Liking versus wanting.** The doc's line is that the good is expanding liking, and expanding wanting is the failure mode. One of its falsifiers is expansion dragging wanting up with it. This is test 1 of the hedonic-technology tests (ADR 0018). Once version 3 splits wanting from liking, the taste menu should be checked by it: expansion that raises wanting-driven activity without raising liking is flagged, not counted.
 
 ## From the author's Notion
 
@@ -112,7 +150,7 @@ Read on 2026-11-15, read only; nothing was changed in Notion. Labels follow the 
 | evolutionary science in art theory (2026-07-14) | Mixed. The opening paragraph and the bullet list are a pasted AI answer; two first-person lines are author-written | Bracketed citation numbers and polished bold headings around plain first-person lines | Framing: "I don’t want evolutionary explanations of why we do art/like art." "I want evolution to inform our practices as artists." |
 | Expanding What You Like (2026-08-17) | Likely AI-assisted | Numbered bold rules, "That's the design.", a "one-line version" summary | Not quoted. Its claims (about eight tries; genes fix receptors, not evaluation) match the literature above, which is cited directly instead |
 | Engineering On-Demand Pleasure Technology (2026-09-25) | Likely AI-assisted (seen in search only) | Opens a reply with "Yes, you have hit on a brilliant evolutionary concept" | Not used |
-| sexual arousal as a kind of taste (2026-08-28) | Author-written | One lowercase question | Not used; it asks whether expanding that kind of taste is in your interest. Conclusion 4 keeps orientation off the taste menu, for the author to confirm |
+| sexual arousal as a kind of taste (2026-08-28) | Author-written | One lowercase question | Not used; it asks whether expanding that kind of taste is in your interest. Conclusion 4 leaves this question open for the author |
 | Optimal Stimulation and Hedonic Homeostasis (2026-09-19) | Mixed, mostly AI (as already labelled) | Unchanged | Not re-read or used |
 
 **What the author's own pages say, in sum (Claude's reading).** The author treats taste as mostly learnable ("this is mostly exposure"), favours ways into a thing over trying cold, values understanding and noticing as part of liking, and wonders whether some preferences are more hardwired than we think. That matches the proposed plasticity by kind: most taste moves, sensory and early-wired things move least.
