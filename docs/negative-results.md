@@ -228,3 +228,14 @@ Three paid framings (capability v2, propensity, win; about $10 in all) reported 
 - `Forecasts leave too often under A5: 52-week leaving 42% in forecasts against 22% lived (B); the in-future look-back judges 13 weeks back where life forecasts 52 ahead.`
 - `Lock-in did not bite: exit growth 0 to 0.08 a year moved exits 0.80 / 0.75 / 0.73 / 0.77 a run (not monotonic) and weeks together within +/-0.007.`
 - `Story 4's starved rest and connection traced to the routine: it values one more friend visit at full strength while the world habituates repeated visits (the clause Amendment 2 left on the persona rule). Not fixed.`
+
+## 2026-11-15: Two hybrid bugs fixed before the freeze, Amendment 6 (docs/results/hybrid-a6.md)
+
+- `KO1 failed again after both bug fixes, and by more: +0.027 [+0.004, +0.048] over 73 B bar exits (A5 +0.016 [-0.010, +0.044]); bar: mean within +/-0.02, interval inside +/-0.04. The stale-return fix removed one error and left the other: outside futures never re-form or return, lived leavers do. A6 is not ready to freeze.`
+- `The fixes changed little: 94 of 120 B lives identical to A5 to the last digit; weeks together -0.005 [-0.011, +0.000]. The friend fix bites only in long same-friend streaks, which H41's harness rarely produces.`
+- `The friend fix could not be checked against the life that found it: story 4's starved lone member (A4) never arises under A5 or A6, because both members leave at the trial's end. KL2 passes only trivially.`
+- `The quiet path is still nearly absent: 2 of 293 exits (B, P2, trial) on the primary windows, 3 on the second. Neither bug caused it.`
+- `Forecasts still leave about twice as often as lived agents: B 52-week 41.8% vs 21.5% (A5 42.0% vs 22.3%).`
+- `P-AUTH held on formation again (+0.050 [0.000, +0.100], DESCRIPTIVE) but not on weeks together (+0.053 [+0.021, +0.094]): the exit option makes pairs spend more time together.`
+- `F2 not measured as stated: "fewer immediate re-entries" had no direct measure in the rows; only exits per run (0.75 -> 0.67) speak to it.`
+

@@ -63,6 +63,8 @@ Fix: a month plan for the bill (the household sets each member's share once a mo
 
 **Update 2026-11-14, Amendment 5.** How the hybrid decides to leave ([results/hybrid-leaving.md](results/hybrid-leaving.md)). With a pure exit cost, the exit option's known answer (KX2) now passes, so forecasts do value the option to leave as the exact model says. A fading tally now sets when agents rethink, in life and in forecasts alike; an exit cost grows with time together; the outside option is played in the lived world. Open: the outside forecast misses its accuracy bar narrowly (KO1), forecasts leave about twice as often as lived agents, people in this model leave almost only when suffering rises (the "good quietly fading" path is nearly absent), and the routine misvalues repeated friend visits (it can starve rest and connection). Results on any hybrid version cannot be about how people time leaving, or about sunk cost (the agent has none).
 
+**Update 2026-11-15, Amendment 6.** The two routine and bookkeeping bugs Amendment 5 found are fixed behind flags ([results/hybrid-a6.md](results/hybrid-a6.md)): friend visits are valued at the world's satiety, and a member that leaves no longer returns on an old return value. Every check passes except the outside forecast's accuracy (KO1), which now misses the other way: lived leavers do a little better than forecast, because outside futures never re-form or return. Still open: the "good quietly fading" path of leaving is nearly absent, and forecasts leave about twice as often as lived agents. Results on any hybrid version still cannot be about how people time leaving or about sunk cost.
+
 ## What results here CAN be about
 
 - What a rule system does to scripted agents in a stated toy world.
