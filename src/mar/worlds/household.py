@@ -2114,9 +2114,10 @@ class WeeklyWorld:
             cands = _OBS.forced(self, r, w, cands)
         # soft rules: the agent weighs the estimated sanction against the utility
         scored = []
+        st = self.state(r, w) if cands else None    # read once: decide() changes nothing, so every candidate sees the same state
         for u, cand in cands:
             a = cand["a"]
-            dec, sanc, reasons = self.decide(r, a, w, cand.get("take", 0))
+            dec, sanc, reasons = self.decide(r, a, w, cand.get("take", 0), st)
             if dec == "soft":
                 u -= self.sanction_cost(r, w, sanc)
             scored.append((u, cand, dec, sanc, reasons))
