@@ -244,3 +244,12 @@ Three paid framings (capability v2, propensity, win; about $10 in all) reported 
 - `The model's LAT suffering has nothing to do with time together: under A6 all of LAT's extra non-offsettable suffering (+0.00079 [+0.00016, +0.00160] per member-week) is denied money during job loss while apart with no shared pot; connection is never denied. The author's question about losing time together had no hook in it.`
 - `Concentrated in 6 of 120 pairings: the interval is clear of 0 but rests on when 6 job losses land.`
 - `All-aids attribution stopped at 32 of 120 pairings to save time (all money there too).`
+
+## 2026-11-16: Time together in two kinds (docs/results/time-together.md)
+
+- `PT-R failed under TT: the routine's best-action share T3 0.898 against v2's 0.947 on the same sample (bar: no more than 0.02 below). Cause not diagnosed. TT is not usable by its prereg's rule.`
+- `KO1 failed worse under TT: +0.037 [+0.019, +0.055] (A6 +0.027). Outside futures have no background time and never re-form.`
+- `TT4 missed: the author's "a varied life is hit less" did not strengthen under the substitution flag. The slope of LAT's pleasure loss on partner share weakened from -0.0052 (A6) to -0.0017 [-0.0040, +0.0002]; turning substitution off left it at -0.0019.`
+- `The new background term mostly moves levels: pleasure +0.012 and liberty -0.07 to -0.28 in every arm. Its size rests on q = 0.1, which has no source; q from 0.03 to 0.2 changed LAT's weeks-together cost by about seven times.`
+- `The prereg's story check was not done in this slice.`
+
