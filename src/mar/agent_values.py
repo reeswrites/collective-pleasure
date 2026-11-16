@@ -84,6 +84,7 @@ def snapshot(world, r, w):
             s["pick"] = world._pick_bond(r)
             s["_strand_memo"] = {}          # shared by the snapshot's advanced copies: bond quality depends on sessions and visits only
     s["extra"], s["fric"] = extra, fric
+    s["_wn_memo"] = {}      # shared by the snapshot's advanced copies: _week_net's contact and bought-pleasure terms by their inputs
     if getattr(world, "agree", None) and fx.agent_values == "hybrid":     # the hybrid's bill agreement: its standing transfer at settlement
         from . import hybrid as _HY
         inn = [x for x in "AB" if world.p[x]["in"]]
@@ -284,12 +285,25 @@ def _week_net(s, parts=None):
         s_asp0 = s_asp0 + aw[k] * (1 - x)
     s_asp = c.unmet_aspiration * s_asp0
     extra, fric = s["extra"], s["fric"] + bill_fric
+    memo = s.get("_wn_memo")      # pure terms, memoized by the only inputs an advanced copy changes (the rest are the snapshot's)
     if fx.contact:
         n_f = s["friends"] + s["fi"]
-        a, p = _contact(fx, s["cx"], n_f, s["partner_tog"], s["both"], s["overlap_ab"])
+        mk = ("contact", n_f, s["partner_tog"])
+        ap = memo.get(mk) if memo is not None else None
+        if ap is None:
+            ap = _contact(fx, s["cx"], n_f, s["partner_tog"], s["both"], s["overlap_ab"])
+            if memo is not None:
+                memo[mk] = ap
+        a, p = ap
         extra += a; fric += p
     if fx.valued_money:
-        extra += HD.bought_pleasure(fx, s["spent"])
+        mk = ("bought", s["spent"])
+        bp = memo.get(mk) if memo is not None else None
+        if bp is None:
+            bp = HD.bought_pleasure(fx, s["spent"])
+            if memo is not None:
+                memo[mk] = bp
+        extra += bp
     if "n_sess" in s:
         pay, suf = _strands(s)
         extra += pay; fric += suf
