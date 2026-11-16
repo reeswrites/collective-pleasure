@@ -134,7 +134,7 @@ def task(args):
 
 
 def collect(cfg, f, workers=WORKERS, extra=None, horizons=None):
-    workers = min(workers, 3)
+    workers = min(workers, 6)
     OUT.mkdir(parents=True, exist_ok=True)
     pairs = H38.pairings(H38.CONFIRM)[::cfg["pairs_every"]]
     done = set()
@@ -519,6 +519,8 @@ def main():
                     "Amendment 5's flags plus friend_satiety and fresh_return; runs/value-consistency-hybrid-world-a6/")
     ap.add_argument("--tt", action="store_true", help="time-together prereg (time-together-prereg.md): with --hybrid --world, A6's "
                     "flags plus background time, LAT travel and substitution; runs/value-consistency-hybrid-world-tt/")
+    ap.add_argument("--tt2", action="store_true", help="TT2 prereg (tt2-prereg.md): with --hybrid --world, TT's flags with "
+                    "together_bg 3.3 (q = 0.3) and lat_gifts; runs/value-consistency-hybrid-world-tt2/")
     ap.add_argument("--gaps", action="store_true", help="carry-over terms: per action, per group, the k-week effect minus the 1-week effect")
     ap.add_argument("--passtest", action="store_true")
     ap.add_argument("--reach", action="store_true")
@@ -557,6 +559,12 @@ def main():
                                                        "exit_grow": 0.04, "hybrid_outside": "lived", "friend_satiety": True,
                                                        "fresh_return": True, "together_bg": 1.1, "lat_bg_keep": 0.2, "lat_travel": 0.33,
                                                        "together_subst": True}
+    if a.tt2 and a.hybrid and a.world:             # TT2: q = 0.3 and gifts between LAT partners, on top of TT's flags
+        OUT, extra = OUT.parent / (OUT.name + "-tt2"), {**extra, "hybrid_w": "persona", "hybrid_readings": "world", "hybrid_lone": True,
+                                                        "hybrid_exit": True, "hybrid_tally": "level", "tally_half": 13.0, "tally_line": 0.02,
+                                                        "exit_grow": 0.04, "hybrid_outside": "lived", "friend_satiety": True,
+                                                        "fresh_return": True, "together_bg": 3.3, "lat_bg_keep": 0.2, "lat_travel": 0.33,
+                                                        "together_subst": True, "lat_gifts": True}
     if a.hybrid:
         if a.run:
             collect(HSAMPLE, OUT / "rows.jsonl", a.workers, extra)

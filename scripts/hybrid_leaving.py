@@ -64,6 +64,13 @@ TT_SWEEPS = {"tt_bg033": {**TT, "together_bg": 1.0 / 3.0}, "tt_bg22": {**TT, "to
 TT_REACH = {"tt_reach0": {**TT, "together_bg": 0.0}, "tt_reach3": {**TT, "together_bg": 3.0}}   # the prereg's free reach check
 CFGS.update({"tt": TT, **TT_SWEEPS, **TT_REACH})
 OUTTT = ROOT / "runs" / "time-together"
+# TT2 (docs/results/tt2-prereg.md): TT with q = 0.3 (together_bg = 33 x q / 3 = 3.3) and gifts between LAT partners. Rows in runs/tt2/.
+# The q sweep (gifts on): q = 0.05, 0.1, 0.6. tt2_screen: the EXPLORATORY screening run (pilot sample), never a result.
+TT2 = {**TT, "together_bg": 3.3, "lat_gifts": True}
+TT2_SWEEPS = {"tt2_q005": {**TT2, "together_bg": 0.55}, "tt2_q01": {**TT2, "together_bg": 1.1}, "tt2_q06": {**TT2, "together_bg": 6.6}}
+CFGS.update({"tt2": TT2, "tt2_screen": TT2, "tt2_screen_off": {**TT2, "lat_gifts": False}, **TT2_SWEEPS})
+OUTTT2 = ROOT / "runs" / "tt2"
+ARM_COST = {"all": 0, "info": 1, "P4": 2, "P2": 3, "P1": 4, "P0.5": 5, "prenup": 6, "trial": 7, "lat": 8, "cheap": 9, "B": 10}   # longest first
 SWEEPS = ("half4", "half26", "line0", "line05", "slope", "both", "grow0", "grow02", "grow08", "solo", "bias02", "bias05")
 XO.VERSIONS.update(CFGS)
 OLD_ROWS = ROOT / "runs" / "h41-choice-aids" / "rows.jsonl"
@@ -243,7 +250,8 @@ def paths_analyze():
 
 KX2_FLAGS = {"a4": {"hybrid_lone": True}, "a5": {k: v for k, v in A5.items() if k != "hybrid_exit"},
              "a6": {k: v for k, v in A6.items() if k != "hybrid_exit"},
-             "tt": {k: v for k, v in TT.items() if k != "hybrid_exit"}}
+             "tt": {k: v for k, v in TT.items() if k != "hybrid_exit"},
+             "tt2": {k: v for k, v in TT2.items() if k != "hybrid_exit"}}
 
 
 def _kx2_one(args):
@@ -273,7 +281,7 @@ def kx2(flags="a4", workers=WORKERS, n_pairs=12, seed=900):
     pairs = [(a, b) for a, b, c in STR.pairings() if c == "ctl"][:n_pairs]
     tasks = [(flags, e, c, a, b, seed) for e in (False, True) for c in (0.0, KX2_COST) for a, b in pairs]
     t0 = time.time()
-    with Pool(min(workers, 4)) as p:
+    with Pool(min(workers, 6)) as p:
         recs = p.map(_kx2_one, tasks, chunksize=1)
     get = {(r["exit"], r["cost"], r["a"], r["b"]): r for r in recs}
     did, D = {}, {False: [], True: []}
@@ -304,7 +312,7 @@ def kx2(flags="a4", workers=WORKERS, n_pairs=12, seed=900):
            "clauses": {"i": c1, "ii": c2, "iii": c3},
            "KX2": "PASS" if (c1 and c2 and c3) else ("FAIL" if c3 else "CANNOT FAIL (no in-future exits)"),
            "rows": recs, "secs": round(time.time() - t0)}
-    od = OUT6 if flags == "a6" else OUTTT if flags == "tt" else OUT
+    od = OUT6 if flags == "a6" else OUTTT if flags == "tt" else OUTTT2 if flags == "tt2" else OUT
     od.mkdir(parents=True, exist_ok=True)
     (od / f"kx2-{flags}.json").write_text(json.dumps(out, indent=1, default=str))
     print(json.dumps({k: v for k, v in out.items() if k != "rows"}, indent=1, default=str))
@@ -372,10 +380,14 @@ def cfg_task(args):
     rec["xcost_paid"] = round(sum(o["hedonic"][r].get("fix", {}).get("exit_cost", 0.0) for o in run.outcomes for r in "AB"), 6)
     rec["future_exits"] = HY.STATS.get("future_exits", 0)
     rec["lived_outside"] = HY.STATS.get("lived_outside", 0)
+    rec["gifts"] = [[wk, r] for wk, r, ev in events if ev == "give"]      # TT2: every executed gift (week, giver)
     return rec
 
 
 def cfg_file(name):
+    if name.startswith("tt2"):
+        return OUTTT2 / ("rows.jsonl" if name == "tt2" else "screen.jsonl" if name == "tt2_screen" else
+                         "screen-off.jsonl" if name == "tt2_screen_off" else f"{name}.jsonl")
     if name.startswith("tt"):
         return OUTTT / ("rows.jsonl" if name == "tt" else f"{name}.jsonl")
     if name.startswith("a6"):
@@ -387,11 +399,13 @@ def run_cfg(name, arms, every=1, workers=WORKERS):
     f = cfg_file(name)
     f.parent.mkdir(parents=True, exist_ok=True)
     done = {(r["g"], r["a"], r["b"]) for r in A.load(f)} if f.exists() else set()
-    pairs = A.pairings(A.CONFIRM)[::every]
-    tasks = [(arm, a, b, s, name) for (a, b) in pairs for arm in arms for s in A.CONFIRM["seeds"] if (arm, a, b) not in done]
-    print(f"{name}: {len(tasks)} tasks, {min(workers, 4)} workers -> {f}", flush=True)
+    sample = A.PILOT if name.startswith("tt2_screen") else A.CONFIRM      # TT2's screening run: the pilot sample (EXPLORATORY)
+    pairs = A.pairings(sample)[::every]
+    tasks = [(arm, a, b, s, name) for (a, b) in pairs for arm in arms for s in sample["seeds"] if (arm, a, b) not in done]
+    tasks.sort(key=lambda t: ARM_COST.get(t[0], 5))              # longest arms first (order of work only; rows keyed by arm and pairing)
+    print(f"{name}: {len(tasks)} tasks, {min(workers, 6)} workers -> {f}", flush=True)
     t0 = time.time()
-    with Pool(min(workers, 4)) as pool, f.open("a") as fh:
+    with Pool(min(workers, 6)) as pool, f.open("a") as fh:
         for i, rec in enumerate(pool.imap_unordered(cfg_task, tasks, chunksize=1), 1):
             fh.write(json.dumps(rec) + "\n")
             fh.flush()
@@ -425,7 +439,7 @@ def story(version="a5"):
            "suff_blocks": {r: [round(float(np.mean([o["hedonic"][r]["s_off"] + o["hedonic"][r]["s_non"] for o in run.outcomes[k:k + 13]])), 3)
                                for k in range(0, len(run.outcomes), 13)] for r in "AB"},
            "secs": round(time.time() - t0)}
-    od = OUT6 if version == "a6" else OUT
+    od = OUT6 if version == "a6" else OUTTT2 if version == "tt2" else OUT
     od.mkdir(parents=True, exist_ok=True)
     (od / f"story-{version}.json").write_text(json.dumps(out, indent=1, default=str))
     print(json.dumps(out, indent=1, default=str))

@@ -63,7 +63,8 @@ def _instrument():
                           "run": dict(h.run), "s_non": row[r]["s_non"], "pl": row[r]["pleasure"], "cond": row[r]["conditions"],
                           "money": float(self.p[r]["money"]), "share": float(self.share(r)),
                           "works": self.wk[r]["works"], "jobless": self.p[r]["jobless"], "ill": self.p[r]["ill"],
-                          "together": self.wk[r]["together"]}
+                          "together": self.wk[r]["together"],
+                          "gave": sum(1 for e in getattr(self, "events", []) if e[0] == w and e[1] == r and e[2] == "give")}
             _LOG.append(rec)
         return out
     wrapped._lat_wrapped = True
@@ -94,9 +95,9 @@ def run_all(arms, version="a6", workers=4):
         done = {(r["arm"], r["a"], r["b"]) for r in map(json.loads, f.open())}
     pairs = A.pairings(A.CONFIRM)
     tasks = [(arm, a, b, s, version) for (a, b) in pairs for arm in arms for s in A.CONFIRM["seeds"] if (arm, a, b) not in done]
-    print(f"{version}: {len(tasks)} tasks, {min(workers, 4)} workers -> {f}", flush=True)
+    print(f"{version}: {len(tasks)} tasks, {min(workers, 6)} workers -> {f}", flush=True)
     t0 = time.time()
-    with Pool(min(workers, 4)) as pool, f.open("a") as fh:
+    with Pool(min(workers, 6)) as pool, f.open("a") as fh:
         for i, rec in enumerate(pool.imap_unordered(task, tasks, chunksize=1), 1):
             fh.write(json.dumps(rec) + "\n")
             fh.flush()

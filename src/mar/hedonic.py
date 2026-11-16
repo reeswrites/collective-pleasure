@@ -316,6 +316,9 @@ class FixConfig:
     lat_bg_keep: float = 0.2
     lat_travel: float = 0.0
     together_subst: bool = False
+    # TT2 (docs/results/tt2-prereg.md): under living apart together a member may give its partner money by the existing `give` action
+    # (GIVE = 3, the seed v2 gift policy, the hybrid's one-week fork value); off = the old world, bit for bit (no gift unless both in).
+    lat_gifts: bool = False
 
 
 SUBST_MEAN = 0.50      # mean of togetherness / (togetherness + other_connections) over H41's 38 personas (0.499; persona file, not outcomes)

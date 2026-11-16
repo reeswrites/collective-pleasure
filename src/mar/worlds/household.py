@@ -977,6 +977,10 @@ class PersonaAgent:
                 out.append((0.3, _a("return")))
             u = self.utilities({**o, "gap": 0})
             out += [(v, _a(a)) for a, v in u.items() if v > 0.003 and (a != "together" or o.get("lat"))]
+            if o.get("lat_gifts") and self.prosocial >= 0.5 and o["partner_money"] < 4 and o["own_money"] >= 8:
+                # TT2: the seed v2 gift policy under LAT. The hybrid replaces this score with its fork value, so no noise draw there
+                # (the random streams of a life with no gift stay as they were).
+                out.append(((0.12 + 0.2 * (self.prosocial - 0.5)) * (1.0 if o.get("hyb") else self._noise()), _a("give", kind="partner")))
             return sorted(out, key=lambda t: -t[0])
         distress = o["low_weeks"] >= 4 or h.N >= 0.2 or o.get("trust", 1.0) < TRUST["leave_below"]
         if o.get("hyb"):                     # hybrid: leave only on a simulated reading, valued at its gain times the horizon
@@ -1420,6 +1424,10 @@ class WeeklyWorld:
         (time-together prereg). The plain int 2 when there is no travel, so old runs keep integer units bit for bit."""
         extra = getattr(self.fx, "lat_travel", 0.0) if (self.fx is not None and self.lat_on()) else 0.0
         return V2_COST["together"] + extra if extra else V2_COST["together"]
+
+    def lat_gifts_on(self):
+        """TT2 (FixConfig.lat_gifts): under living apart together a gift to the partner is feasible and proposed by the seed v2 policy."""
+        return self.fx is not None and getattr(self.fx, "lat_gifts", False) and self.lat_on()
 
     def bg_on(self):
         return self.fx is not None and getattr(self.fx, "together_bg", 0.0) > 0
@@ -1946,7 +1954,8 @@ class WeeklyWorld:
         if a == "veto":
             return me["in"] and o["in"] and kind in VETO_KINDS and kind not in self.vetoes[self.other(r)]
         if a == "give":
-            return kind in ("partner", "friend") and me["money"] >= GIVE + 1 and (kind == "friend" or (me["in"] and o["in"]))
+            return kind in ("partner", "friend") and me["money"] >= GIVE + 1 and (kind == "friend" or (me["in"] and o["in"])
+                                                                                   or (kind == "partner" and self.lat_gifts_on()))
         if a == "take_shared":
             return me["in"] and self.pool >= 1 and not self.wk[r]["took"]
         if a == "leave":
@@ -1976,6 +1985,8 @@ class WeeklyWorld:
         ob["partner_accepts"] = False
         if self.lat_on():
             ob["lat"] = True                     # H41 living apart together: time together without a shared home
+            if self.lat_gifts_on():
+                ob["lat_gifts"] = True           # TT2: a gift to the partner is on the menu (seed v2 policy, below)
         if self.can_meet():
             oo = {"hed": self.hed[oth]}
             ob["partner_accepts"] = self.agents[oth].together_utility(oo) >= 0.02 and self.units[oth] >= self.together_cost()

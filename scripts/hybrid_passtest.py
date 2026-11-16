@@ -72,6 +72,7 @@ A4 = {**A3, "hybrid_lone": True, "hybrid_exit": True}              # Amendment 4
 A5 = {**A4, "hybrid_tally": "level", "tally_half": 13.0, "tally_line": 0.02, "exit_grow": 0.04, "hybrid_outside": "lived"}   # Amendment 5 (hybrid-leaving-prereg.md)
 A6 = {**A5, "friend_satiety": True, "fresh_return": True}          # Amendment 6 (hybrid-a6-prereg.md)
 TT = {**A6, "together_bg": 1.1, "lat_bg_keep": 0.2, "lat_travel": 0.33, "together_subst": True}   # time-together-prereg.md
+TT2 = {**TT, "together_bg": 3.3, "lat_gifts": True}                  # tt2-prereg.md: q = 0.3 and gifts between LAT partners
 
 
 def audit_run(workers=3, out=None, sample=None, extra=None):
@@ -82,9 +83,9 @@ def audit_run(workers=3, out=None, sample=None, extra=None):
     done = {(r["arm"], r["a"], r["b"], r["seed"]) for r in load(f)} if f.exists() else set()
     pairs = H38.pairings(H38.CONFIRM)[::sample["pairs_every"]]
     tasks = [(arm, a, b, s, None, None, extra) for (a, b) in pairs for s in sample["seeds"] for arm in sample["arms"] if (arm, a, b, s) not in done]
-    print(f"{len(tasks)} tasks, {min(3, workers)} workers -> {f}", flush=True)
+    print(f"{len(tasks)} tasks, {min(6, workers)} workers -> {f}", flush=True)
     t0 = time.time()
-    with Pool(min(3, workers)) as pool, f.open("a") as fh:
+    with Pool(min(6, workers)) as pool, f.open("a") as fh:
         for i, rec in enumerate(pool.imap_unordered(task, tasks, chunksize=1), 1):
             fh.write(json.dumps(rec) + "\n")
             fh.flush()
@@ -241,7 +242,15 @@ if __name__ == "__main__":
     ap.add_argument("--a5", action="store_true", help="Amendment 5: A1's sample with A5's flags; runs/hybrid-passtest-a5/")
     ap.add_argument("--a6", action="store_true", help="Amendment 6: A1's sample with A6's flags; runs/hybrid-passtest-a6/")
     ap.add_argument("--tt", action="store_true", help="time-together prereg: A1's sample with TT's flags; runs/hybrid-passtest-tt/")
+    ap.add_argument("--tt2", action="store_true", help="TT2 prereg: A1's sample with TT2's flags; runs/hybrid-passtest-tt2/")
     a = ap.parse_args()
+    if a.tt2:
+        OUT_TT2 = ROOT / "runs" / "hybrid-passtest-tt2"
+        if a.audit:
+            audit_run(a.workers, OUT_TT2, A1, TT2)
+        if a.analyze:
+            analyze(OUT_TT2, ("value-consistency-hybrid-world-tt2", "value-consistency-v2-sat-world"))
+        sys.exit(0)
     if a.tt:
         OUT_TT = ROOT / "runs" / "hybrid-passtest-tt"
         if a.audit:

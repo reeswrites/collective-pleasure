@@ -30,6 +30,8 @@ A4 = {"both": {"hybrid_readings": "world", "hybrid_w": "persona"},
 A5 = {"a5": {"hybrid_readings": "world", "hybrid_w": "persona", "hybrid_lone": True, "hybrid_exit": True, "hybrid_tally": "level", "tally_half": 13.0, "tally_line": 0.02, "exit_grow": 0.04, "hybrid_outside": "lived"}}
 # Amendment 5 (hybrid-leaving-prereg.md): the fading tally, the growing exit cost, the lived outside option
 A6 = {"a6": {**A5["a5"], "friend_satiety": True, "fresh_return": True}}     # Amendment 6 (hybrid-a6-prereg.md): the two bug fixes
+TT2 = {"tt2": {**A6["a6"], "together_bg": 3.3, "lat_bg_keep": 0.2, "lat_travel": 0.33, "together_subst": True,
+               "lat_gifts": True}}      # TT2 (docs/results/tt2-prereg.md)
 BARS = {"trap_min": 0.10, "baseline_max": 0.02}
 
 
@@ -40,7 +42,7 @@ def _one(args):
     import stay_test_run as STR
     cfg, arm, a, b, seed = args
     ps = STR.personas()
-    fx = dataclasses.replace(RT.FIXES_ON, pairing=PR.dial(0), **FC3.rule("hybrid"), **{**CONFIGS, **A4, **A5, **A6}[cfg])
+    fx = dataclasses.replace(RT.FIXES_ON, pairing=PR.dial(0), **FC3.rule("hybrid"), **{**CONFIGS, **A4, **A5, **A6, **TT2}[cfg])
     t0 = time.time()
     with HD.use_levers(RT.LEVERS), HD.use_fixes(fx):
         world = H.WeeklyWorld(H.PyGate(H.load_variant(arm)), (ps[a], ps[b]), seed, H.WEEKS)
@@ -59,7 +61,7 @@ def trap(workers=4, n_pairs=12, configs=None, key="both", fname="trap.json"):
     tasks = [(c, arm, a, b, 900) for c in configs for arm in ("trap", "baseline") for a, b in pairs]
     OUT.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    with Pool(min(workers, 4)) as p:
+    with Pool(min(workers, 6)) as p:
         recs = p.map(_one, tasks, chunksize=1)
     out = {"rows": recs, "secs": round(time.time() - t0), "summary": {}}
     for c in configs:
@@ -85,8 +87,11 @@ if __name__ == "__main__":
     ap.add_argument("--a4", action="store_true", help="Amendment 4: K1 with all four flags; each new flag alone beside; trap-a4.json")
     ap.add_argument("--a5", action="store_true", help="Amendment 5: K1 with A5's flags; trap-a5.json")
     ap.add_argument("--a6", action="store_true", help="Amendment 6: K1 with A6's flags; trap-a6.json")
+    ap.add_argument("--tt2", action="store_true", help="TT2: K1 with TT2's flags; trap-tt2.json")
     a = ap.parse_args()
-    if a.trap and a.a6:
+    if a.trap and a.tt2:
+        trap(a.workers, configs=TT2, key="tt2", fname="trap-tt2.json")
+    elif a.trap and a.a6:
         trap(a.workers, configs=A6, key="a6", fname="trap-a6.json")
     elif a.trap and a.a5:
         trap(a.workers, configs=A5, key="a5", fname="trap-a5.json")
