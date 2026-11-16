@@ -1,3 +1,5 @@
+> **Status 2026-11-16:** the author confirmed q = 0.3 (range 0.05–0.6) as the main value (read-back rb-2026-11-16-bgvalue). Runs sweep 0.05, 0.1, 0.3, 0.6. Not yet run; the next model change's prereg applies it.
+
 # The value of a background hour (q): what the evidence says
 
 Research note, 2026-11-16. Written for the time-together model (prereg: [../results/time-together-prereg.md](../results/time-together-prereg.md); results: [../results/time-together.md](../results/time-together.md); earlier evidence: [time-together-research.md](time-together-research.md)). Not a result. Nothing in the model changes here. Wording rule: agents feel nothing; "pleasure" is a gloss for modeled numbers.
