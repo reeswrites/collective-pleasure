@@ -198,3 +198,121 @@ Ranked by expected gain, then risk.
   long tail where one worker finishes alone.
 - **The value check's horizons.** Each sampled decision forks up to 52 weeks per candidate action; the fork count, not the fork's copy, is
   the cost. Fewer sampled weeks per pair with more pairs gives the same number of decisions at the same cost, but more independent ones.
+
+## 5. The hybrid agent (2026-11-16)
+
+Written by an agent at the author's request (a speed-up pass on the hybrid; outputs byte-identical; never fewer rollouts or futures, never
+a different number or order of random draws). Same machine, Python 3.14, one process per workload.
+
+### Workloads
+
+- **b_a6, b_tt**: one H41 life, arm B, pair g-01011 / p-peacekeeper (the median B life of the A6 and TT runs), seed 0, under A6's flags
+  and under the time-together flags (scripts/hybrid_leaving.py `cfg_task`, as `--run` plays it).
+- **lat_tt**: the same pair in the LAT arm under TT. **p2_tt**: the same pair in P2 under TT (a pressure arm: the stay lens adds a
+  pressure-off rollout, so a P life costs about twice a B life).
+- **pth_tt**: one PT-H audit unit (scripts/hybrid_passtest.py `play`, G-L0, the first pairing of A1's sample, TT's flags).
+- **kx2_tt**: one KX2 unit (hybrid_leaving `_kx2_one`, TT flags, exit option on, exit cost 0.04, the first control pairing, seed 900).
+
+### Where the time goes
+
+cProfile (b_tt, 48.5 s under the profiler for a 22 s life) and, because cProfile inflates small frequent calls, an in-process stack
+sampler (a thread reading the main thread's frame every 0.5 ms; py-spy needs root on macOS and was not installed):
+
+| where (inclusive share of the b_tt life, sampled) | share |
+|---|---|
+| the weekly step (`WeeklyWorld.step_week`), lived and simulated | 98% |
+| sampled futures (`hybrid._forecast`: status quo, return, lone readings, `lived_outside`) | 83% |
+| outside options (`hybrid.outside_value`), of which solo/friend rollouts (`negotiation.alone_value`) 39%, `lived_outside` 30% | 70% |
+| `default_ref` (the anchors of in-future readings: each member's outside option, valued again for every forecast no choice set) | 60% |
+| the stay lens (`h41_choice_aids.stay_reading`) | 55% |
+| the agents' choice (`step_agent`), of which utilities 38%, `obs` 23% (the agent-values snapshot 12%), `decide` 6% | 74% |
+| the projected close (`agent_values._week_net`, about 6 calls per agent step) | 30% |
+| liberty measured at weeks 0 and 52 (`h38_pairing_run._liberty`) | 4% |
+| deep copies of world state | under 1% |
+
+One b_tt life steps 20,332 simulated weeks for its 156 lived ones (about 130 per lived week): 196 sampled futures, 192 solo/friend
+rollouts (704 asked for; the rest are cache hits) and 84 `lived_outside` valuations. Every one of them is the full two-agent weekly step,
+and under the hybrid every agent step projects this week's close about six times (`utilities`). There is no single hotspot: the most
+expensive function (`_week_net`) is 16% of own time, and nothing else is above 6%.
+
+Rollouts that repeat exactly: a scratch check hashed every future's full starting world (after copy, option edit and reseeding) with its
+week, seed, length, `last` and anchors. In b_tt 16 of 196 futures (8%) and in p2_tt 16 of 304 (5%) start from a state already played in
+the same life, all of them inside `lived_outside` called outside a `forward_memo` block. Deep copies: under 1% (the hybrid's
+`copy_world` already leaves the run log out).
+
+The 6-hour figure and the long lives in the rows: the TT rows record lives of up to 14,000 s (P1, g-10010 / p-steward). Replayed alone
+that life takes 32 s. The recorded seconds are wall time and include stalls (the machine sleeping, or other jobs): the 960-life TT run
+took 61,053 s of wall time (17 h) on 4 workers, against about 4.5 h of compute. Without the stalls, the rows give 19.3 CPU-hours for
+the 1,320-life A6 run and 22.2 for TT (each life over 5x its arm's median counted at the median): 4.8 h and 5.6 h on 4 workers.
+
+### What changed (each commit byte-identical)
+
+| # | commit | change | where |
+|---|---|---|---|
+| 1 | 90cb4ab | `_week_net` writes each clip to [0, 1] inline as `_c01` computes it and unrolls the condition loop in the close's order. Every float operation is the one it was, in the same order. | src/mar/agent_values.py |
+| 2 | 8d8e0c3 | `hedonic.strand_cover_terms`: the strand cover and its (pay, suffering) memoized by (q0, bond qualities, strand sets), checked against the same levers object. Both are pure functions of those inputs. Used by the world's lever terms and the agent's projected close. | src/mar/hedonic.py, agent_values.py, worlds/household.py |
+| 3 | 5926b20 | `step_agent` reads the gate state once for all candidates instead of once per candidate (`decide` and `sanction_cost` change nothing between them). | src/mar/worlds/household.py |
+| 4 | 25c851b | The projected close memoizes its contact term and bought pleasure per snapshot, by the only inputs an advanced copy of the snapshot changes (contacts and partner sessions; money spent), shared by the copies as the strand memo already was. | src/mar/agent_values.py |
+
+### How identity was checked
+
+Before any change, from the clean checkout (058edc7), a scratch script recorded 145 full-output digests, each unit in a fresh process:
+
+- H41 lives (hybrid_leaving `cfg_task`'s record without `secs`, plus hashes of every outcome row, trace row, final state, fix report,
+  exits, stay readings, the lived reading log, retries, lone log, exit log, tally log, liberty, and the `HY.STATS` and `NG.STATS`
+  deltas) under five hybrid configurations: the pre-A4 hybrid ("old", Amendment 3's flags), A4, A5, A6 and TT; arms B, P2, trial, lat
+  and all; four units each (g-01011 / p-peacekeeper at seeds 0 and 1, two more pairings at seeds 0 and 2). 100 lives.
+- PT-H audit units (the record without `secs`, including every audited choice): G-L0 under TT and under A6 for two pairings, G-L4 under
+  TT for one.
+- KX2 units: flags A4, A6 and TT, exit option off and on, exit cost 0 and 0.04, three control pairings (36 units).
+- The formation check's world without the hybrid (FC3 `v2b`) and with it, G-L0 and G-L4 (outcomes, final, fix report, readings, log).
+
+After changes 1 and 2, and again after 1 to 4, all 145 were byte-identical to the before digests. After change 1 and after 1 to 4, the 50
+slow pins (`uv run pytest -m slow`) and the fast suite passed. Changes 2 to 4 were verified together and committed one by one (each is a
+separate file region; the intermediate trees were not digested on their own).
+
+### Before and after, one process per workload, two at a time, same machine
+
+| workload | before s | after s | speedup |
+|---|---|---|---|
+| b_a6 | 21.8 | 19.6 | 1.11x |
+| b_tt | 22.0 | 19.7 | 1.11x |
+| lat_tt | 21.5 | 19.4 | 1.11x |
+| p2_tt | 36.1 | 32.7 | 1.10x |
+| pth_tt | 96.2 | 87.7 | 1.10x |
+| kx2_tt | 2.2 | 1.9 | 1.12x |
+
+Single runs; differences under about 5% are noise, but the gain is the same on every workload.
+
+Projected full H41 run (1,320 lives, 4 workers, no stalls): A6 about 17.4 CPU-hours, **4.3 h** (was 4.8 h); TT about 20.0 CPU-hours,
+**5.0 h** (was 5.6 h). The arms `all` and `info` are a third of it (100 to 130 s a life).
+
+### Tried and dropped (no gain, so not committed)
+
+- **Memoizing `PyGate.check`** by (kind, action, take, state). 80% of checks hit, and the outputs did not move, but the wall time did not
+  move either: building the key costs about what evaluating the compiled card conditions costs. cProfile had overstated the gate.
+
+### Proposals not made, and why
+
+Ranked by expected gain, then risk.
+
+1. **Keep the machine awake** (gain: the TT run's 17 h wall time against about 4.5 h of compute). `caffeinate -i` stops idle sleep only;
+   it does not stop sleep on lid close or a sleep the user starts. `caffeinate -s` (system sleep, on AC power) or `-dimsu` keeps it
+   up. Not changed: the queue scripts and the machine are the author's.
+2. **Workers 4 -> 6** (about 13% more throughput, part 1's table). The cap is the author's policy for a shared machine.
+3. **Order tasks longest first** (`all` and `info` lives take 4 to 5x a B life): avoids a tail where one worker runs alone. A change to the
+   harness's task order, not to any output; not made because rows are appended in completion order and analyses key on (arm, a, b), so it
+   is safe, but it is a harness change outside this pass.
+4. **Solo rollouts step both twins** (`alone_value` is 39% of a life). The outside-option world plays the same persona in both roles and
+   reads only one role's rows. Skipping the other role would roughly halve those rollouts, but nothing proves the two roles never interact
+   in the world step (friend visits alternate by week, shared shock schedule), so the outputs could move. Needs a proof or a pin-checked
+   model change, not a speed-up.
+5. **Memo `lived_outside` across the whole reading, not only inside `forward_memo`** (5 to 8% of futures repeat exactly). Exact only if a
+   hit also adds the counters a played valuation adds (`futures`, `future_weeks`, `future_exits`, `lived_outside`), which are written into
+   rows; and the key would have to cover every global the forecast reads (`_REF`, `_OCTX`, `_NEUTRAL`). Gain about 5%; touches
+   hybrid.py, which the next model change (gifts between partners living apart) edits. Left for after it.
+6. **Stage the projected close** (compute rest, connection, money and aspiration terms once per snapshot and only the changed ones per
+   action). `_week_net` is 30% of a life; this might take a third off it, but it splits a function that mirrors `Hedonic.close_week`
+   line by line on purpose. Not made for readability.
+7. **Caching outside rollouts across lives, fewer futures, shorter windows.** Rejected as before (part 3, items 3 and 4); fewer
+   rollouts or futures is a model change the author ruled out.
