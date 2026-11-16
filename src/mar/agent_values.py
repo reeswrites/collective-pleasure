@@ -185,15 +185,19 @@ def _c01(x):
 
 
 def _week_net(s, parts=None):
+    # Speed (docs/notes/performance.md, part 5): each clip to [0, 1] is written inline as `_c01` computes it (0.0 if x < 0.0 else
+    # 1.0 if x > 1.0 else x) and the config is read into locals; every float operation is the one it was, in the same order.
     h, c, cap, L, fx = s["h"], s["h"].cfg, s["cap"], s["L"], s["fx"]
-    rest = _c01(L["rest"] + c.rest_base + c.rest_action * cap * s["rests"] - c.rest_decay - c.work_fatigue * s["works"]
-                - (0.3 if s["ill"] else 0.0))
+    x = (L["rest"] + c.rest_base + c.rest_action * cap * s["rests"] - c.rest_decay - c.work_fatigue * s["works"]
+         - (0.3 if s["ill"] else 0.0))
+    rest = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
     bg = s.get("bg", 0.0)                 # time-together prereg: background time (under LAT only in a week with a chosen session)
     if bg and s.get("bg_lat") and s["together"] <= 0:
         bg = 0.0
     eff_tog = s["eff_tog"] + bg if bg else s["eff_tog"]
-    conn = _c01(L["connection"] + (c.conn_cohabit if s["cohab"] else 0.0) - c.conn_decay - s["conn_pen"]
-                + cap * (c.conn_friend * s["eff_fr"] + c.conn_together * eff_tog + c.conn_friend_initiated * s["fi"]))
+    x = (L["connection"] + (c.conn_cohabit if s["cohab"] else 0.0) - c.conn_decay - s["conn_pen"]
+         + cap * (c.conn_friend * s["eff_fr"] + c.conn_together * eff_tog + c.conn_friend_initiated * s["fi"]))
+    conn = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
     m, pool = s["money"] - s["out_cost"], s["pool"]
     if m < 0:
         d = min(pool, -m + 2)
@@ -232,22 +236,38 @@ def _week_net(s, parts=None):
             if short - d > 0.01 and s["in"]:
                 sec_hit += 0.15
     share = (pool / 2 if s["both"] else pool) if s["in"] else 0.0
-    sec = _c01(L["security"] - c.sec_decay - sec_hit + c.sec_refill * _c01((m + share) / c.sec_assets))
-    mon = _c01(m / c.money_scale)
+    x = (m + share) / c.sec_assets
+    x = L["security"] - c.sec_decay - sec_hit + c.sec_refill * (0.0 if x < 0.0 else 1.0 if x > 1.0 else x)
+    sec = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
+    x = m / c.money_scale
+    mon = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
     sal = h.sal
     sr, sc, sm, ss = sal["rest"], sal["connection"], sal["money"], sal["security"]
+    x = (rest - 0.5) / 0.5
+    ur = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x          # each need above the midline (pleasure) ...
+    x = (conn - 0.5) / 0.5
+    uc = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
+    x = (mon - 0.5) / 0.5
+    um = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
+    x = (sec - 0.5) / 0.5
+    us = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
     if fx.valued_money:
         v_s = s["v_s"]
         lost = ss * (1.0 - v_s)
         rc = sr + sc
         up = 1.0 + (lost / rc if rc > 0 else 0.0)
-        p_need = ((0 + sr * up * _c01((rest - 0.5) / 0.5)) + sc * up * _c01((conn - 0.5) / 0.5)
-                  + sm * _c01((mon - 0.5) / 0.5) + ss * v_s * _c01((sec - 0.5) / 0.5))
+        p_need = ((0 + sr * up * ur) + sc * up * uc + sm * um + ss * v_s * us)
     else:
-        p_need = (((0 + sr * _c01((rest - 0.5) / 0.5)) + sc * _c01((conn - 0.5) / 0.5)) + sm * _c01((mon - 0.5) / 0.5)
-                  ) + ss * _c01((sec - 0.5) / 0.5)
-    s_need = (((0 + sr * _c01((0.5 - rest) / 0.5)) + sc * _c01((0.5 - conn) / 0.5)) + sm * _c01((0.5 - mon) / 0.5)
-              ) + ss * _c01((0.5 - sec) / 0.5)
+        p_need = (((0 + sr * ur) + sc * uc) + sm * um) + ss * us
+    x = (0.5 - rest) / 0.5
+    dr = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x          # ... and below it (suffering)
+    x = (0.5 - conn) / 0.5
+    dc = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
+    x = (0.5 - mon) / 0.5
+    dm = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
+    x = (0.5 - sec) / 0.5
+    ds = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
+    s_need = (((0 + sr * dr) + sc * dc) + sm * dm) + ss * ds
     net = s["income"] - HD.DEFAULT.living_cost - 2.5 - s["spent"]          # BILLS_WEEKLY = 2.5
     av = {"security_buffer": sec, "together_per_week": s["together"], "friends_per_week": s["friends"],
           "savings_per_week": max(0, net), "autonomy": s["autonomy"]}
@@ -255,7 +275,11 @@ def _week_net(s, parts=None):
     p_asp = s_asp0 = 0
     for k in tg:
         t = tg[k]
-        x = 1.0 if t <= 0 else _c01(av.get(k, 0.0) / t)
+        if t <= 0:
+            x = 1.0
+        else:
+            x = av.get(k, 0.0) / t
+            x = 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
         p_asp = p_asp + aw[k] * x
         s_asp0 = s_asp0 + aw[k] * (1 - x)
     s_asp = c.unmet_aspiration * s_asp0
@@ -274,17 +298,28 @@ def _week_net(s, parts=None):
     run = h.run
     dmin, dsal = c.denied_below, c.denied_min_salience
     denied = ((rest < dmin and sr >= dsal) or (conn < dmin and sc >= dsal) or (mon < dmin and sm >= dsal) or (sec < dmin and ss >= dsal))
-    for name, on, inten in (("trapped", run["trapped"] > 0, c.trapped_intensity), ("denied", denied, c.denied_intensity),
-                            ("diminished", run["diminished"] > 0, c.diminished_intensity)):
-        if on:
-            if run[name] + 1 >= c.onset_weeks:
-                s_non += inten
-            else:
-                s_off += c.pre_onset_share * inten
-    pl = _c01(raw) if h.knee is None else HD.saturate(raw, h.knee)        # ADR 0019: the close's own pleasure scale
-    out = pl - _c01(s_off) - _c01(s_non)
+    ow, pre = c.onset_weeks, c.pre_onset_share                 # the conditions, in the close's order: trapped, denied, diminished
+    if run["trapped"] > 0:
+        if run["trapped"] + 1 >= ow:
+            s_non += c.trapped_intensity
+        else:
+            s_off += pre * c.trapped_intensity
+    if denied:
+        if run["denied"] + 1 >= ow:
+            s_non += c.denied_intensity
+        else:
+            s_off += pre * c.denied_intensity
+    if run["diminished"] > 0:
+        if run["diminished"] + 1 >= ow:
+            s_non += c.diminished_intensity
+        else:
+            s_off += pre * c.diminished_intensity
+    pl = (0.0 if raw < 0.0 else 1.0 if raw > 1.0 else raw) if h.knee is None else HD.saturate(raw, h.knee)  # ADR 0019: the close's own pleasure scale
+    so = 0.0 if s_off < 0.0 else 1.0 if s_off > 1.0 else s_off
+    sn = 0.0 if s_non < 0.0 else 1.0 if s_non > 1.0 else s_non
+    out = pl - so - sn
     if parts is not None:
-        parts.update(pleasure=pl, s_off=_c01(s_off), s_non=_c01(s_non), raw=raw,
+        parts.update(pleasure=pl, s_off=so, s_non=sn, raw=raw,
                      levels={"rest": rest, "connection": conn, "money": mon, "security": sec}, bill_fric=bill_fric)
     return out
 
