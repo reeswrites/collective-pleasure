@@ -172,7 +172,7 @@ def _strands_calc(s):
     for j, q in enumerate(s["qx"]):
         gj = 1.0 - (1.0 - lv.qx_visit) ** s["visits"].get(j, 0)
         qx.append(0.0 if s["downx"][j] else (q + gj * (1.0 - q)) * (1.0 - lv.qx_decay))
-    return HD.strand_terms(lv, HD.strand_cover(lv, q0, qx, s["sets"]))
+    return HD.strand_cover_terms(lv, q0, qx, s["sets"])[1]
 
 
 def week_net(s, parts=None):

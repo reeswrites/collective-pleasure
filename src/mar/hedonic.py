@@ -442,6 +442,24 @@ def strand_terms(cfg, cover):
     return pay, suf
 
 
+_STRAND_MEMO = {}       # (q0, qx, sets) -> (cfg, cover, (pay, suffering)); see strand_cover_terms
+
+
+def strand_cover_terms(cfg, q0, qx, sets):
+    """-> (strand_cover(...), strand_terms(cfg, cover)), memoized. Both are pure functions of (cfg, q0, qx, sets), so a hit returns
+    exactly what the computation would (docs/notes/performance.md, part 5). Callers only read the cover."""
+    key = (q0, tuple(qx), tuple(sets))
+    hit = _STRAND_MEMO.get(key)
+    if hit is not None and hit[0] is cfg:
+        return hit[1], hit[2]
+    cover = strand_cover(cfg, q0, qx, sets)
+    terms = strand_terms(cfg, cover)
+    if len(_STRAND_MEMO) >= 200_000:
+        _STRAND_MEMO.clear()
+    _STRAND_MEMO[key] = (cfg, cover, terms)
+    return cover, terms
+
+
 def coordination_units(cfg, n_ext):
     """Units per week a partner spends keeping n_ext external bonds going (convex: synthesis M5, 'unbundled lives cost coordination')."""
     return cfg.coord_a * n_ext ** cfg.coord_gamma if n_ext > 0 else 0.0

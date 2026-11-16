@@ -1325,8 +1325,7 @@ class WeeklyWorld:
             pl += d["k_pay"]
             fr += d["commit_friction"]
         if lv.network:
-            cover = HD.strand_cover(lv, self.q0, self.qx[r], self.sets[r])
-            d["strand_pay"], d["care_suffer"] = HD.strand_terms(lv, cover)
+            cover, (d["strand_pay"], d["care_suffer"]) = HD.strand_cover_terms(lv, self.q0, self.qx[r], self.sets[r])
             d["care_cover"] = cover["care"]
             pl += d["strand_pay"]
             fr += d["care_suffer"]
