@@ -137,7 +137,9 @@ def analyze():
         vs = {v: {arm: XO.vs_b(rows, arm) for arm in arms} for v, rows in (("a6", a6), ("tt", tt), ("tt2", t2))}
         res["vsB"] = vs
         res["stop_rule_tt_tt2"] = XO.stop_rule(vs["tt"], vs["tt2"])
-        res["three"] = L.three_way({"a6": vs["a6"], "tt": vs["tt"], "tt2": vs["tt2"]})
+        res["three"] = {arm: {k: {"a6": vs["a6"][arm][k]["class"], "tt": vs["tt"][arm][k]["class"], "tt2": vs["tt2"][arm][k]["class"],
+                                  "label": "holds across versions" if len({vs[v][arm][k]["class"] for v in vs}) == 1 else "version-dependent"}
+                              for k in vs["tt2"][arm]} for arm in arms}
         res["verdict"] = {v: {arm: verdict(vs[v][arm]) for arm in arms} for v in vs}
     if set(have) == set(A.ARMS):
         res["h41_tt2"] = A.analyze_rows(t2)
