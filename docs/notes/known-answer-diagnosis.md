@@ -71,7 +71,22 @@ the check's ceiling falling, not the routine getting worse.**
   partner's; T3's "net" target counts only its own. Under T3's "social" target (the utility's own definition) T3 is 0.909 (TT) and
   0.879 (TT2). This was so under v2 and A6 too; it grows a little because own values shrink while the partner term stays.
 
-Flag attribution: queued (below).
+**One flag at a time from A6** (PT-R's sample, 40 pairings, seed 0; rows in runs/diagnose-t3/ptr-*):
+
+| | T3 | oracle T3 (perfect one-week values, same floor) | agent − oracle | best action under the floor | floor misses | rest's one-week value in a household |
+|---|---|---|---|---|---|---|
+| v2 (reference) | 0.947 | 0.989 | −0.042 | 1.1% | 2 | 0.019 |
+| A6 | 0.953 | 0.990 | −0.037 | 1.0% | 4 | 0.020 |
+| subst | 0.940 | 0.982 | −0.042 | 1.8% | 6 | 0.022 |
+| bg 1.1 | 0.905 | 0.951 | −0.046 | 4.9% | 14 | 0.013 |
+| TT | 0.898 | 0.942 | −0.044 | 5.8% | 13 | 0.011 |
+| bg 3.3 | **0.856** | **0.861** | −0.005 | 13.9% | 34 | 0.008 |
+| TT2 | 0.869 | 0.898 | −0.030 | 10.2% | 34 | 0.009 |
+
+**Background time moves T3: −0.048 at q = 0.1 and −0.097 at q = 0.3, alone. Substitution alone moves it −0.013 (within the bar).**
+The LAT flags cannot act here: the sample has no LAT, and they were byte-identical in K1's sample and H41's B arm.
+In every row the oracle falls with T3. At q = 0.3 the oracle itself is 0.861 to 0.898. **The bar (v2's 0.947 − 0.02 = 0.927) cannot
+be met by any agent that keeps the 0.003 floor.**
 
 ## K1
 
