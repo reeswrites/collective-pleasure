@@ -6,7 +6,7 @@ Written 2026-11-16 by an agent at the author's request ("diagnose, don't fix"). 
 changed, no parameter fitted. Scripted agents, no model calls. Code: scripts/known_answer_diagnosis.py. Rows: runs/diagnose-t3/
 (queue.sh, status.log, k1-*.json, ko1-*.jsonl, ptr-*/rows.jsonl, analysis.json).
 
-**Status: in progress.** PT-R and K1 are diagnosed; KO1 is diagnosed on A6 and TT2, with its single-flag runs and the PT-R flag runs still running.
+**Status: done** (2026-11-17). Every run below is complete; A6 and TT2 were reproduced exactly for each check before anything was toggled.
 
 ## The three failures, as reported
 
@@ -61,12 +61,15 @@ prereg's own oracle, agent-recalibration-prereg.md, which scored 99.9% on the v1
 | TT2 | 0.869 | **0.898** | **−0.030** |
 
 Under TT2 an agent that knew every one-week value exactly would score 0.898, 0.049 under v2's 0.947, and fail PT-R's bar. The
-routine's distance from that oracle is the same under every version (−0.03 to −0.04), and smallest under TT2. **All of T3's fall is
-the check's ceiling falling, not the routine getting worse.**
+routine's distance from that oracle is about the same under every version (−0.03 to −0.04), and smallest under TT2. **All of T3's
+fall is the check's ceiling falling, not the routine getting worse.**
 
 **Two more things the T3 bar mixes in.**
 - **The reference is from another world.** PT-R holds the hybrid's T3 to v2's T3 "on the same sample", but v2's rows
   (runs/value-consistency-v2-sat-world) were played without background time. Under TT and TT2 the comparison is across worlds.
+  Rerun here (descriptive, not a verdict): v2 in A6's world reproduces the original v2 rows exactly (480 of 480 decisions), and **v2 in
+  TT2's world scores T3 0.887** (oracle 0.936; 21 floor misses against 2). The hybrid's 0.869 is 0.018 below that same-world
+  reference, inside the 0.02 bar. v2 falls with the world too.
 - **The together misses (TT 16, TT2 10) are the partner share.** The agent values time together as its own net plus prosocial × the
   partner's; T3's "net" target counts only its own. Under T3's "social" target (the utility's own definition) T3 is 0.909 (TT) and
   0.879 (TT2). This was so under v2 and A6 too; it grows a little because own values shrink while the partner term stays.
@@ -85,8 +88,10 @@ the check's ceiling falling, not the routine getting worse.**
 
 **Background time moves T3: −0.048 at q = 0.1 and −0.097 at q = 0.3, alone. Substitution alone moves it −0.013 (within the bar).**
 The LAT flags cannot act here: the sample has no LAT, and they were byte-identical in K1's sample and H41's B arm.
-In every row the oracle falls with T3. At q = 0.3 the oracle itself is 0.861 to 0.898. **The bar (v2's 0.947 − 0.02 = 0.927) cannot
-be met by any agent that keeps the 0.003 floor.**
+In every row the oracle falls with T3. At q = 0.3 the oracle itself is 0.861 to 0.898. **The bar as written (v2's 0.947 − 0.02 =
+0.927) cannot be met at q = 0.3 by any agent that keeps the 0.003 floor, a perfect one-week valuer included.** (With background 3.3
+alone the agent is within 0.005 of the oracle.) The LAT flags are confirmed inert here as well: TT2 without them gives the same 480
+decisions, byte for byte.
 
 ## K1
 
@@ -222,13 +227,35 @@ nothing else.
 
 1. **PT-R T3 (bar).** Either hold T3 to the same floor on both sides (the agent's 0.003, or 0), or hold the hybrid to an oracle on
    the same rows (agent − oracle, which is −0.03 to −0.04 under every version), or rerun v2's reference rows in the same world as the
-   hybrid. Each is a change to a preregistered check, so it should be preregistered before it is read. Not a reason to touch the floor
+   hybrid (done here descriptively: v2 in TT2's world gives 0.887, and the hybrid is 0.018 below it). Each is a change to a
+   preregistered check, so it should be preregistered before it is read. Not a reason to touch the floor
    itself: the floor is the agent's, and it behaves as designed.
 2. **K1 (bar).** Decide what K1 should count when pairs re-form inside the trap: the first spell only, held weeks per run, or a larger
    sample (more pairings or seeds) so the 0.10 bar is not decided by one or two pairings. Preregister before reading.
 3. **KO1 (mismatch; design change).** Give `lived_outside`'s futures what lived leavers have: return readings and retries. This is the
    only change aimed at the cause. Under ADR 0020 it is a model change behind a default-off flag. Findings it could move: everything
    that runs through the hybrid's decision to leave (H41's arms and its stop rule, the exit option KX2, the quiet path, LAT's verdict
-   via who leaves, the hybrid's PT-H H1 for leave choices), because a less pessimistic outside forecast means more exits.
+   via who leaves, the hybrid's PT-H H1 for leave choices), because a less pessimistic outside forecast could mean more exits.
 4. **Freezing.** Of TT2's three failures, only KO1 shows a real gap between how a decision values something and how it is lived, and it
    fails under A6 too. Whether the hybrid can freeze with a documented KO1 stand-in is the author's call.
+
+## Confidence, and what was not checked
+
+- **PT-R: high.** Three independent lines agree: the floor misses are exact values below the floor, the oracle falls with T3 under
+  every flag, and v2 falls with the world too. Not checked: other floors or targets as a verdict (left to the author, preregistered).
+- **K1: high on the mechanism at q = 0.3** (re-formed spells, per pairing, with readings and lived pleasure). **Moderate on "fragile"
+  below it:** one seed and 12 pairings, as K1 is defined. More seeds were not run, because that would be a new check.
+- **KO1: high that the comeback gap is the cause of the failure under every version; moderate on the size of each flag's share**,
+  because exits change with any change to the world, and the stay-out group (13 to 23 exits) moves by ±0.02 run to run.
+- **No bug.** The searches that could have found one: the routine's projected close against the world's (background time enters both
+  the same way: connection, the together event, the substitution factor, LAT's kept share only in a week with a session); the floor
+  misses' values against their actuals; reruns reproducing the original rows exactly for A6 and TT2 in all three checks.
+- **Pins and fast suite:** no file under src/ or tests/ was changed (one new script and this note), so the 50 slow pins and the fast
+  suite are unaffected and were not rerun.
+
+## Reproduction
+
+`caffeinate -s zsh runs/diagnose-t3/queue.sh` (K1 7 configurations, about 20 min; KO1 5 × 120 B lives, about 1 h 20; PT-R 4 × 40
+pairings, about 2 h; 6 workers). Then `uv run python scripts/known_answer_diagnosis.py --ptr v2_a6,v2_tt2` (about 3 min) and
+`--analyze` (runs/diagnose-t3/analysis.json). The A6 and TT2 rows the original write-ups used are reproduced, not reused, by every
+harness here.
