@@ -6,7 +6,7 @@ Written 2026-11-16 by an agent at the author's request ("diagnose, don't fix"). 
 changed, no parameter fitted. Scripted agents, no model calls. Code: scripts/known_answer_diagnosis.py. Rows: runs/diagnose-t3/
 (queue.sh, status.log, k1-*.json, ko1-*.jsonl, ptr-*/rows.jsonl, analysis.json).
 
-**Status: in progress.** PT-R is diagnosed from the rows already on disk; the flag runs for all three checks are queued.
+**Status: in progress.** PT-R (from the rows on disk) and K1 (flag runs done) are diagnosed; KO1 and the PT-R flag runs are running.
 
 ## The three failures, as reported
 
@@ -72,3 +72,61 @@ the check's ceiling falling, not the routine getting worse.**
   0.879 (TT2). This was so under v2 and A6 too; it grows a little because own values shrink while the partner term stays.
 
 Flag attribution: queued (below).
+
+## K1
+
+**Label: bar (what the check pools), plus fragility. Not a bug; not the forecast mismatch. Confidence: high.**
+
+**What K1 counts.** The trap fixture (rules/household/trap: a leaver forfeits the pool; the higher earner can veto contact and work),
+the formation check's 12 control pairings, seed 900, the stay test on every week both partners are in: K1 = held weeks / staying weeks,
+pooled over all 12 runs. A staying week is held if, replayed with every exit cost removed, a partner leaves.
+
+**Reproduced exactly** (k1-a6.json: 16/125 = 0.128; k1-tt2.json: 23/332 = 0.069). **TT, never run before, passes: 17/130 = 0.131.**
+
+**One flag at a time from A6** (trap runs, staying/held per pairing):
+
+| pairing | A6 | lat flags | subst | bg 1.1 | TT | bg 3.3 | TT2 |
+|---|---|---|---|---|---|---|---|
+| anchor / host | 9/0 | 9/0 | 28/0 | 9/0 | 9/0 | **73/0** | **137/0** |
+| anchor / peacekeeper | 9/0 | 9/0 | 9/0 | 9/0 | 9/0 | 9/0 | **79/0** |
+| anchor / steward | 9/0 | 9/0 | 9/0 | 9/0 | 9/0 | **112/0** | 9/0 |
+| bargainer / host | 9/0 | 9/0 | 9/0 | 9/0 | 17/5 | 13/0 | 9/0 |
+| bargainer / wanderer | 17/7 | 17/7 | 9/0 | 9/0 | 9/0 | 17/7 | 9/0 |
+| host / peacekeeper | 13/4 | 13/4 | 12/3 | 16/7 | 21/12 | 16/7 | 24/13 |
+| host / steward | 9/0 | 9/0 | 9/0 | 9/0 | 9/0 | 20/11 | 13/4 |
+| host / wanderer | 14/5 | 14/5 | 11/2 | 9/0 | 9/0 | 9/0 | 16/6 |
+| (5 more pairings) | 9/0 each | same | same | same | ≤ 11/0 | ≤ 12/0 | 9/0 |
+| **K1** | **0.128** | **0.128** | **0.038** | **0.061** | **0.131** | **0.081** | **0.069** |
+| baseline | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+
+The LAT flags (`lat_bg_keep`, `lat_travel`, `lat_gifts`) change nothing, byte for byte: the formation check's world has no LAT.
+
+**Two different things move K1.**
+
+1. **At q = 0.3, re-formed households fill the denominator.** Split each run at its first exit:
+
+   | | first spell: held / staying | share | later spells: staying weeks (held) |
+   |---|---|---|---|
+   | A6 | 16 / 125 | 0.128 | 0 |
+   | bg 3.3 | 25 / 143 | **0.175** | 167 (0) |
+   | TT2 | 23 / 134 | **0.172** | 198 (0) |
+
+   **In the trap as first entered, more weeks are held at q = 0.3 than under A6, not fewer.** K1 falls only because pairs now come
+   back. In anchor / host under TT2, A leaves at week 9 exactly as under A6, returns, and the pair then stays 128 more weeks. None is
+   held, and by the lived numbers none should be: at every reading in that spell the status quo beats the outside option for both
+   (SQ − O between +0.09 and +0.68), and lived pleasure is 0.997 (A) and 0.991 (B) in the household against 0.819 and 0.657 out of it.
+   Anchor / peacekeeper is the same story (0.997 / 0.974 in, 0.904 / 0.510 out). These are weeks the household is worth it, in a
+   household whose rules still allow control. Under A6 and TT nobody comes back into the trap.
+
+2. **Below q = 0.3 the share is fragile.** A6's 16 held weeks come from 3 of 12 pairings. Substitution alone (no background time)
+   gives 0.038, background 1.1 alone 0.061, and both together (TT) 0.131. No later spells are involved. The flags change which of the
+   few borderline pairs is held for a few weeks before leaving. A pooled share of about 16 held weeks cannot tell 0.10 from 0.13 under a
+   small change to the world. A6's own result already called its pass "thin".
+
+**Why this is not the KO1 mismatch.** If a pessimistic outside forecast were keeping people in, the long stays would be weeks the
+lived numbers do not support. They are the opposite: the life lived outside is far worse than the life in the re-formed household.
+
+**What would decide it (the author's call; nothing here changes the bar).** K1 was written for a world where nobody re-forms inside
+the trap. Read on the first spell it passes under every version where re-formation happens (0.175, 0.172). Whether K1 should be read
+on the first spell, on held weeks per run, or with more pairings or seeds to steady it, is a change to the check. That is not mine to
+make, and it should be preregistered before anyone looks at the result it gives.

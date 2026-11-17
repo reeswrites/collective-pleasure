@@ -180,11 +180,14 @@ def ptr_extra(cfg):
 
 
 def ptr(cfgs, workers=WORKERS):
+    """cfgs: DELTAS names (the hybrid from A6), or "v2_<name>": PT-R's reference agents (v2, bills, saturating scale, satiety=world)
+    in the world of that delta (only the world's flags act on v2), on the hybrid's sample."""
     for cfg in cfgs:
         d = OUT / f"ptr-{cfg}"
         d.mkdir(parents=True, exist_ok=True)
         print(f"ptr {cfg}", flush=True)
-        V.collect(V.HSAMPLE, d / "rows.jsonl", workers, ptr_extra(cfg))
+        extra = {**V.V2SAT, "satiety_expect": "world", **DELTAS[cfg[3:]]} if cfg.startswith("v2_") else ptr_extra(cfg)
+        V.collect(V.HSAMPLE, d / "rows.jsonl", workers, extra)
 
 
 # ---- analysis --------------------------------------------------------------------------------------------------------------------
