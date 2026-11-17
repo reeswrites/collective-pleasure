@@ -163,3 +163,24 @@ same two stand-ins (no re-formation, no fresh return); this is the measurement o
 
 The first two are the hypothesis: households are worth more, so more leavers re-form and each re-formation is a bigger miss for a
 forecast that never re-forms. The third is within noise for 14 exits.
+
+**One flag at a time from A6** (B arm, 120 pairings each; the LAT flags are inert in B: the TT sweeps `tt_keep0`, `tt_keep04`,
+`tt_tr017`, `tt_tr067` give B rows identical to TT's):
+
+| | KO1 | 95% interval | exits | back in for half or more: error (n) | the rest: error (n) | leavers back in |
+|---|---|---|---|---|---|---|
+| A6 | +0.027 | [+0.005, +0.047] | 73 | +0.048 (50) | −0.019 (23) | 68% |
+| subst | +0.028 | [−0.001, +0.057] | 73 | +0.046 (51) | −0.013 (22) | 70% |
+| bg 1.1 | +0.039 | [+0.018, +0.059] | 69 | +0.046 (49) | +0.020 (20) | 71% |
+| bg 3.3 | +0.051 | [+0.028, +0.081] | 70 | +0.058 (57) | +0.022 (13) | 81% |
+| TT2 | +0.055 | [+0.033, +0.085] | 68 | +0.066 (54) | +0.012 (14) | 79% |
+
+**Background time moves KO1, and more with higher q (+0.012 at 1.1, +0.025 at 3.3). Substitution moves nothing (+0.001).** Most of the
+step from A6 to TT2 (+0.025 of +0.028) is background time alone. The leavers who come back are 0.046 to 0.066 better off than forecast
+in every configuration: **that gap is what keeps KO1 failing, under every version including A6.** The error of the leavers who stay
+out (−0.019 to +0.022) moves with small changes to the world about as much as anything else, and is a small group.
+
+**Next step (the author's decision; a design change, not a bug fix).** The forecast of leaving would have to hold what lived leavers
+do after leaving: return readings and retries inside `lived_outside`'s futures. A6's write-up named this already. It is the only change
+that addresses the cause; anything that shrinks the error another way (a bias term, a shorter post window) would be fitting to the
+check.
