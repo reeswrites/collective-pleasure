@@ -6,7 +6,7 @@ Written 2026-11-16 by an agent at the author's request ("diagnose, don't fix"). 
 changed, no parameter fitted. Scripted agents, no model calls. Code: scripts/known_answer_diagnosis.py. Rows: runs/diagnose-t3/
 (queue.sh, status.log, k1-*.json, ko1-*.jsonl, ptr-*/rows.jsonl, analysis.json).
 
-**Status: in progress.** PT-R (from the rows on disk) and K1 (flag runs done) are diagnosed; KO1 and the PT-R flag runs are running.
+**Status: in progress.** PT-R and K1 are diagnosed; KO1 is diagnosed on A6 and TT2, with its single-flag runs and the PT-R flag runs still running.
 
 ## The three failures, as reported
 
@@ -130,3 +130,36 @@ lived numbers do not support. They are the opposite: the life lived outside is f
 the trap. Read on the first spell it passes under every version where re-formation happens (0.175, 0.172). Whether K1 should be read
 on the first spell, on held weeks per run, or with more pairings or seeds to steady it, is a change to the check. That is not mine to
 make, and it should be preregistered before anyone looks at the result it gives.
+
+## KO1
+
+**Label: mismatch (the outside forecast's known stand-in: it never re-forms), made larger by time together. Not a bug. Confidence:
+high on the cause; the flag split is below.**
+
+**What KO1 measures.** For each lived bar exit in H41's B arm (120 pairings), L − O: the leaver's mean yardstick (pleasure − w ×
+suffering) over the 52 weeks after the exit, minus the outside value O of the reading that decided it. O is `hybrid.lived_outside`:
+the lived world played on with the member gone, with no readings inside the future, so the forecast leaver never returns or
+re-forms. Lived leavers do both.
+
+**Reproduced exactly.** The instrumented reruns give the same exits and the same errors as the original rows, exit for exit
+(A6 +0.0268, 73 exits; TT2 +0.0547, 68 exits). The new field is the share of the 52 post-exit weeks the leaver is back in a household.
+
+**The error is the leavers who come back:**
+
+| | exits | back in for half the window or more | the rest | all |
+|---|---|---|---|---|
+| A6 | 73 | **+0.048** [+0.028, +0.070] (50, 68%) | −0.019 [−0.055, +0.011] (23) | +0.027 |
+| TT2 | 68 | **+0.066** [+0.038, +0.098] (54, 79%) | +0.012 [+0.002, +0.024] (14) | +0.055 |
+
+Leavers who mostly stay out are forecast about right under A6 (−0.019, interval spans 0). Those who come back live better than the
+forecast said, because the forecast never brings them back: their yardstick is 0.880 in a household against 0.669 out of one (A6).
+**So KO1 already failed under A6 for this reason alone; the time-together flags did not create the bias.** A6's write-up named the
+same two stand-ins (no re-formation, no fresh return); this is the measurement of it.
+
+**What TT2 adds, A6 → TT2 (+0.028):**
+- more leavers come back (68% → 79%): **+0.007**;
+- a comeback is further from the forecast (+0.048 → +0.066): **+0.014**;
+- the leavers who stay out (14 exits, n small): **+0.007**.
+
+The first two are the hypothesis: households are worth more, so more leavers re-form and each re-formation is a bigger miss for a
+forecast that never re-forms. The third is within noise for 14 exits.
