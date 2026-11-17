@@ -184,3 +184,36 @@ out (−0.019 to +0.022) moves with small changes to the world about as much as 
 do after leaving: return readings and retries inside `lived_outside`'s futures. A6's write-up named this already. It is the only change
 that addresses the cause; anything that shrinks the error another way (a bias term, a shorter post window) would be fitting to the
 check.
+
+## Do the three share a cause?
+
+**One root, three different mechanisms, and only one of them is the mismatch the previous agent guessed.** The root is the same:
+background time from a shared home (`together_bg`, q) makes household weeks worth more. Each check meets it differently:
+
+| | what q does to it | label | flag that moves it |
+|---|---|---|---|
+| PT-R T3 | pushes household pleasure up the saturating curve, so every action's one-week value shrinks toward the agent's 0.003 floor; T3 counts the floor's idles as misses. The routine's values stay right. | **bar** | `together_bg` |
+| K1 | at q = 0.3 trap pairs come back after leaving and stay, worth it; those weeks dilute a pooled share. Below 0.3, small changes move a thin result. | **bar** (+ fragility) | `together_bg` at 3.3; any flag below it |
+| KO1 | the forecast of leaving never re-forms; with households worth more, more leavers re-form and each re-formation is a bigger miss. Fails under A6 already. | **mismatch** | `together_bg` |
+
+The hypothesis "the routine's projection, the trap reading and the outside forecasts see household value differently from how lives are
+lived" holds for **KO1 only**. **The routine's projection sees it correctly** (floor misses: perceived and actual agree to 0.00004; T6
+holds). **The trap reading sees it correctly too**: the long stays are worth it by the lived numbers. **No bug was found.** So no
+failing test and no default-off fix are proposed. `together_subst` and the LAT flags (`lat_bg_keep`, `lat_travel`, `lat_gifts`) do not
+cause any of the three: the LAT flags are inert, byte for byte, in all three samples. Substitution moves K1 within its fragility and
+nothing else.
+
+## Proposed next steps (all need the author's decision; none was taken)
+
+1. **PT-R T3 (bar).** Either hold T3 to the same floor on both sides (the agent's 0.003, or 0), or hold the hybrid to an oracle on
+   the same rows (agent − oracle, which is −0.03 to −0.04 under every version), or rerun v2's reference rows in the same world as the
+   hybrid. Each is a change to a preregistered check, so it should be preregistered before it is read. Not a reason to touch the floor
+   itself: the floor is the agent's, and it behaves as designed.
+2. **K1 (bar).** Decide what K1 should count when pairs re-form inside the trap: the first spell only, held weeks per run, or a larger
+   sample (more pairings or seeds) so the 0.10 bar is not decided by one or two pairings. Preregister before reading.
+3. **KO1 (mismatch; design change).** Give `lived_outside`'s futures what lived leavers have: return readings and retries. This is the
+   only change aimed at the cause. Under ADR 0020 it is a model change behind a default-off flag. Findings it could move: everything
+   that runs through the hybrid's decision to leave (H41's arms and its stop rule, the exit option KX2, the quiet path, LAT's verdict
+   via who leaves, the hybrid's PT-H H1 for leave choices), because a less pessimistic outside forecast means more exits.
+4. **Freezing.** Of TT2's three failures, only KO1 shows a real gap between how a decision values something and how it is lived, and it
+   fails under A6 too. Whether the hybrid can freeze with a documented KO1 stand-in is the author's call.

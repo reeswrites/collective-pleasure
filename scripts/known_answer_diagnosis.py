@@ -229,8 +229,9 @@ def t3_parts(recs):
         if d["ctx"]["in_hh"] and d["ctx"]["other_in"]:
             rest_in += [i["actual"]["1"]["own"]["net"] for i in d["items"] if i["applied"] and i["a"] == "rest"]
     pt = V.passtest(recs, "net")
+    oracle = V.passtest(recs, "net", perceived=lambda r: V.act_of(r, 13 if r["rule"] == "soft" else 1))   # a perfect one-week valuer
     ba = np.array(best)
-    return {"T3": round(pt["T3"], 4), "decisions": n, "misses": {k: c for k, c in cat.items() if k != "agree"},
+    return {"T3": round(pt["T3"], 4), "T3_oracle": round(oracle["T3"], 4), "decisions": n, "misses": {k: c for k, c in cat.items() if k != "agree"},
             "T3_same_floor": round(same / max(1, n), 4), "best_actual_median": round(float(np.median(ba)), 5),
             "best_actual_under_floor_share": round(float(np.mean((ba > 0) & (ba <= FLOOR))), 4),
             "rest_in_household_actual_mean": round(float(np.mean(rest_in)), 5) if rest_in else None,
