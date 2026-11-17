@@ -1,5 +1,7 @@
 # Where living apart together's non-offsettable suffering comes from
 
+> **Note 2026-11-16:** see [tt2.md](tt2.md). With gifts allowed between LAT partners (existing `give` rule) at TT's q, LAT's extra suffering falls +0.00033 → +0.00013; at q = 0.3 (TT2) it is +0.00004 [0, +0.00012] with no gift given, because few pairs choose LAT. The rest is still denied money, now in LAT weeks beside a partner the gift rule does not let give (prosocial 0.41 < 0.5). The text below is as run.
+
 Wording rule: agents feel nothing; "suffering", "denied" and "money" are glosses for modeled numbers.
 
 ## 2026-11-15: attribution under A6 (no model change)

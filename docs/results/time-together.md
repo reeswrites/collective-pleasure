@@ -1,5 +1,7 @@
 # Time together in two kinds: background time, chosen time, travel and substitution
 
+> **Note 2026-11-16:** rerun as TT2 (q = 0.3, the sourced value, plus gifts between LAT partners): [tt2.md](tt2.md). LAT's trade-off holds across A6, TT and TT2 and at every q from 0.05 to 0.6; PT-R T3 fails worse (0.869), K1 now fails (0.069), KO1 widens (+0.055). The numbers below are TT's, as run.
+
 Wording rule: agents feel nothing; "pleasure", "suffering", "value", "forecast" and "held" are glosses for modeled numbers.
 
 **Model line (TT):** `hybrid · sat · bills · satiety=world · hybrid_w=persona · hybrid_readings=world · hybrid_lone · hybrid_exit · hybrid_tally=level · tally_half=13 · tally_line=0.02 · exit_grow=0.04 · hybrid_outside=lived · friend_satiety · fresh_return · together_bg=1.1 · lat_bg_keep=0.2 · lat_travel=0.33 · together_subst`, exit fallback F4 with items (F5 in the prenup and all-aids arms), corrected rule (ADR 0020). Compared with A6 (the same line without the last four flags).
